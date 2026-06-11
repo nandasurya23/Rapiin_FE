@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f4f2ed;
+  --surface: #ffffff;
+  --surface-soft: #f3eee6;
+  --text-primary: #1f2622;
+  --text-secondary: #64706b;
+  --text-muted: #8c958f;
+  --border: #d9d4cb;
+  --brand: #0f7a5b;
+  --brand-soft: #e8f5ef;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(15, 122, 91, 0.08), transparent 26%),
+    radial-gradient(circle at top right, rgba(182, 140, 93, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.58)),
+    var(--background);
+  color: var(--text-primary);
+  font-family: Inter, "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(20, 122, 92, 0.18);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.toast-enter {
+  animation: toast-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ui-fade-up {
+  animation: fade-up 420ms ease-out both;
+}
+
+.ui-fade-up-delay-1 {
+  animation: fade-up 420ms ease-out 80ms both;
+}
+
+.ui-fade-up-delay-2 {
+  animation: fade-up 420ms ease-out 160ms both;
+}
+
+.ui-fade-up-delay-3 {
+  animation: fade-up 420ms ease-out 240ms both;
+}
+
+.animate-fade-up {
+  animation: fade-up 420ms ease-out both;
+}
+
+.animate-fade-up-delay-1 {
+  animation: fade-up 420ms ease-out 80ms both;
+}
+
+.animate-fade-up-delay-2 {
+  animation: fade-up 420ms ease-out 160ms both;
+}
+
+.animate-fade-up-delay-3 {
+  animation: fade-up 420ms ease-out 240ms both;
+}
+
+.page-enter > * {
+  animation: fade-up 420ms ease-out both;
+}
+
+.page-enter > *:nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.page-enter > *:nth-child(3) {
+  animation-delay: 160ms;
+}
+
+.page-enter > *:nth-child(4) {
+  animation-delay: 240ms;
+}
+
+.page-enter > *:nth-child(5) {
+  animation-delay: 320ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-fade-up,
+  .ui-fade-up-delay-1,
+  .ui-fade-up-delay-2,
+  .ui-fade-up-delay-3,
+  .animate-fade-up,
+  .animate-fade-up-delay-1,
+  .animate-fade-up-delay-2,
+  .animate-fade-up-delay-3,
+  .page-enter > *,
+  .toast-enter {
+    animation: none;
+  }
+}

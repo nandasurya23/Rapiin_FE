@@ -1,0 +1,16 @@
+export const ROUTES = {
+  login: "/auth/login",
+  register: "/auth/register",
+  onboarding: "/onboarding",
+  dashboard: "/app/dashboard",
+  customers: "/app/customers",
+  orders: "/app/orders",
+  messages: "/app/messages",
+  invoices: "/app/invoices",
+  reports: "/app/reports",
+  businessLink: "/app/business-link",
+  settings: "/app/settings",
+  publicBusiness: (slug: string) => `/b/${slug}`,
+  publicBusinessOrder: (slug: string) => `/b/${slug}/order`,
+  invoice: (code: string) => `/invoice/${code}`,
+} as const;
