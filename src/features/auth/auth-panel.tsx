@@ -5,19 +5,20 @@ import { useState, type FormEvent } from "react";
 import { ROUTES } from "@/lib/routes";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { isValidEmailOrPhone, normalizePhoneNumber } from "@/lib/validation";
 
 type AuthPanelProps = {
-  mode: "login" | "register";
+  mode: "login" | "register" | "forgot-password";
 };
 
 export function AuthPanel({ mode }: AuthPanelProps) {
   const router = useRouter();
   const toast = useToast();
-  const { auth, login, register } = useAppData();
+  const { auth, login, register, resetPassword } = useAppData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +29,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
     const name = String(formData.get("name") ?? "");
     const identifierRaw = String(formData.get("identifier") ?? "");
     const password = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
     const identifier = identifierRaw.includes("@") ? identifierRaw.trim().toLowerCase() : normalizePhoneNumber(identifierRaw);
 
     if (mode === "register" && !name.trim()) {
@@ -50,22 +52,43 @@ export function AuthPanel({ mode }: AuthPanelProps) {
       return;
     }
 
+    if (mode === "forgot-password" && password !== confirmPassword) {
+      setError("Konfirmasi password harus sama.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
       const result =
         mode === "login"
           ? login({ identifier, password })
-          : register({ name: name.trim(), identifier, password });
+          : mode === "register"
+            ? register({ name: name.trim(), identifier, password })
+            : resetPassword({ identifier, password });
 
       if (!result.ok) {
         setError(result.message);
         return;
       }
 
-      toast.success(mode === "login" ? "Berhasil masuk" : "Akun berhasil dibuat");
+      toast.success(
+        mode === "login"
+          ? "Berhasil masuk"
+          : mode === "register"
+            ? "Akun berhasil dibuat"
+            : "Password berhasil diperbarui"
+      );
       await new Promise((resolve) => setTimeout(resolve, 180));
-      router.push(mode === "register" || !auth.onboardingCompleted ? ROUTES.onboarding : ROUTES.dashboard);
+      router.push(
+        mode === "login"
+          ? !auth.onboardingCompleted
+            ? ROUTES.onboarding
+            : ROUTES.dashboard
+          : mode === "register"
+            ? ROUTES.onboarding
+            : ROUTES.login
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -80,10 +103,12 @@ export function AuthPanel({ mode }: AuthPanelProps) {
           </div>
           <div className="space-y-3">
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-              {mode === "login" ? "Masuk ke Rapiin" : "Mulai rapiin bisnismu"}
+              {mode === "login" ? "Masuk ke Rapiin" : mode === "register" ? "Mulai rapiin bisnismu" : "Atur ulang password"}
             </h1>
             <p className="max-w-xl text-base leading-7 text-text-secondary">
-              Kelola customer, order, follow-up, nota, dan laporan sederhana dari satu tempat tanpa istilah teknis yang membingungkan.
+              {mode === "forgot-password"
+                ? "Masukkan email atau nomor HP yang terdaftar, lalu buat password baru untuk lanjut masuk lagi."
+                : "Kelola customer, order, follow-up, nota, dan laporan sederhana dari satu tempat tanpa istilah teknis yang membingungkan."}
             </p>
           </div>
           <Card className="max-w-xl">
@@ -102,12 +127,14 @@ export function AuthPanel({ mode }: AuthPanelProps) {
           <CardBody className="space-y-5 p-5 sm:p-6">
             <div>
               <h2 className="text-2xl font-semibold text-text-primary">
-                {mode === "login" ? "Masuk" : "Buat akun"}
+                {mode === "login" ? "Masuk" : mode === "register" ? "Buat akun" : "Lupa Password"}
               </h2>
               <p className="mt-1 text-sm text-text-secondary">
                 {mode === "login"
                   ? "Gunakan akun yang sudah kamu daftarkan."
-                  : "Buat akun gratis dan lanjutkan onboarding bisnis."}
+                  : mode === "register"
+                    ? "Buat akun gratis dan lanjutkan onboarding bisnis."
+                    : "Ganti password akun yang sudah terdaftar di perangkat ini."}
               </p>
             </div>
 
@@ -124,19 +151,34 @@ export function AuthPanel({ mode }: AuthPanelProps) {
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-text-primary">Password</span>
-                <Input name="password" type="password" placeholder="Masukkan password" required />
+                <PasswordInput name="password" placeholder="Masukkan password" required />
               </label>
+              {mode === "forgot-password" ? (
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-text-primary">Konfirmasi password baru</span>
+                  <PasswordInput name="confirmPassword" placeholder="Ulangi password baru" required />
+                </label>
+              ) : null}
               {error ? <p className="text-sm text-status-danger">{error}</p> : null}
               <Button type="submit" className="w-full" isLoading={isSubmitting}>
-                {mode === "login" ? "Masuk" : "Buat Akun"}
+                {mode === "login" ? "Masuk" : mode === "register" ? "Buat Akun" : "Simpan Password Baru"}
               </Button>
             </form>
 
-            <div className="text-center text-sm text-text-secondary">
-              {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
-              <LinkButton href={mode === "login" ? ROUTES.register : ROUTES.login} variant="ghost" className="h-auto px-0 py-0 text-brand-700">
-                {mode === "login" ? "Daftar gratis" : "Masuk"}
-              </LinkButton>
+            <div className="space-y-2 text-center text-sm text-text-secondary">
+              {mode === "login" ? (
+                <div>
+                  <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-brand-700">
+                    Lupa password?
+                  </LinkButton>
+                </div>
+              ) : null}
+              <div>
+                {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
+                <LinkButton href={mode === "login" ? ROUTES.register : ROUTES.login} variant="ghost" className="h-auto px-0 py-0 text-brand-700">
+                  {mode === "login" ? "Daftar gratis" : "Masuk"}
+                </LinkButton>
+              </div>
             </div>
           </CardBody>
         </Card>

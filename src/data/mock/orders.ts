@@ -18,7 +18,21 @@ function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60 * 1000);
 }
 
-const now = new Date();
+function createStableMockNow() {
+  const current = new Date();
+
+  return new Date(
+    current.getFullYear(),
+    current.getMonth(),
+    current.getDate(),
+    current.getHours(),
+    0,
+    0,
+    0
+  );
+}
+
+const now = createStableMockNow();
 const today = toDateKey(now);
 const yesterday = toDateKey(addDays(now, -1));
 
@@ -36,7 +50,7 @@ export const mockOrders: Order[] = [
     scheduledDate: today,
     scheduledTime: "18:00",
     bookingDurationMinutes: 60,
-    bookingHoldExpiresAt: addMinutes(now, 20).toISOString(),
+    bookingHoldExpiresAt: addMinutes(now, 59).toISOString(),
     resourceId: "res_1",
     resourceNameSnapshot: "Studio 1",
     totalAmount: 240000,

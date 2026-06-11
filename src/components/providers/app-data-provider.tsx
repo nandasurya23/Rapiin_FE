@@ -85,6 +85,11 @@ type AuthInput = {
   password: string;
 };
 
+type ResetPasswordInput = {
+  identifier: string;
+  password: string;
+};
+
 type PublicOrderInput = {
   payload: Record<string, string>;
 };
@@ -97,6 +102,7 @@ type AppDataContextValue = AppStorageState & {
   completeOnboarding: (payload: OnboardingPayload) => void;
   register: (payload: Required<Pick<AuthInput, "name">> & AuthInput) => { ok: true } | { ok: false; message: string };
   login: (payload: AuthInput) => { ok: true } | { ok: false; message: string };
+  resetPassword: (payload: ResetPasswordInput) => { ok: true } | { ok: false; message: string };
   logout: () => void;
   createCustomer: (payload: CustomerInput) => Customer;
   updateCustomer: (id: string, payload: CustomerInput) => Customer | null;
@@ -300,6 +306,32 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         currentUserId: null,
       },
     }));
+  }
+
+  function resetPassword(payload: ResetPasswordInput) {
+    const normalizedIdentifier = payload.identifier.trim().toLowerCase();
+    const existing = state.auth.users.find((user) => user.identifier.toLowerCase() === normalizedIdentifier);
+
+    if (!existing) {
+      return { ok: false as const, message: "Akun dengan email / nomor HP ini tidak ditemukan." };
+    }
+
+    setAppState((current) => ({
+      ...current,
+      auth: {
+        ...current.auth,
+        users: current.auth.users.map((user) =>
+          user.id === existing.id
+            ? {
+                ...user,
+                password: payload.password,
+              }
+            : user
+        ),
+      },
+    }));
+
+    return { ok: true as const };
   }
 
   function createCustomer(payload: CustomerInput) {
@@ -631,6 +663,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     completeOnboarding,
     register,
     login,
+    resetPassword,
     logout,
     createCustomer,
     updateCustomer,
