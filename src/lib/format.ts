@@ -16,6 +16,8 @@ const dateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
+  hour12: false,
+  hourCycle: "h23",
 });
 
 const relativeFormatter = new Intl.RelativeTimeFormat("id-ID", {

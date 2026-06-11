@@ -51,6 +51,8 @@ function formatDateTime(value?: string | null) {
   return new Intl.DateTimeFormat("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
+    hour12: false,
+    hourCycle: "h23",
   }).format(parsedDate);
 }
 

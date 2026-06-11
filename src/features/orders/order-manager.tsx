@@ -6,6 +6,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { TimeSelect } from "@/components/ui/time-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +84,8 @@ function formatDateTime(value?: string | null) {
   return new Intl.DateTimeFormat("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
+    hour12: false,
+    hourCycle: "h23",
   }).format(parsedDate);
 }
 
@@ -555,10 +558,10 @@ export function OrderManager() {
                   </label>
                   <label className="block">
                     <span className="mb-2 block text-sm font-medium text-text-primary">Jam</span>
-                    <Input
-                      type="time"
+                    <TimeSelect
                       value={form.scheduledTime}
-                      onChange={(event) => updateFormField("scheduledTime", event.target.value)}
+                      onValueChange={(value) => updateFormField("scheduledTime", value)}
+                      placeholder="Pilih jam"
                     />
                   </label>
                   <label className="block">

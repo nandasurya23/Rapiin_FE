@@ -129,15 +129,20 @@ export function PublicBusinessPage({ slug }: { slug: string }) {
             </div>
             <div className="grid gap-3">
               {catalog.map((item) => (
-                <div key={item.id} className="rounded-xl border border-border/80 bg-surface px-4 py-4">
+                <a
+                  key={item.id}
+                  href={`${publicOrderLink}?item=${encodeURIComponent(item.id)}`}
+                  className="group rounded-xl border border-border/80 bg-surface px-4 py-4 transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50/30"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-text-primary">{item.name}</p>
                       <p className="mt-1 text-sm text-text-secondary">{item.description}</p>
+                      <p className="mt-3 text-xs font-medium text-brand-700">Pilih ini dan isi form</p>
                     </div>
                     {item.priceLabel ? <Badge tone="info">{item.priceLabel}</Badge> : null}
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </CardBody>

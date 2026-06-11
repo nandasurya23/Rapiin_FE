@@ -5,6 +5,7 @@ export type PublicCatalogItem = {
   name: string;
   description: string;
   priceLabel?: string;
+  durationMinutes?: number;
 };
 
 export type PublicOrderField = {
@@ -17,9 +18,9 @@ export type PublicOrderField = {
 
 const catalogByMode: Record<BusinessMode, PublicCatalogItem[]> = {
   BOOKING_SERVICE: [
-    { id: "svc_1", name: "Booking Studio 2 Jam", description: "Cocok untuk latihan band atau rekaman singkat.", priceLabel: "Rp 240.000" },
-    { id: "svc_2", name: "Booking Studio 4 Jam", description: "Untuk sesi yang lebih lama dan fleksibel.", priceLabel: "Rp 420.000" },
-    { id: "svc_3", name: "Paket Malam", description: "Jam sibuk dengan prioritas room.", priceLabel: "Rp 550.000" },
+    { id: "svc_1", name: "Booking Studio 2 Jam", description: "Cocok untuk latihan band atau rekaman singkat.", priceLabel: "Rp 240.000", durationMinutes: 120 },
+    { id: "svc_2", name: "Booking Studio 4 Jam", description: "Untuk sesi yang lebih lama dan fleksibel.", priceLabel: "Rp 420.000", durationMinutes: 240 },
+    { id: "svc_3", name: "Paket Malam 3 Jam", description: "Jam sibuk dengan prioritas room.", priceLabel: "Rp 550.000", durationMinutes: 180 },
   ],
   PRODUCT_ORDER: [
     { id: "prd_1", name: "Paket Hemat", description: "Pilihan paling sering dipesan.", priceLabel: "Rp 75.000" },
@@ -76,6 +77,23 @@ function getOperationalModel(input: Business | BusinessMode) {
 
 export function getPublicCatalog(input: Business | BusinessMode) {
   return catalogByMode[getModeFromBusinessOrMode(input)];
+}
+
+export function inferCatalogDurationMinutes(item?: Pick<PublicCatalogItem, "name" | "durationMinutes"> | null) {
+  if (!item) {
+    return null;
+  }
+
+  if (typeof item.durationMinutes === "number" && item.durationMinutes > 0) {
+    return item.durationMinutes;
+  }
+
+  const matchedHours = item.name.match(/(\d+)\s*jam/i);
+  if (matchedHours) {
+    return Number(matchedHours[1]) * 60;
+  }
+
+  return null;
 }
 
 export function getPublicOrderFields(input: Business | BusinessMode) {

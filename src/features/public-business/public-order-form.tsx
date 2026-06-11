@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock3, MapPin, PhoneCall, Sparkles } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { TimeSelect } from "@/components/ui/time-select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import {
@@ -22,6 +24,7 @@ import { ROUTES } from "@/lib/routes";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import {
   getPublicCatalog,
+  inferCatalogDurationMinutes,
   getPublicFormFields,
   getPublicFormSubmitLabel,
   getPublicFormTitle,
@@ -83,12 +86,108 @@ function formatHoldReleaseTime(value?: string | null) {
   return new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
+    hourCycle: "h23",
   }).format(parsedDate);
+}
+
+function getCatalogFieldName(mode: BusinessMode) {
+  if (mode === "BOOKING_SERVICE") {
+    return "service";
+  }
+
+  if (mode === "PRODUCT_ORDER") {
+    return "product";
+  }
+
+  return "requestDetail";
+}
+
+function createPublicWhatsAppMessage(business: Business, form: FormState) {
+  const lines = [`Halo ${business.name}, saya mau lanjut ${business.mode === "BOOKING_SERVICE" ? "booking" : business.mode === "PRODUCT_ORDER" ? "order" : "request"}.`];
+
+  if (form.name) {
+    lines.push(`Nama: ${form.name}`);
+  }
+
+  if (form.service) {
+    lines.push(`Layanan: ${form.service}`);
+  }
+
+  if (form.product) {
+    lines.push(`Produk: ${form.product}`);
+  }
+
+  if (form.quantity) {
+    lines.push(`Jumlah: ${form.quantity}`);
+  }
+
+  if (form.scheduledDate) {
+    lines.push(`Tanggal: ${form.scheduledDate}`);
+  }
+
+  if (form.scheduledTime) {
+    lines.push(`Jam: ${form.scheduledTime}`);
+  }
+
+  if (form.bookingDurationMinutes) {
+    lines.push(`Durasi: ${form.bookingDurationMinutes} menit`);
+  }
+
+  if (form.deliveryMethod) {
+    lines.push(`Ambil / antar: ${form.deliveryMethod}`);
+  }
+
+  if (form.deadline) {
+    lines.push(`Deadline: ${form.deadline}`);
+  }
+
+  if (form.budget) {
+    lines.push(`Budget: ${form.budget}`);
+  }
+
+  if (form.requestDetail) {
+    lines.push(`Detail request: ${form.requestDetail}`);
+  }
+
+  if (form.notes) {
+    lines.push(`Catatan: ${form.notes}`);
+  }
+
+  return lines.join("\n");
+}
+
+function applyCatalogSelectionToForm(mode: BusinessMode, current: FormState, itemName: string, durationMinutes?: number | null) {
+  const next = {
+    ...current,
+    [getCatalogFieldName(mode)]: itemName,
+  };
+
+  if (mode === "BOOKING_SERVICE" && durationMinutes && durationMinutes > 0) {
+    next.bookingDurationMinutes = String(durationMinutes);
+  }
+
+  return next;
+}
+
+function clearCatalogSelectionFromForm(mode: BusinessMode, current: FormState, defaultBookingDurationMinutes: number) {
+  const next = {
+    ...current,
+    [getCatalogFieldName(mode)]: "",
+  };
+
+  if (mode === "BOOKING_SERVICE") {
+    next.bookingDurationMinutes = String(defaultBookingDurationMinutes);
+  }
+
+  return next;
 }
 
 export function PublicOrderForm({ slug }: { slug: string }) {
   const toast = useToast();
+  const searchParams = useSearchParams();
   const { business, hydrated, orders, submitPublicOrder } = useAppData();
+  const defaultBookingDuration = business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
   const [form, setForm] = useState<FormState>(initialStateByMode[business.mode]);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -101,14 +200,23 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
     setForm({
       ...initialStateByMode[business.mode],
-      bookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES),
+      bookingDurationMinutes: String(defaultBookingDuration),
     });
     setSubmitted(false);
     setError("");
-  }, [business.defaultBookingDurationMinutes, business.mode, hydrated]);
+  }, [business.mode, defaultBookingDuration, hydrated]);
 
   const isMatch = isBusinessSlugMatch(business, slug);
   const catalog = getPublicCatalog(business);
+  const selectedCatalogItem = useMemo(() => {
+    const itemId = searchParams.get("item");
+
+    if (!itemId) {
+      return null;
+    }
+
+    return catalog.find((item) => item.id === itemId) ?? null;
+  }, [catalog, searchParams]);
   const bookingDurationMinutes = useMemo(() => {
     const parsedDuration = Number(form.bookingDurationMinutes);
 
@@ -174,10 +282,32 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
   const fields = useMemo(() => getPublicFormFields(business), [business]);
   const submitLabel = getPublicFormSubmitLabel(business);
+  const hasSelectedBookingService = business.mode === "BOOKING_SERVICE" && Boolean(form.service.trim());
+  const waMessage = useMemo(() => createPublicWhatsAppMessage(business, form), [business, form]);
   const waLink = useMemo(
-    () => buildWhatsAppUrl(business.whatsappNumber, `Halo ${business.name}, saya mau kirim detail order dari form publik.`),
-    [business.name, business.whatsappNumber]
+    () => buildWhatsAppUrl(business.whatsappNumber, waMessage),
+    [business.whatsappNumber, waMessage]
   );
+
+  useEffect(() => {
+    if (!selectedCatalogItem) {
+      return;
+    }
+
+    const catalogField = getCatalogFieldName(business.mode);
+    const inferredDurationMinutes = inferCatalogDurationMinutes(selectedCatalogItem);
+
+    setForm((current) => {
+      if (
+        (current[catalogField] ?? "") === selectedCatalogItem.name &&
+        (business.mode !== "BOOKING_SERVICE" || !inferredDurationMinutes || current.bookingDurationMinutes === String(inferredDurationMinutes))
+      ) {
+        return current;
+      }
+
+      return applyCatalogSelectionToForm(business.mode, current, selectedCatalogItem.name, inferredDurationMinutes);
+    });
+  }, [business.mode, selectedCatalogItem]);
 
   if (!isMatch) {
     return (
@@ -268,6 +398,11 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">
                   Isi form singkat ini. Admin akan lanjut menghubungi lewat WhatsApp.
                 </p>
+                {selectedCatalogItem ? (
+                  <div className="mt-3">
+                    <Badge tone="success">Pilihan aktif: {selectedCatalogItem.name}</Badge>
+                  </div>
+                ) : null}
               </div>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row xl:flex-col xl:items-stretch xl:self-start">
                 <LinkButton
@@ -295,10 +430,41 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {catalog.map((item) => (
-                    <div key={item.id} className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                      <p className="font-medium text-text-primary">{item.name}</p>
-                      <p className="mt-1 text-xs text-text-muted">{item.priceLabel ?? "Harga fleksibel"}</p>
-                    </div>
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        const isSelected = fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name;
+                        const nextForm = isSelected
+                          ? clearCatalogSelectionFromForm(business.mode, form, defaultBookingDuration)
+                          : applyCatalogSelectionToForm(
+                              business.mode,
+                              form,
+                              item.name,
+                              inferCatalogDurationMinutes(item)
+                            );
+                        setError("");
+                        setForm(nextForm);
+                      }}
+                      className={`rounded-lg border px-4 py-3 text-left transition ${
+                        fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name
+                          ? "border-brand-300 bg-brand-50"
+                          : "border-border/70 bg-surface hover:bg-muted"
+                      }`}
+                      aria-pressed={fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-text-primary">{item.name}</p>
+                          <p className="mt-1 text-xs text-text-muted">{item.priceLabel ?? "Harga fleksibel"}</p>
+                        </div>
+                        {fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name ? (
+                          <Badge tone="success">Dipilih</Badge>
+                        ) : (
+                          <span className="text-xs font-medium text-brand-700">Pilih</span>
+                        )}
+                      </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -347,12 +513,11 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                       onValueChange={(nextValue) => updateField(field.name, nextValue)}
                       placeholder={field.placeholder}
                     />
-                  ) : field.type === "time" || field.type === "number" ? (
+                  ) : field.type === "time" ? (
                     <>
-                      <Input
-                        type={field.type}
+                      <TimeSelect
                         value={value}
-                        onChange={(event) => updateField(field.name, event.target.value)}
+                        onValueChange={(nextValue) => updateField(field.name, nextValue)}
                         placeholder={field.placeholder}
                       />
                       {field.name === "scheduledTime" && business.mode === "BOOKING_SERVICE" ? (
@@ -368,6 +533,40 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                           <p className={`text-xs ${activeAvailability.isFull ? "text-status-danger" : activeAvailability.hasHold ? "text-amber-700" : "text-text-muted"}`}>{slotHint}</p>
                         </div>
                       ) : null}
+                    </>
+                  ) : field.name === "bookingDurationMinutes" && business.mode === "BOOKING_SERVICE" ? (
+                    hasSelectedBookingService ? (
+                      <div className="rounded-md border border-border bg-muted/25 px-4 py-3 text-sm text-text-primary">
+                        <div className="font-medium">
+                          {value ? `${value} menit` : "Pilih layanan dulu"}
+                        </div>
+                        <p className="mt-1 text-xs text-text-secondary">
+                          Durasi otomatis mengikuti layanan yang dipilih.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <Input
+                          type="number"
+                          min={15}
+                          step={15}
+                          value={value}
+                          onChange={(event) => updateField(field.name, event.target.value)}
+                          placeholder={field.placeholder}
+                        />
+                        <p className="mt-1 text-xs text-text-secondary">
+                          Kalau belum pilih layanan, durasi bisa diisi manual.
+                        </p>
+                      </>
+                    )
+                  ) : field.type === "number" ? (
+                    <>
+                      <Input
+                        type={field.type}
+                        value={value}
+                        onChange={(event) => updateField(field.name, event.target.value)}
+                        placeholder={field.placeholder}
+                      />
                     </>
                   ) : field.name === "notes" || field.name === "requestDetail" ? (
                     <Textarea
