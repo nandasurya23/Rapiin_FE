@@ -6,6 +6,8 @@ export type Invoice = Timestamped & {
   businessId: ID;
   orderId: ID;
   invoiceCode: string;
+  verificationCode: string;
+  integritySeal: string;
   customerName: string;
   totalAmount: number;
   paymentStatus: PaymentStatus;

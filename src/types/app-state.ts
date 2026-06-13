@@ -4,12 +4,25 @@ import type { Customer } from "@/types/customer";
 import type { Invoice } from "@/types/invoice";
 import type { MessageCategory, MessageTemplate } from "@/types/message";
 import type { Order } from "@/types/order";
+import type {
+  BackupRecord,
+  BusinessSubscription,
+  PlanDefinition,
+  SuperAdminActionLog,
+  UpgradeRequest,
+  UserRole,
+} from "@/types/subscription";
 
 export type AuthUser = {
   id: ID;
   name: string;
-  identifier: string;
+  email: string;
+  phoneNumber: string;
   password: string;
+  role: UserRole;
+  businessId?: ID;
+  trialUsed: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -52,9 +65,17 @@ export type AppStorageState = {
   customers: Customer[];
   orders: Order[];
   invoices: Invoice[];
+  subscriptions: BusinessSubscription[];
+  upgradeRequests: UpgradeRequest[];
+  backupRecords: BackupRecord[];
+  superAdminLogs: SuperAdminActionLog[];
   messageTemplates: MessageTemplate[];
   publicSubmissions: PublicSubmission[];
   auth: AuthState;
+  system: {
+    superAdminUserIds: ID[];
+    planCatalog: PlanDefinition[];
+  };
   ui: {
     messageComposer: MessageComposerDraft;
   };

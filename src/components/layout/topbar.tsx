@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bell, LogOut, PanelLeftClose, PanelLeftOpen, Search, Sparkles } from "lucide-react";
+import { Bell, LogOut, PanelLeftClose, PanelLeftOpen, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast-provider";
@@ -17,7 +17,7 @@ type TopbarProps = {
 export function Topbar({ sidebarCollapsed, onToggleSidebar }: TopbarProps) {
   const router = useRouter();
   const toast = useToast();
-  const { business, logout } = useAppData();
+  const { business, currentUser, isSuperAdmin, logout } = useAppData();
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/80 bg-surface/90 backdrop-blur">
@@ -28,8 +28,8 @@ export function Topbar({ sidebarCollapsed, onToggleSidebar }: TopbarProps) {
             <div className="mt-1 flex items-center gap-2">
               <p className="truncate text-sm font-semibold text-text-primary">{business.name}</p>
               <span className="inline-flex items-center gap-1 rounded-md border border-brand-100 bg-brand-50 px-2 py-1 text-[11px] font-medium text-brand-800">
-                <Sparkles className="h-3 w-3" />
-                WhatsApp-first
+                {isSuperAdmin ? <ShieldCheck className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                {isSuperAdmin ? "Manual approval" : "WhatsApp-first"}
               </span>
             </div>
           </div>
@@ -41,7 +41,7 @@ export function Topbar({ sidebarCollapsed, onToggleSidebar }: TopbarProps) {
             <Button variant="secondary" size="sm" className="hidden sm:inline-flex">
               <Bell className="h-4 w-4" />
             </Button>
-            <QuickAddMenu />
+            {!isSuperAdmin ? <QuickAddMenu /> : null}
             <Button
               variant="secondary"
               size="sm"
@@ -64,7 +64,7 @@ export function Topbar({ sidebarCollapsed, onToggleSidebar }: TopbarProps) {
           </label>
           <div className="hidden items-center gap-2 lg:flex">
             <span className="rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
-              Hari ini fokus follow-up dan jadwal
+              {isSuperAdmin ? `Login sebagai ${currentUser?.name ?? "Super Admin"}` : "Hari ini fokus follow-up dan jadwal"}
             </span>
           </div>
         </div>

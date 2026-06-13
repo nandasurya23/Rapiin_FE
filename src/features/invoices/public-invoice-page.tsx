@@ -1,17 +1,17 @@
 "use client";
 
-import { Download, Send, ReceiptText, CircleDollarSign } from "lucide-react";
+import { Download, ReceiptText, Send } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
-import { PaymentStatusBadge } from "@/components/shared/status-badge";
 import { getEntityById } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
 
 async function copyToClipboard(text: string) {
   await navigator.clipboard.writeText(text);
@@ -34,8 +34,8 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
   const shareMessage = `Halo ${invoice.customerName}, ini nota untuk ${invoice.invoiceCode}. Totalnya ${formatCurrency(invoice.totalAmount)}.`;
 
   return (
-    <main className="page-enter mx-auto min-h-screen max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      <section className="grid gap-4 rounded-2xl border border-border/80 bg-surface p-5 shadow-soft lg:grid-cols-[1.05fr_0.95fr]">
+    <main className="page-enter mx-auto min-h-screen max-w-[1380px] px-4 py-6 sm:px-6 lg:px-8">
+      <section className="grid gap-4 rounded-2xl border border-border/80 bg-surface p-5 shadow-soft xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-3">
           <Badge tone={isFallback ? "warning" : "success"}>{isFallback ? "Fallback nota" : "Nota publik"}</Badge>
           <div>
@@ -89,51 +89,16 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
         </Card>
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+      <section className="mt-6 grid gap-6 2xl:grid-cols-[1.14fr_0.86fr]">
         <Card>
           <CardBody className="space-y-4 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-text-primary">Detail nota</h2>
-                <p className="text-sm text-text-secondary">Ringkasan invoice sederhana yang gampang dibaca.</p>
-              </div>
-              <PaymentStatusBadge status={invoice.paymentStatus} />
-            </div>
-
-            <div className="rounded-2xl border border-border/80 bg-muted/20 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{business.name}</p>
-                  <p className="mt-1 text-xl font-semibold text-text-primary">{invoice.invoiceCode}</p>
-                  <p className="mt-1 text-sm text-text-secondary">Dibuat: {formatDateTime(invoice.createdAt)}</p>
-                </div>
-                <Badge tone="info">{formatCurrency(invoice.totalAmount)}</Badge>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <InfoBox label="Customer" value={invoice.customerName} />
-                <InfoBox label="Order" value={order?.title ?? "-"} />
-                <InfoBox label="Jadwal" value={order?.scheduledDate ? `${formatDate(order.scheduledDate)} ${order.scheduledTime ?? ""}` : "-"} />
-                <InfoBox label="Pembayaran" value={invoice.paymentStatus} />
-              </div>
-
-                <div className="mt-5 rounded-xl border border-border/70 bg-surface px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-text-primary">Rincian item</p>
-                  <CircleDollarSign className="h-4 w-4 text-brand-700" />
-                </div>
-                <div className="mt-3 flex items-start justify-between gap-3 text-sm">
-                  <div>
-                    <p className="font-medium text-text-primary">{order?.title ?? "Nota layanan"}</p>
-                    <p className="mt-1 text-text-secondary">Item utama dari order yang dipilih.</p>
-                  </div>
-                  <p className="font-medium text-text-primary">{formatCurrency(invoice.totalAmount)}</p>
-                </div>
-                <div className="mt-4 border-t border-border pt-4 text-sm text-text-secondary">
-                  <p>Catatan: {invoice.notes ?? "-"}</p>
-                </div>
+                <p className="text-sm text-text-secondary">Tampilan nota resmi dengan kode verifikasi dan segel integritas.</p>
               </div>
             </div>
+            <InvoiceSheet business={business} invoice={invoice} order={order} />
 
             <div className="flex flex-wrap gap-2">
               <WhatsAppButton
@@ -166,7 +131,7 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
           <CardBody className="space-y-4 p-5">
             <div>
               <h2 className="text-lg font-semibold text-text-primary">Download / print</h2>
-              <p className="text-sm text-text-secondary">Masih placeholder kalau export PDF belum siap.</p>
+              <p className="text-sm text-text-secondary">Dokumen publik sudah dibikin lebih resmi. Export tetap placeholder untuk MVP.</p>
             </div>
             <div className="rounded-2xl border border-dashed border-border/80 p-5 text-sm text-text-secondary">
               <div className="flex items-start gap-3">
@@ -186,14 +151,5 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
         </Card>
       </section>
     </main>
-  );
-}
-
-function InfoBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-surface px-4 py-4">
-      <p className="text-xs text-text-muted">{label}</p>
-      <p className="mt-1 font-medium text-text-primary">{value}</p>
-    </div>
   );
 }

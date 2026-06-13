@@ -1,24 +1,31 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   createAuthUser,
+  createBackupRecord,
+  createBusinessSubscriptionRecord,
   createCustomerRecord,
   createInitialAppStorageState,
   createInvoiceRecord,
   createMessageTemplateRecord,
   createOrderRecord,
   createPublicSubmissionRecord,
+  createSuperAdminActionLog,
+  createUpgradeRequestRecord,
   getDefaultOrderStatusForMode,
   readAppStorageState,
   writeAppStorageState,
 } from "@/lib/storage-service";
 import { createBusinessResources, doesOperationalModelUseResources } from "@/lib/constants/business";
+import { PREMIUM_CUSTOMER_LIMIT, PRO_CUSTOMER_LIMIT } from "@/lib/constants/subscription";
+import { canCreateCustomer as canCreateCustomerByState, canCreateInvoice, canCreateOrder as canCreateOrderByState, canAccessWriteMode as canWriteMode, getCustomerUsage, getReadOnlyReason, getSubscriptionForBusiness, getSubscriptionStatus } from "@/lib/subscription";
+import type { AppStorageState, AuthUser, MessageComposerDraft } from "@/types/app-state";
 import type { Business, BusinessMode, BusinessResource, NicheTemplate, OperationalModel } from "@/types/business";
-import type { AppStorageState, MessageComposerDraft } from "@/types/app-state";
 import type { Customer, CustomerStatus } from "@/types/customer";
 import type { Invoice } from "@/types/invoice";
 import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
+import type { BackupRecord, BusinessSubscription, PlanCode, UpgradeRequest, UserRole } from "@/types/subscription";
 
 type OnboardingPayload = {
   name: string;
@@ -79,9 +86,15 @@ type OrderInput = {
   notes?: string;
 };
 
-type AuthInput = {
-  name?: string;
+type LoginInput = {
   identifier: string;
+  password: string;
+};
+
+type RegisterOwnerInput = {
+  name: string;
+  email: string;
+  phoneNumber: string;
   password: string;
 };
 
@@ -97,11 +110,28 @@ type PublicOrderInput = {
 type AppDataContextValue = AppStorageState & {
   hydrated: boolean;
   currentUser: AppStorageState["auth"]["users"][number] | null;
+  currentUserRole: UserRole | null;
+  isSuperAdmin: boolean;
+  subscriptionForCurrentBusiness: BusinessSubscription | null;
+  currentBusinessUsage: ReturnType<typeof getCustomerUsage>;
+  canCreateCustomer: boolean;
+  canCreateOrder: boolean;
+  canCreateInvoice: boolean;
+  canAccessWriteMode: boolean;
+  readOnlyReason: string | null;
+  businessDirectory: Array<{
+    business: Business;
+    owner: AppStorageState["auth"]["users"][number] | null;
+    subscription: BusinessSubscription | null;
+    customerCount: number;
+    backupCount: number;
+    latestBackup: BackupRecord | null;
+  }>;
   updateBusiness: (payload: Partial<Business>) => void;
   saveBusinessSettings: (payload: BusinessSettingsInput) => void;
   completeOnboarding: (payload: OnboardingPayload) => void;
-  register: (payload: Required<Pick<AuthInput, "name">> & AuthInput) => { ok: true } | { ok: false; message: string };
-  login: (payload: AuthInput) => { ok: true } | { ok: false; message: string };
+  registerOwner: (payload: RegisterOwnerInput) => { ok: true; user: AuthUser } | { ok: false; message: string };
+  login: (payload: LoginInput) => { ok: true; user: AuthUser } | { ok: false; message: string };
   resetPassword: (payload: ResetPasswordInput) => { ok: true } | { ok: false; message: string };
   logout: () => void;
   createCustomer: (payload: CustomerInput) => Customer;
@@ -115,6 +145,13 @@ type AppDataContextValue = AppStorageState & {
   updateMessageComposer: (payload: Partial<MessageComposerDraft>) => void;
   saveMessageDraft: (templateId: string, payload: { title: string; content: string }) => void;
   submitPublicOrder: (input: PublicOrderInput) => { customer: Customer; order: Order };
+  createBackup: () => BackupRecord;
+  requestUpgrade: (toPlan: PlanCode, paymentNote?: string) => UpgradeRequest;
+  approveUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
+  rejectUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
+  extendTrial: (businessId: string, extraDays: number) => BusinessSubscription | null;
+  suspendBusiness: (businessId: string, reason?: string) => BusinessSubscription | null;
+  reactivateBusiness: (businessId: string) => BusinessSubscription | null;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
@@ -191,6 +228,14 @@ function normalizeBusinessPayload(current: Business, payload: Partial<BusinessSe
   };
 }
 
+function normalizeIdentifier(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function withUpdatedTimestamp<T extends { updatedAt: string }>(value: T): T {
+  return { ...value, updatedAt: new Date().toISOString() };
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppStorageState>(createInitialAppStorageState);
   const [hydrated, setHydrated] = useState(false);
@@ -211,6 +256,62 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function setAppState(updater: (current: AppStorageState) => AppStorageState) {
     setState((current) => updater(current));
+  }
+
+  const currentUser = useMemo(() => state.auth.users.find((user) => user.id === state.auth.currentUserId) ?? null, [state.auth.currentUserId, state.auth.users]);
+  const subscriptionForCurrentBusiness = useMemo(
+    () => getSubscriptionForBusiness(state.subscriptions, state.business.id),
+    [state.business.id, state.subscriptions]
+  );
+  const currentUserRole = currentUser?.role ?? null;
+  const isSuperAdmin = currentUserRole === "SUPER_ADMIN";
+  const currentBusinessUsage = useMemo(
+    () => getCustomerUsage({ business: state.business, customers: state.customers, subscriptions: state.subscriptions }),
+    [state.business, state.customers, state.subscriptions]
+  );
+  const canCreateCustomer = canCreateCustomerByState({ business: state.business, customers: state.customers, subscriptions: state.subscriptions });
+  const canCreateOrder = canCreateOrderByState({ business: state.business, subscriptions: state.subscriptions });
+  const canCreateInvoiceValue = canCreateInvoice({ business: state.business, subscriptions: state.subscriptions });
+  const canAccessWriteMode = canWriteMode(subscriptionForCurrentBusiness);
+  const readOnlyReason = getReadOnlyReason(subscriptionForCurrentBusiness);
+
+  const businessDirectory = useMemo(
+    () => [
+      {
+        business: state.business,
+        owner: state.auth.users.find((user) => user.role === "OWNER" && user.businessId === state.business.id) ?? null,
+        subscription: subscriptionForCurrentBusiness,
+        customerCount: state.customers.length,
+        backupCount: state.backupRecords.filter((record) => record.businessId === state.business.id).length,
+        latestBackup:
+          state.backupRecords
+            .filter((record) => record.businessId === state.business.id)
+            .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null,
+      },
+    ],
+    [state.auth.users, state.backupRecords, state.business, state.customers.length, subscriptionForCurrentBusiness]
+  );
+
+  function assertCanCreateCustomer() {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
+
+    if (!canCreateCustomer) {
+      throw new Error(`Batas customer plan ini sudah penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`);
+    }
+  }
+
+  function assertCanCreateOrder() {
+    if (!canCreateOrder) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
+  }
+
+  function assertCanCreateInvoice() {
+    if (!canCreateInvoiceValue) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
   }
 
   function updateBusiness(payload: Partial<Business>) {
@@ -242,18 +343,28 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }));
   }
 
-  function register(payload: Required<Pick<AuthInput, "name">> & AuthInput) {
-    const normalizedIdentifier = payload.identifier.trim().toLowerCase();
-    const existing = state.auth.users.find((user) => user.identifier.toLowerCase() === normalizedIdentifier);
+  function registerOwner(payload: RegisterOwnerInput) {
+    const normalizedEmail = normalizeIdentifier(payload.email);
+    const normalizedPhoneNumber = payload.phoneNumber.trim();
+    const existingEmail = state.auth.users.find((user) => user.email.toLowerCase() === normalizedEmail);
+    if (existingEmail) {
+      return { ok: false as const, message: "Email ini sudah terdaftar." };
+    }
 
-    if (existing) {
-      return { ok: false as const, message: "Akun dengan email / nomor HP ini sudah ada." };
+    const existingPhone = state.auth.users.find((user) => user.phoneNumber === normalizedPhoneNumber);
+    if (existingPhone) {
+      return { ok: false as const, message: "Nomor WhatsApp ini sudah dipakai untuk akun bisnis lain." };
     }
 
     const nextUser = createAuthUser({
       name: payload.name.trim(),
-      identifier: normalizedIdentifier,
+      email: normalizedEmail,
+      phoneNumber: normalizedPhoneNumber,
       password: payload.password,
+      role: "OWNER",
+      businessId: state.business.id,
+      trialUsed: true,
+      isActive: true,
     });
 
     setAppState((current) => ({
@@ -263,31 +374,47 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ownerName: nextUser.name,
         updatedAt: new Date().toISOString(),
       },
+      subscriptions: current.subscriptions.map((subscription) =>
+        subscription.businessId === current.business.id
+          ? createBusinessSubscriptionRecord({
+              businessId: current.business.id,
+              planCode: "FREE_TRIAL",
+              startedAt: new Date().toISOString(),
+            })
+          : subscription
+      ),
       auth: {
         ...current.auth,
         currentUserId: nextUser.id,
+        onboardingCompleted: false,
         users: [nextUser, ...current.auth.users],
       },
     }));
 
-    return { ok: true as const };
+    return { ok: true as const, user: nextUser };
   }
 
-  function login(payload: AuthInput) {
-    const normalizedIdentifier = payload.identifier.trim().toLowerCase();
+  function login(payload: LoginInput) {
+    const normalizedIdentifier = normalizeIdentifier(payload.identifier);
     const user = state.auth.users.find(
-      (item) => item.identifier.toLowerCase() === normalizedIdentifier && item.password === payload.password
+      (item) =>
+        (item.email.toLowerCase() === normalizedIdentifier || item.phoneNumber === payload.identifier.trim()) &&
+        item.password === payload.password
     );
 
     if (!user) {
       return { ok: false as const, message: "Akun tidak ditemukan atau password salah." };
     }
 
+    if (!user.isActive) {
+      return { ok: false as const, message: "Akun ini sedang tidak aktif." };
+    }
+
     setAppState((current) => ({
       ...current,
       business: {
         ...current.business,
-        ownerName: user.name,
+        ownerName: user.role === "OWNER" ? user.name : current.business.ownerName,
       },
       auth: {
         ...current.auth,
@@ -295,7 +422,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
     }));
 
-    return { ok: true as const };
+    return { ok: true as const, user };
   }
 
   function logout() {
@@ -309,8 +436,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function resetPassword(payload: ResetPasswordInput) {
-    const normalizedIdentifier = payload.identifier.trim().toLowerCase();
-    const existing = state.auth.users.find((user) => user.identifier.toLowerCase() === normalizedIdentifier);
+    const normalizedIdentifier = normalizeIdentifier(payload.identifier);
+    const existing = state.auth.users.find(
+      (user) => user.email.toLowerCase() === normalizedIdentifier || user.phoneNumber === payload.identifier.trim()
+    );
 
     if (!existing) {
       return { ok: false as const, message: "Akun dengan email / nomor HP ini tidak ditemukan." };
@@ -325,6 +454,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             ? {
                 ...user,
                 password: payload.password,
+                updatedAt: new Date().toISOString(),
               }
             : user
         ),
@@ -335,6 +465,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function createCustomer(payload: CustomerInput) {
+    assertCanCreateCustomer();
+
     const nextCustomer = createCustomerRecord({
       businessId: state.business.id,
       ...payload,
@@ -430,6 +562,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function createOrder(payload: OrderInput) {
+    assertCanCreateOrder();
     const nextHoldExpiresAt = payload.bookingHoldExpiresAt;
     let createdOrder: Order | null = null;
 
@@ -534,9 +667,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function createInvoiceFromOrder(orderId: string, notes?: string) {
+    assertCanCreateInvoice();
     const order = state.orders.find((item) => item.id === orderId);
     if (!order) {
       return null;
+    }
+
+    const existingInvoice = state.invoices.find((invoice) => invoice.orderId === order.id);
+    if (existingInvoice) {
+      return existingInvoice;
     }
 
     const nextInvoice = createInvoiceRecord({
@@ -597,6 +736,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function submitPublicOrder(input: PublicOrderInput) {
+    assertCanCreateOrder();
     const customerName = input.payload.name?.trim() || "Customer baru";
     const whatsappNumber = input.payload.whatsappNumber?.trim() || "";
     const mode = state.business.mode;
@@ -652,16 +792,304 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return { customer, order };
   }
 
-  const currentUser = state.auth.users.find((user) => user.id === state.auth.currentUserId) ?? null;
+  function createBackup() {
+    const payload = JSON.stringify({
+      business: state.business,
+      customers: state.customers,
+      orders: state.orders,
+      invoices: state.invoices,
+      messageTemplates: state.messageTemplates,
+      publicSubmissions: state.publicSubmissions,
+      generatedAt: new Date().toISOString(),
+    });
+    const nextRecord = createBackupRecord({
+      businessId: state.business.id,
+      snapshotVersion: state.version,
+      summary: `${state.customers.length} customer • ${state.orders.length} order • ${state.invoices.length} nota`,
+      payload,
+    });
+
+    setAppState((current) => ({
+      ...current,
+      backupRecords: [nextRecord, ...current.backupRecords],
+      subscriptions: current.subscriptions.map((subscription) =>
+        subscription.businessId === current.business.id
+          ? withUpdatedTimestamp({
+              ...subscription,
+              hasCompletedRequiredBackup: true,
+              lastBackupAt: nextRecord.createdAt,
+            })
+          : subscription
+      ),
+      superAdminLogs: current.auth.currentUserId
+        ? [createSuperAdminActionLog({ actorUserId: current.auth.currentUserId, targetBusinessId: current.business.id, actionType: "CREATE_BACKUP" }), ...current.superAdminLogs]
+        : current.superAdminLogs,
+    }));
+
+    return nextRecord;
+  }
+
+  function requestUpgrade(toPlan: PlanCode, paymentNote?: string) {
+    const currentUserId = state.auth.currentUserId;
+    if (!currentUserId) {
+      throw new Error("Kamu harus login dulu.");
+    }
+
+    const currentSubscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
+    const existingPending = state.upgradeRequests.find((request) => request.businessId === state.business.id && request.status === "PENDING");
+    if (existingPending) {
+      return existingPending;
+    }
+
+    const nextRequest = createUpgradeRequestRecord({
+      businessId: state.business.id,
+      requestedByUserId: currentUserId,
+      fromPlan: currentSubscription?.planCode ?? "FREE_TRIAL",
+      toPlan,
+      paymentNote,
+    });
+
+    setAppState((current) => ({
+      ...current,
+      upgradeRequests: [nextRequest, ...current.upgradeRequests],
+      subscriptions: current.subscriptions.map((subscription) =>
+        subscription.businessId === current.business.id
+          ? withUpdatedTimestamp({
+              ...subscription,
+              status: "PENDING_UPGRADE_APPROVAL",
+            })
+          : subscription
+      ),
+    }));
+
+    return nextRequest;
+  }
+
+  function approveUpgrade(requestId: string, adminNote?: string) {
+    const request = state.upgradeRequests.find((item) => item.id === requestId);
+    if (!request || !state.auth.currentUserId) {
+      return null;
+    }
+
+    let updatedRequest: UpgradeRequest | null = null;
+
+    setAppState((current) => ({
+      ...current,
+      upgradeRequests: current.upgradeRequests.map((item) => {
+        if (item.id !== requestId) {
+          return item;
+        }
+
+        updatedRequest = {
+          ...item,
+          status: "APPROVED",
+          adminNote,
+          reviewedAt: new Date().toISOString(),
+          reviewedByUserId: current.auth.currentUserId ?? undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        return updatedRequest;
+      }),
+      subscriptions: current.subscriptions.map((subscription) =>
+        subscription.businessId === request.businessId
+          ? withUpdatedTimestamp({
+              ...subscription,
+              planCode: request.toPlan,
+              status: "ACTIVE",
+              customerLimit: request.toPlan === "PRO" ? PRO_CUSTOMER_LIMIT : PREMIUM_CUSTOMER_LIMIT,
+              startedAt: new Date().toISOString(),
+              expiresAt: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
+              readOnlyReason: undefined,
+            })
+          : subscription
+      ),
+      superAdminLogs: [
+        createSuperAdminActionLog({
+          actorUserId: current.auth.currentUserId ?? "system",
+          targetBusinessId: request.businessId,
+          actionType: "APPROVE_UPGRADE",
+          metadata: { toPlan: request.toPlan, fromPlan: request.fromPlan },
+        }),
+        ...current.superAdminLogs,
+      ],
+    }));
+
+    return updatedRequest;
+  }
+
+  function rejectUpgrade(requestId: string, adminNote?: string) {
+    const request = state.upgradeRequests.find((item) => item.id === requestId);
+    if (!request || !state.auth.currentUserId) {
+      return null;
+    }
+
+    let updatedRequest: UpgradeRequest | null = null;
+
+    setAppState((current) => ({
+      ...current,
+      upgradeRequests: current.upgradeRequests.map((item) => {
+        if (item.id !== requestId) {
+          return item;
+        }
+
+        updatedRequest = {
+          ...item,
+          status: "REJECTED",
+          adminNote,
+          reviewedAt: new Date().toISOString(),
+          reviewedByUserId: current.auth.currentUserId ?? undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        return updatedRequest;
+      }),
+      subscriptions: current.subscriptions.map((subscription) =>
+        subscription.businessId === request.businessId
+          ? withUpdatedTimestamp({
+              ...subscription,
+              status: getSubscriptionStatus(subscription) === "TRIAL_EXPIRED" ? "TRIAL_EXPIRED" : subscription.planCode === "FREE_TRIAL" ? "TRIAL_ACTIVE" : "ACTIVE",
+            })
+          : subscription
+      ),
+      superAdminLogs: [
+        createSuperAdminActionLog({
+          actorUserId: current.auth.currentUserId ?? "system",
+          targetBusinessId: request.businessId,
+          actionType: "REJECT_UPGRADE",
+          metadata: { toPlan: request.toPlan, fromPlan: request.fromPlan },
+        }),
+        ...current.superAdminLogs,
+      ],
+    }));
+
+    return updatedRequest;
+  }
+
+  function extendTrial(businessId: string, extraDays: number) {
+    let updatedSubscription: BusinessSubscription | null = null;
+
+    setAppState((current) => ({
+      ...current,
+      subscriptions: current.subscriptions.map((subscription) => {
+        if (subscription.businessId !== businessId) {
+          return subscription;
+        }
+
+        const nextExpiry = new Date(subscription.expiresAt);
+        nextExpiry.setDate(nextExpiry.getDate() + extraDays);
+        updatedSubscription = {
+          ...subscription,
+          status: "TRIAL_ACTIVE",
+          expiresAt: nextExpiry.toISOString(),
+          readOnlyReason: undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        return updatedSubscription;
+      }),
+      superAdminLogs:
+        current.auth.currentUserId
+          ? [
+              createSuperAdminActionLog({
+                actorUserId: current.auth.currentUserId,
+                targetBusinessId: businessId,
+                actionType: "EXTEND_TRIAL",
+                metadata: { extraDays: String(extraDays) },
+              }),
+              ...current.superAdminLogs,
+            ]
+          : current.superAdminLogs,
+    }));
+
+    return updatedSubscription;
+  }
+
+  function suspendBusiness(businessId: string, reason?: string) {
+    let updatedSubscription: BusinessSubscription | null = null;
+
+    setAppState((current) => ({
+      ...current,
+      subscriptions: current.subscriptions.map((subscription) => {
+        if (subscription.businessId !== businessId) {
+          return subscription;
+        }
+
+        updatedSubscription = {
+          ...subscription,
+          status: "SUSPENDED",
+          readOnlyReason: reason || "Bisnis disuspend oleh super admin.",
+          updatedAt: new Date().toISOString(),
+        };
+
+        return updatedSubscription;
+      }),
+      superAdminLogs:
+        current.auth.currentUserId
+          ? [
+              createSuperAdminActionLog({
+                actorUserId: current.auth.currentUserId,
+                targetBusinessId: businessId,
+                actionType: "SUSPEND_BUSINESS",
+                metadata: { reason: reason || "" },
+              }),
+              ...current.superAdminLogs,
+            ]
+          : current.superAdminLogs,
+    }));
+
+    return updatedSubscription;
+  }
+
+  function reactivateBusiness(businessId: string) {
+    let updatedSubscription: BusinessSubscription | null = null;
+
+    setAppState((current) => ({
+      ...current,
+      subscriptions: current.subscriptions.map((subscription) => {
+        if (subscription.businessId !== businessId) {
+          return subscription;
+        }
+
+        updatedSubscription = {
+          ...subscription,
+          status: subscription.planCode === "FREE_TRIAL" ? "TRIAL_ACTIVE" : "ACTIVE",
+          readOnlyReason: undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        return updatedSubscription;
+      }),
+      superAdminLogs:
+        current.auth.currentUserId
+          ? [
+              createSuperAdminActionLog({
+                actorUserId: current.auth.currentUserId,
+                targetBusinessId: businessId,
+                actionType: "REACTIVATE_BUSINESS",
+              }),
+              ...current.superAdminLogs,
+            ]
+          : current.superAdminLogs,
+    }));
+
+    return updatedSubscription;
+  }
 
   const value: AppDataContextValue = {
     ...state,
     hydrated,
     currentUser,
+    currentUserRole,
+    isSuperAdmin,
+    subscriptionForCurrentBusiness,
+    currentBusinessUsage,
+    canCreateCustomer,
+    canCreateOrder,
+    canCreateInvoice: canCreateInvoiceValue,
+    canAccessWriteMode,
+    readOnlyReason,
+    businessDirectory,
     updateBusiness,
     saveBusinessSettings,
     completeOnboarding,
-    register,
+    registerOwner,
     login,
     resetPassword,
     logout,
@@ -676,6 +1104,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updateMessageComposer,
     saveMessageDraft,
     submitPublicOrder,
+    createBackup,
+    requestUpgrade,
+    approveUpgrade,
+    rejectUpgrade,
+    extendTrial,
+    suspendBusiness,
+    reactivateBusiness,
   };
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

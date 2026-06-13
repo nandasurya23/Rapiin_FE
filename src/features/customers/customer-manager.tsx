@@ -33,7 +33,7 @@ const CUSTOMER_PAGE_SIZE = 6;
 
 export function CustomerManager() {
   const toast = useToast();
-  const { customers, createCustomer, updateCustomer } = useAppData();
+  const { customers, createCustomer, updateCustomer, canCreateCustomer, currentBusinessUsage, readOnlyReason } = useAppData();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterValue>("ALL");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -117,15 +117,19 @@ export function CustomerManager() {
         return;
       }
 
-      createCustomer({
-        name: form.name.trim(),
-        whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
-        status: form.status,
-        source: form.source.trim() || undefined,
-        notes: form.notes.trim() || undefined,
-      });
-      toast.success("Customer berhasil ditambahkan");
-      resetForm();
+      try {
+        createCustomer({
+          name: form.name.trim(),
+          whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
+          status: form.status,
+          source: form.source.trim() || undefined,
+          notes: form.notes.trim() || undefined,
+        });
+        toast.success("Customer berhasil ditambahkan");
+        resetForm();
+      } catch (submitError) {
+        setError(submitError instanceof Error ? submitError.message : "Customer belum bisa ditambahkan.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -211,6 +215,9 @@ export function CustomerManager() {
               <div>
                 <h2 className="text-lg font-semibold text-text-primary">{editingId ? "Edit Customer" : "Tambah Customer"}</h2>
                 <p className="text-sm text-text-secondary">Input singkat, cukup nama dan nomor WhatsApp.</p>
+                {!editingId && !canCreateCustomer ? (
+                  <p className="mt-2 text-xs text-amber-700">{readOnlyReason ?? `Limit customer penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`}</p>
+                ) : null}
               </div>
               {editingId ? (
                 <button type="button" onClick={resetForm} className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary">
@@ -258,7 +265,7 @@ export function CustomerManager() {
                 />
               </label>
               {error ? <p className="text-sm text-status-danger">{error}</p> : null}
-              <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()}>
+              <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()} disabled={!editingId && !canCreateCustomer}>
                 {editingId ? "Simpan Perubahan" : "Simpan Customer"}
               </Button>
             </div>

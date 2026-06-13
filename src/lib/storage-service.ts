@@ -1,15 +1,32 @@
 "use client";
 
 import { mockBusiness, mockCustomers, mockInvoices, mockMessageTemplates, mockOrders } from "@/data/mock";
-import type { Business, BusinessMode, OperationalModel } from "@/types/business";
-import type { AppStorageState, AuthUser, MessageComposerDraft, PublicSubmission } from "@/types/app-state";
-import type { Customer, CustomerStatus } from "@/types/customer";
-import type { MessageTemplate } from "@/types/message";
-import type { Invoice } from "@/types/invoice";
-import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
+import { PLAN_DEFINITIONS, PRO_CUSTOMER_LIMIT, TRIAL_CUSTOMER_LIMIT, TRIAL_DURATION_DAYS } from "@/lib/constants/subscription";
+import { buildInvoiceIntegritySeal, buildInvoiceVerificationCode, normalizeInvoiceVerification } from "@/lib/invoice";
 import { createBusinessResources, doesOperationalModelUseResources, getDefaultBusinessConfigForMode, getDefaultOperationalModel } from "@/lib/constants/business";
+import type { AppStorageState, AuthUser, MessageComposerDraft, PublicSubmission } from "@/types/app-state";
+import type { Business, BusinessMode, OperationalModel } from "@/types/business";
+import type { Customer, CustomerStatus } from "@/types/customer";
+import type { Invoice } from "@/types/invoice";
+import type { MessageTemplate } from "@/types/message";
+import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
+import type {
+  BackupRecord,
+  BackupType,
+  BusinessSubscription,
+  PlanCode,
+  SuperAdminActionLog,
+  SubscriptionStatus,
+  UpgradeRequest,
+  UpgradeRequestStatus,
+  UserRole,
+} from "@/types/subscription";
 
 const STORAGE_KEY = "rapiin-app-storage";
+const SUPER_ADMIN_EMAIL = "superadmin@rapiin.local";
+const SUPER_ADMIN_PHONE = "6289900000000";
+const SUPER_ADMIN_PASSWORD = "superadmin123";
+const SUPER_ADMIN_ID = "usr_super_admin";
 
 function now() {
   return new Date().toISOString();
@@ -28,6 +45,12 @@ function buildId(prefix: string) {
   return `${prefix}_${randomPart}`;
 }
 
+function addDays(dateValue: string, days: number) {
+  const nextDate = new Date(dateValue);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate.toISOString();
+}
+
 function createDefaultMessageComposer(messageTemplates: MessageTemplate[], customers: Customer[], orders: Order[]): MessageComposerDraft {
   const followUpTemplate = messageTemplates.find((template) => template.category === "FOLLOW_UP") ?? messageTemplates[0] ?? null;
 
@@ -40,23 +63,21 @@ function createDefaultMessageComposer(messageTemplates: MessageTemplate[], custo
   };
 }
 
-export function createInitialAppStorageState(): AppStorageState {
+function createDefaultSuperAdmin(): AuthUser {
+  const timestamp = now();
+
   return {
-    version: 1,
-    business: clone(mockBusiness),
-    customers: clone(mockCustomers),
-    orders: clone(mockOrders),
-    invoices: clone(mockInvoices),
-    messageTemplates: clone(mockMessageTemplates),
-    publicSubmissions: [],
-    auth: {
-      currentUserId: null,
-      onboardingCompleted: false,
-      users: [],
-    },
-    ui: {
-      messageComposer: createDefaultMessageComposer(mockMessageTemplates, mockCustomers, mockOrders),
-    },
+    id: SUPER_ADMIN_ID,
+    name: "Super Admin",
+    email: SUPER_ADMIN_EMAIL,
+    phoneNumber: SUPER_ADMIN_PHONE,
+    password: SUPER_ADMIN_PASSWORD,
+    role: "SUPER_ADMIN",
+    businessId: undefined,
+    trialUsed: false,
+    isActive: true,
+    createdAt: timestamp,
+    updatedAt: timestamp,
   };
 }
 
@@ -88,6 +109,125 @@ function normalizeBusinessConfig(business: Business): Business {
   };
 }
 
+function normalizeInvoices(invoices: Invoice[]) {
+  return invoices.map((invoice) => normalizeInvoiceVerification(invoice));
+}
+
+function normalizeAuthUsers(users: AppStorageState["auth"]["users"] | unknown, businessId: string) {
+  if (!Array.isArray(users)) {
+    return [createDefaultSuperAdmin()];
+  }
+
+  const normalizedUsers: AuthUser[] = users.map((user) => {
+    const legacyUser = user as Partial<AuthUser> & { identifier?: string };
+    const identifier = legacyUser.identifier?.trim() ?? "";
+    const email = legacyUser.email?.trim().toLowerCase() ?? (identifier.includes("@") ? identifier.toLowerCase() : "");
+    const phoneNumber = legacyUser.phoneNumber?.trim() ?? (!identifier.includes("@") ? identifier : "");
+
+    return {
+      id: legacyUser.id || buildId("usr"),
+      name: legacyUser.name?.trim() || "Owner",
+      email,
+      phoneNumber,
+      password: legacyUser.password || "password123",
+      role: legacyUser.role ?? (legacyUser.id === SUPER_ADMIN_ID ? "SUPER_ADMIN" : "OWNER"),
+      businessId: legacyUser.role === "SUPER_ADMIN" ? undefined : legacyUser.businessId ?? businessId,
+      trialUsed: typeof legacyUser.trialUsed === "boolean" ? legacyUser.trialUsed : true,
+      isActive: typeof legacyUser.isActive === "boolean" ? legacyUser.isActive : true,
+      createdAt: legacyUser.createdAt ?? now(),
+      updatedAt: legacyUser.updatedAt ?? legacyUser.createdAt ?? now(),
+    } satisfies AuthUser;
+  });
+
+  if (!normalizedUsers.some((user) => user.id === SUPER_ADMIN_ID)) {
+    normalizedUsers.unshift(createDefaultSuperAdmin());
+  }
+
+  return normalizedUsers;
+}
+
+function resolveSubscriptionStatus(status: SubscriptionStatus, planCode: PlanCode, expiresAt: string) {
+  if (status === "ACTIVE" || status === "SUSPENDED" || status === "PENDING_UPGRADE_APPROVAL") {
+    return status;
+  }
+
+  if (planCode === "FREE_TRIAL" && new Date(expiresAt).getTime() < Date.now()) {
+    return "TRIAL_EXPIRED";
+  }
+
+  return "TRIAL_ACTIVE";
+}
+
+function normalizeSubscriptions(subscriptions: BusinessSubscription[] | unknown, business: Business) {
+  if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
+    return [createBusinessSubscriptionRecord({ businessId: business.id, planCode: "FREE_TRIAL", startedAt: now() })];
+  }
+
+  return subscriptions.map((subscription) => {
+    const item = subscription as Partial<BusinessSubscription>;
+    const startedAt = item.startedAt ?? business.createdAt;
+    const planCode = item.planCode ?? "FREE_TRIAL";
+    const expiresAt =
+      item.expiresAt ??
+      (planCode === "FREE_TRIAL" ? addDays(startedAt, TRIAL_DURATION_DAYS) : addDays(startedAt, 30));
+
+    return {
+      id: item.id || buildId("sub"),
+      businessId: item.businessId || business.id,
+      planCode,
+      status: resolveSubscriptionStatus(item.status ?? "TRIAL_ACTIVE", planCode, expiresAt),
+      startedAt,
+      expiresAt,
+      customerLimit: item.customerLimit ?? (planCode === "FREE_TRIAL" ? TRIAL_CUSTOMER_LIMIT : planCode === "PRO" ? PRO_CUSTOMER_LIMIT : 10000),
+      hasCompletedRequiredBackup: item.hasCompletedRequiredBackup ?? false,
+      lastBackupAt: item.lastBackupAt,
+      readOnlyReason: item.readOnlyReason,
+      createdAt: item.createdAt ?? startedAt,
+      updatedAt: item.updatedAt ?? item.createdAt ?? startedAt,
+    } satisfies BusinessSubscription;
+  });
+}
+
+function normalizeBackupRecords(backupRecords: BackupRecord[] | unknown) {
+  if (!Array.isArray(backupRecords)) {
+    return [];
+  }
+
+  return backupRecords.map((record) => ({
+    ...record,
+    payload: typeof record.payload === "string" ? record.payload : JSON.stringify(record.payload ?? {}),
+  }));
+}
+
+export function createInitialAppStorageState(): AppStorageState {
+  const business = clone(mockBusiness);
+  return {
+    version: 1,
+    business,
+    customers: clone(mockCustomers),
+    orders: clone(mockOrders),
+    invoices: normalizeInvoices(clone(mockInvoices)),
+    subscriptions: [createBusinessSubscriptionRecord({ businessId: business.id, planCode: "FREE_TRIAL", startedAt: now() })],
+    upgradeRequests: [],
+    backupRecords: [],
+    superAdminLogs: [],
+    messageTemplates: clone(mockMessageTemplates),
+    publicSubmissions: [],
+    auth: {
+      currentUserId: null,
+      onboardingCompleted: false,
+      users: [createDefaultSuperAdmin()],
+    },
+    system: {
+      superAdminUserIds: [SUPER_ADMIN_ID],
+      planCatalog: clone(PLAN_DEFINITIONS),
+    },
+    ui: {
+      messageComposer: createDefaultMessageComposer(mockMessageTemplates, mockCustomers, mockOrders),
+    },
+  };
+}
+
 export function readAppStorageState() {
   if (typeof window === "undefined") {
     return createInitialAppStorageState();
@@ -101,20 +241,37 @@ export function readAppStorageState() {
   try {
     const parsed = JSON.parse(raw) as Partial<AppStorageState>;
     const initial = createInitialAppStorageState();
+    const business = normalizeBusinessConfig(parsed.business ?? initial.business);
+    const users = normalizeAuthUsers(parsed.auth?.users ?? initial.auth.users, business.id);
 
     return {
       ...initial,
       ...parsed,
-      business: normalizeBusinessConfig(parsed.business ?? initial.business),
+      business,
       customers: Array.isArray(parsed.customers) ? parsed.customers : initial.customers,
       orders: Array.isArray(parsed.orders) ? parsed.orders : initial.orders,
-      invoices: Array.isArray(parsed.invoices) ? parsed.invoices : initial.invoices,
+      invoices: normalizeInvoices(Array.isArray(parsed.invoices) ? parsed.invoices : initial.invoices),
+      subscriptions: normalizeSubscriptions(parsed.subscriptions ?? initial.subscriptions, business),
+      upgradeRequests: Array.isArray(parsed.upgradeRequests) ? parsed.upgradeRequests : initial.upgradeRequests,
+      backupRecords: normalizeBackupRecords(parsed.backupRecords ?? initial.backupRecords),
+      superAdminLogs: Array.isArray(parsed.superAdminLogs) ? parsed.superAdminLogs : initial.superAdminLogs,
       messageTemplates: Array.isArray(parsed.messageTemplates) ? parsed.messageTemplates : initial.messageTemplates,
       publicSubmissions: Array.isArray(parsed.publicSubmissions) ? parsed.publicSubmissions : initial.publicSubmissions,
       auth: {
         ...initial.auth,
         ...(parsed.auth ?? {}),
-        users: Array.isArray(parsed.auth?.users) ? parsed.auth.users : initial.auth.users,
+        users,
+        currentUserId: users.some((user) => user.id === parsed.auth?.currentUserId) ? parsed.auth?.currentUserId ?? null : null,
+      },
+      system: {
+        superAdminUserIds:
+          Array.isArray(parsed.system?.superAdminUserIds) && parsed.system?.superAdminUserIds.length
+            ? parsed.system.superAdminUserIds
+            : initial.system.superAdminUserIds,
+        planCatalog:
+          Array.isArray(parsed.system?.planCatalog) && parsed.system?.planCatalog.length
+            ? parsed.system.planCatalog
+            : initial.system.planCatalog,
       },
       ui: {
         messageComposer: {
@@ -157,14 +314,28 @@ function getOrderStatusForMode(mode: BusinessMode): OrderStatus {
   return "REQUEST_MASUK";
 }
 
-export function createAuthUser(input: { name: string; identifier: string; password: string }): AuthUser {
+export function createAuthUser(input: {
+  name: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  role?: UserRole;
+  businessId?: string;
+  trialUsed?: boolean;
+  isActive?: boolean;
+}): AuthUser {
   const timestamp = now();
 
   return {
     id: buildId("usr"),
     name: input.name,
-    identifier: input.identifier,
+    email: input.email.trim().toLowerCase(),
+    phoneNumber: input.phoneNumber.trim(),
     password: input.password,
+    role: input.role ?? "OWNER",
+    businessId: input.businessId,
+    trialUsed: input.trialUsed ?? true,
+    isActive: input.isActive ?? true,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -254,16 +425,129 @@ export function createInvoiceRecord(input: {
   invoiceCode: string;
 }): Invoice {
   const timestamp = now();
-
-  return {
-    id: buildId("inv"),
+  const verificationCode = buildInvoiceVerificationCode({
+    invoiceCode: input.invoiceCode,
+    createdAt: timestamp,
+    customerName: input.customerName,
+    totalAmount: input.totalAmount,
+  });
+  const integritySeal = buildInvoiceIntegritySeal({
     businessId: input.businessId,
     orderId: input.orderId,
     invoiceCode: input.invoiceCode,
     customerName: input.customerName,
     totalAmount: input.totalAmount,
     paymentStatus: input.paymentStatus,
+    createdAt: timestamp,
+    verificationCode,
+  });
+
+  return {
+    id: buildId("inv"),
+    businessId: input.businessId,
+    orderId: input.orderId,
+    invoiceCode: input.invoiceCode,
+    verificationCode,
+    integritySeal,
+    customerName: input.customerName,
+    totalAmount: input.totalAmount,
+    paymentStatus: input.paymentStatus,
     notes: input.notes,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export function createBusinessSubscriptionRecord(input: {
+  businessId: string;
+  planCode: PlanCode;
+  startedAt?: string;
+  status?: SubscriptionStatus;
+  hasCompletedRequiredBackup?: boolean;
+  lastBackupAt?: string;
+  readOnlyReason?: string;
+}): BusinessSubscription {
+  const startedAt = input.startedAt ?? now();
+  const customerLimit =
+    input.planCode === "FREE_TRIAL" ? TRIAL_CUSTOMER_LIMIT : input.planCode === "PRO" ? PRO_CUSTOMER_LIMIT : 10000;
+  const expiresAt =
+    input.planCode === "FREE_TRIAL" ? addDays(startedAt, TRIAL_DURATION_DAYS) : addDays(startedAt, 30);
+
+  return {
+    id: buildId("sub"),
+    businessId: input.businessId,
+    planCode: input.planCode,
+    status: input.status ?? (input.planCode === "FREE_TRIAL" ? "TRIAL_ACTIVE" : "ACTIVE"),
+    startedAt,
+    expiresAt,
+    customerLimit,
+    hasCompletedRequiredBackup: input.hasCompletedRequiredBackup ?? false,
+    lastBackupAt: input.lastBackupAt,
+    readOnlyReason: input.readOnlyReason,
+    createdAt: startedAt,
+    updatedAt: startedAt,
+  };
+}
+
+export function createBackupRecord(input: {
+  businessId: string;
+  snapshotVersion: number;
+  summary: string;
+  payload: string;
+  type?: BackupType;
+}): BackupRecord {
+  const timestamp = now();
+
+  return {
+    id: buildId("bak"),
+    businessId: input.businessId,
+    type: input.type ?? "MANUAL",
+    snapshotVersion: input.snapshotVersion,
+    summary: input.summary,
+    payload: input.payload,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export function createUpgradeRequestRecord(input: {
+  businessId: string;
+  requestedByUserId: string;
+  fromPlan: PlanCode;
+  toPlan: PlanCode;
+  paymentNote?: string;
+  status?: UpgradeRequestStatus;
+}): UpgradeRequest {
+  const timestamp = now();
+
+  return {
+    id: buildId("upr"),
+    businessId: input.businessId,
+    requestedByUserId: input.requestedByUserId,
+    fromPlan: input.fromPlan,
+    toPlan: input.toPlan,
+    status: input.status ?? "PENDING",
+    requestedAt: timestamp,
+    paymentNote: input.paymentNote,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export function createSuperAdminActionLog(input: {
+  actorUserId: string;
+  targetBusinessId: string;
+  actionType: SuperAdminActionLog["actionType"];
+  metadata?: Record<string, string>;
+}): SuperAdminActionLog {
+  const timestamp = now();
+
+  return {
+    id: buildId("log"),
+    actorUserId: input.actorUserId,
+    targetBusinessId: input.targetBusinessId,
+    actionType: input.actionType,
+    metadata: input.metadata,
     createdAt: timestamp,
     updatedAt: timestamp,
   };

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { APP_NAV_ITEMS, MOBILE_NAV_ITEMS } from "@/lib/constants/navigation";
+import { APP_NAV_ITEMS, MOBILE_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { PLAN_LABELS } from "@/lib/constants/subscription";
 
 type SidebarProps = {
   collapsed: boolean;
@@ -13,7 +14,8 @@ type SidebarProps = {
 
 export function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
-  const { business } = useAppData();
+  const { business, currentUserRole, isSuperAdmin, subscriptionForCurrentBusiness } = useAppData();
+  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : APP_NAV_ITEMS;
 
   return (
     <aside
@@ -29,17 +31,17 @@ export function Sidebar({ collapsed }: SidebarProps) {
           </div>
           <div className={cn("min-w-0 transition-all duration-300", collapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
             <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-text-muted">Rapiin</p>
-            <h2 className="mt-1 truncate text-lg font-semibold text-text-primary">{business.name}</h2>
+            <h2 className="mt-1 truncate text-lg font-semibold text-text-primary">{isSuperAdmin ? "Super Admin" : business.name}</h2>
           </div>
         </div>
         <div className={cn("mt-4 flex flex-wrap gap-2 transition-all duration-300", collapsed ? "justify-center opacity-0" : "opacity-100")}>
-          <Badge tone="info">Mode: Booking Jasa</Badge>
-          <Badge tone="neutral">{MOBILE_NAV_ITEMS.length} menu</Badge>
+          <Badge tone="info">{isSuperAdmin ? "Role: Super Admin" : `Plan: ${PLAN_LABELS[subscriptionForCurrentBusiness?.planCode ?? "FREE_TRIAL"]}`}</Badge>
+          <Badge tone="neutral">{isSuperAdmin ? currentUserRole : `${MOBILE_NAV_ITEMS.length} menu`}</Badge>
         </div>
       </div>
       <nav className={cn("py-3 transition-all duration-300", collapsed ? "px-2" : "px-3")}>
         <div className="space-y-2">
-          {APP_NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = pathname.startsWith(item.href);
             const Icon = item.icon;
 
@@ -67,10 +69,10 @@ export function Sidebar({ collapsed }: SidebarProps) {
       <div className={cn("border-t border-border/80 py-3 transition-all duration-300", collapsed ? "px-3" : "px-6")}>
         <p className={cn("text-xs text-text-muted transition-all duration-300", collapsed ? "text-center" : "")}>Status kerja</p>
         <p className={cn("mt-1 text-sm font-medium text-text-primary transition-all duration-300", collapsed ? "text-center opacity-0" : "opacity-100")}>
-          Siap menerima customer baru
+          {isSuperAdmin ? "Pantau trial, upgrade, dan approval" : "Siap menerima customer baru"}
         </p>
         <p className={cn("mt-1 text-xs text-text-secondary transition-all duration-300", collapsed ? "hidden" : "block")}>
-          WhatsApp-first, action-first, ringan untuk UMKM.
+          {isSuperAdmin ? "Panel review manual untuk MVP monetisasi." : "WhatsApp-first, action-first, ringan untuk UMKM."}
         </p>
       </div>
     </aside>

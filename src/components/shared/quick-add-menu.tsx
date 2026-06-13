@@ -4,6 +4,7 @@ import { Plus, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { LinkButton } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
+import { useAppData } from "@/components/providers/app-data-provider";
 
 const items = [
   { label: "Tambah Customer", href: ROUTES.customers },
@@ -13,13 +14,15 @@ const items = [
 
 export function QuickAddMenu() {
   const [open, setOpen] = useState(false);
+  const { canAccessWriteMode } = useAppData();
 
   return (
     <div className="relative">
       <button
         type="button"
+        disabled={!canAccessWriteMode}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-primary hover:bg-muted"
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Plus className="h-4 w-4" />
         Aksi

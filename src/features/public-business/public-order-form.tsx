@@ -186,7 +186,7 @@ function clearCatalogSelectionFromForm(mode: BusinessMode, current: FormState, d
 export function PublicOrderForm({ slug }: { slug: string }) {
   const toast = useToast();
   const searchParams = useSearchParams();
-  const { business, hydrated, orders, submitPublicOrder } = useAppData();
+  const { business, hydrated, orders, submitPublicOrder, canCreateOrder, readOnlyReason } = useAppData();
   const defaultBookingDuration = business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
   const [form, setForm] = useState<FormState>(initialStateByMode[business.mode]);
   const [submitted, setSubmitted] = useState(false);
@@ -368,14 +368,19 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     setIsSubmitting(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
-      submitPublicOrder({
-        payload: {
-          ...form,
-          whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
-        },
-      });
-      setSubmitted(true);
-      toast.success("Form berhasil dikirim", "Admin akan lanjut menghubungi lewat WhatsApp.");
+      try {
+        submitPublicOrder({
+          payload: {
+            ...form,
+            whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
+          },
+        });
+        setSubmitted(true);
+        toast.success("Form berhasil dikirim", "Admin akan lanjut menghubungi lewat WhatsApp.");
+      } catch (submitError) {
+        setError(submitError instanceof Error ? submitError.message : "Form belum bisa dikirim.");
+        setSubmitted(false);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -398,6 +403,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">
                   Isi form singkat ini. Admin akan lanjut menghubungi lewat WhatsApp.
                 </p>
+                {!canCreateOrder ? <p className="mt-3 max-w-2xl text-sm leading-6 text-amber-700">{readOnlyReason}</p> : null}
                 {selectedCatalogItem ? (
                   <div className="mt-3">
                     <Badge tone="success">Pilihan aktif: {selectedCatalogItem.name}</Badge>
@@ -597,7 +603,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
             {error ? <p className="text-sm text-status-danger">{error}</p> : null}
 
-            <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()}>
+            <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()} disabled={!canCreateOrder}>
               {submitLabel}
             </Button>
           </CardBody>

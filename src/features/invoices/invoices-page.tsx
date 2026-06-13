@@ -8,13 +8,14 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast-provider";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/shared/status-badge";
 import { ROUTES } from "@/lib/routes";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { getEntityById } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { Pagination } from "@/components/ui/pagination";
+import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
 
 type InvoiceFilter = "ALL" | "PAID" | "DP_PAID" | "UNPAID" | "REFUNDED" | "CANCELLED";
 
@@ -35,7 +36,7 @@ async function copyToClipboard(text: string) {
 
 export function InvoicesPage() {
   const toast = useToast();
-  const { business, orders, invoices, createInvoiceFromOrder } = useAppData();
+  const { business, orders, invoices, createInvoiceFromOrder, canCreateInvoice, readOnlyReason } = useAppData();
   const [filter, setFilter] = useState<InvoiceFilter>("ALL");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(invoices[0]?.id ?? "");
   const [selectedOrderId, setSelectedOrderId] = useState(
@@ -88,13 +89,17 @@ export function InvoicesPage() {
     setLoadingAction("create-invoice");
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
-      const nextInvoice = createInvoiceFromOrder(selectedOrder.id, notes);
-      if (!nextInvoice) {
-        return;
+      try {
+        const nextInvoice = createInvoiceFromOrder(selectedOrder.id, notes);
+        if (!nextInvoice) {
+          return;
+        }
+        setSelectedInvoiceId(nextInvoice.id);
+        toast.success("Nota berhasil dibuat", "Preview nota langsung siap dibagikan.");
+        setNotes("");
+      } catch (submitError) {
+        toast.error("Nota belum bisa dibuat", submitError instanceof Error ? submitError.message : "Mode baca saja aktif.");
       }
-      setSelectedInvoiceId(nextInvoice.id);
-      toast.success("Nota berhasil dibuat", "Preview nota langsung siap dibagikan.");
-      setNotes("");
     } finally {
       setLoadingAction(null);
     }
@@ -242,52 +247,8 @@ export function InvoicesPage() {
 
             {selectedInvoice ? (
               <>
-                <div className="rounded-2xl border border-border/80 bg-muted/20 p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{business.name}</p>
-                      <h3 className="mt-1 text-xl font-semibold text-text-primary">{selectedInvoice.invoiceCode}</h3>
-                      <p className="mt-1 text-sm text-text-secondary">Tanggal dibuat: {formatDateTime(selectedInvoice.createdAt)}</p>
-                    </div>
-                    <Badge tone="info">{selectedInvoice.paymentStatus}</Badge>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                      <p className="text-xs text-text-muted">Customer</p>
-                      <p className="mt-1 font-medium text-text-primary">{selectedInvoice.customerName}</p>
-                    </div>
-                    <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                      <p className="text-xs text-text-muted">Total</p>
-                      <p className="mt-1 font-medium text-text-primary">{formatCurrency(selectedInvoice.totalAmount)}</p>
-                    </div>
-                    <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                      <p className="text-xs text-text-muted">Order terkait</p>
-                      <p className="mt-1 font-medium text-text-primary">{selectedInvoiceOrder?.title ?? "-"}</p>
-                    </div>
-                    <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                      <p className="text-xs text-text-muted">Status bayar</p>
-                      <p className="mt-1 font-medium text-text-primary">{selectedInvoice.paymentStatus}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 rounded-xl border border-border/70 bg-surface px-4 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium text-text-primary">Rincian</p>
-                      <Badge tone="neutral">1 item</Badge>
-                    </div>
-                    <div className="mt-3 flex items-start justify-between gap-3 text-sm">
-                      <div>
-                        <p className="font-medium text-text-primary">{selectedInvoiceOrder?.title ?? "Nota layanan"}</p>
-                        <p className="mt-1 text-text-secondary">Item utama dari order yang dipilih.</p>
-                      </div>
-                      <p className="font-medium text-text-primary">{formatCurrency(selectedInvoice.totalAmount)}</p>
-                    </div>
-                    <div className="mt-4 border-t border-border/80 pt-4 text-sm text-text-secondary">
-                      <p>Catatan: {selectedInvoice.notes ?? "-"}</p>
-                    </div>
-                  </div>
-
+                <div className="rounded-2xl border border-border/80 bg-muted/20 p-4">
+                  <InvoiceSheet business={business} invoice={selectedInvoice} order={selectedInvoiceOrder} compact />
                   <div className="mt-5 flex flex-wrap gap-2">
                     <WhatsAppButton
                       phoneNumber={selectedInvoiceOrder?.whatsappNumber ?? business.whatsappNumber}
@@ -336,10 +297,13 @@ export function InvoicesPage() {
                   />
                   <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Catatan tambahan nota" />
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" isLoading={loadingAction === "create-invoice"} onClick={() => void createFromOrder()}>
+                    <Button type="button" isLoading={loadingAction === "create-invoice"} onClick={() => void createFromOrder()} disabled={!canCreateInvoice}>
                       <FileSpreadsheet className="h-4 w-4" />
                       Buat Nota
                     </Button>
+                    {!canCreateInvoice ? (
+                      <p className="text-xs text-amber-700">{readOnlyReason}</p>
+                    ) : null}
                     <LinkButton href={selectedOrderLink} variant="secondary">
                       <ExternalLink className="h-4 w-4" />
                       Preview Route

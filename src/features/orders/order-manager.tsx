@@ -91,7 +91,7 @@ function formatDateTime(value?: string | null) {
 
 export function OrderManager() {
   const toast = useToast();
-  const { business, hydrated, orders, createOrder, updateOrder } = useAppData();
+  const { business, hydrated, orders, createOrder, updateOrder, canCreateOrder, readOnlyReason } = useAppData();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterValue>("ALL");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilterValue>("ALL");
@@ -342,25 +342,29 @@ export function OrderManager() {
         return;
       }
 
-      createOrder({
-        customerName: form.customerName.trim(),
-        whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
-        title: form.title.trim(),
-        mode: form.mode,
-        status: form.status,
-        paymentStatus: form.paymentStatus,
-        scheduledDate: form.scheduledDate || undefined,
-        scheduledTime: form.scheduledTime || undefined,
-        bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
-        bookingHoldExpiresAt: nextHoldExpiresAt,
-        resourceId: isResourceBookingMode ? form.resourceId || undefined : undefined,
-        resourceNameSnapshot: isResourceBookingMode ? activeResources.find((resource) => resource.id === form.resourceId)?.name : undefined,
-        totalAmount: normalizedTotal,
-        dpAmount: normalizedDp,
-        notes: form.notes.trim() || undefined,
-      });
-      toast.success("Order berhasil ditambahkan");
-      resetForm();
+      try {
+        createOrder({
+          customerName: form.customerName.trim(),
+          whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
+          title: form.title.trim(),
+          mode: form.mode,
+          status: form.status,
+          paymentStatus: form.paymentStatus,
+          scheduledDate: form.scheduledDate || undefined,
+          scheduledTime: form.scheduledTime || undefined,
+          bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
+          bookingHoldExpiresAt: nextHoldExpiresAt,
+          resourceId: isResourceBookingMode ? form.resourceId || undefined : undefined,
+          resourceNameSnapshot: isResourceBookingMode ? activeResources.find((resource) => resource.id === form.resourceId)?.name : undefined,
+          totalAmount: normalizedTotal,
+          dpAmount: normalizedDp,
+          notes: form.notes.trim() || undefined,
+        });
+        toast.success("Order berhasil ditambahkan");
+        resetForm();
+      } catch (submitError) {
+        setError(submitError instanceof Error ? submitError.message : "Order belum bisa ditambahkan.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -475,6 +479,7 @@ export function OrderManager() {
               <div>
                 <h2 className="text-lg font-semibold text-text-primary">{editingId ? "Edit Order" : "Tambah Order"}</h2>
                 <p className="text-sm text-text-secondary">Input cepat, status sesuai mode bisnis.</p>
+                {!editingId && !canCreateOrder ? <p className="mt-2 text-xs text-amber-700">{readOnlyReason}</p> : null}
               </div>
               {editingId ? (
                 <button type="button" onClick={resetForm} className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary">
@@ -629,9 +634,9 @@ export function OrderManager() {
               />
             </label>
             {error ? <p className="text-sm text-status-danger">{error}</p> : null}
-            <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()}>
-              {editingId ? "Simpan Perubahan" : "Simpan Order"}
-            </Button>
+              <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()} disabled={!editingId && !canCreateOrder}>
+                {editingId ? "Simpan Perubahan" : "Simpan Order"}
+              </Button>
           </CardBody>
         </Card>
       </section>

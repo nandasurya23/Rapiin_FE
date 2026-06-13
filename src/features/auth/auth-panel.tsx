@@ -9,7 +9,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { isValidEmailOrPhone, normalizePhoneNumber } from "@/lib/validation";
+import { isValidEmail, isValidEmailOrPhone, isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 
 type AuthPanelProps = {
   mode: "login" | "register" | "forgot-password";
@@ -18,7 +18,7 @@ type AuthPanelProps = {
 export function AuthPanel({ mode }: AuthPanelProps) {
   const router = useRouter();
   const toast = useToast();
-  const { auth, login, register, resetPassword } = useAppData();
+  const { auth, login, registerOwner, resetPassword } = useAppData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,22 +27,46 @@ export function AuthPanel({ mode }: AuthPanelProps) {
     setError("");
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") ?? "");
+    const emailRaw = String(formData.get("email") ?? "");
+    const phoneNumberRaw = String(formData.get("phoneNumber") ?? "");
     const identifierRaw = String(formData.get("identifier") ?? "");
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
     const identifier = identifierRaw.includes("@") ? identifierRaw.trim().toLowerCase() : normalizePhoneNumber(identifierRaw);
+    const email = emailRaw.trim().toLowerCase();
+    const phoneNumber = normalizePhoneNumber(phoneNumberRaw);
 
     if (mode === "register" && !name.trim()) {
       setError("Nama wajib diisi.");
       return;
     }
 
-    if (!identifier.trim()) {
+    if (mode === "register" && !email) {
+      setError("Email wajib diisi.");
+      return;
+    }
+
+    if (mode === "register" && !isValidEmail(email)) {
+      setError("Gunakan email yang valid.");
+      return;
+    }
+
+    if (mode === "register" && !phoneNumber) {
+      setError("Nomor WhatsApp admin wajib diisi.");
+      return;
+    }
+
+    if (mode === "register" && !isValidPhoneNumber(phoneNumber)) {
+      setError("Nomor WhatsApp harus 9-15 digit angka.");
+      return;
+    }
+
+    if (mode !== "register" && !identifier.trim()) {
       setError("Email / nomor HP wajib diisi.");
       return;
     }
 
-    if (!isValidEmailOrPhone(identifierRaw)) {
+    if (mode !== "register" && !isValidEmailOrPhone(identifierRaw)) {
       setError("Gunakan email yang valid atau nomor HP 9-15 digit.");
       return;
     }
@@ -60,35 +84,47 @@ export function AuthPanel({ mode }: AuthPanelProps) {
     setIsSubmitting(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
-      const result =
-        mode === "login"
-          ? login({ identifier, password })
-          : mode === "register"
-            ? register({ name: name.trim(), identifier, password })
-            : resetPassword({ identifier, password });
+      if (mode === "login") {
+        const result = login({ identifier, password });
 
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+
+        toast.success("Berhasil masuk");
+        await new Promise((resolve) => setTimeout(resolve, 180));
+        if (result.user.role === "SUPER_ADMIN") {
+          router.push(ROUTES.superAdminBusinesses);
+          return;
+        }
+
+        router.push(!auth.onboardingCompleted ? ROUTES.onboarding : ROUTES.dashboard);
+        return;
+      }
+
+      if (mode === "register") {
+        const result = registerOwner({ name: name.trim(), email, phoneNumber, password });
+
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+
+        toast.success("Akun berhasil dibuat");
+        await new Promise((resolve) => setTimeout(resolve, 180));
+        router.push(ROUTES.onboarding);
+        return;
+      }
+
+      const result = resetPassword({ identifier, password });
       if (!result.ok) {
         setError(result.message);
         return;
       }
-
-      toast.success(
-        mode === "login"
-          ? "Berhasil masuk"
-          : mode === "register"
-            ? "Akun berhasil dibuat"
-            : "Password berhasil diperbarui"
-      );
+      toast.success("Password berhasil diperbarui");
       await new Promise((resolve) => setTimeout(resolve, 180));
-      router.push(
-        mode === "login"
-          ? !auth.onboardingCompleted
-            ? ROUTES.onboarding
-            : ROUTES.dashboard
-          : mode === "register"
-            ? ROUTES.onboarding
-            : ROUTES.login
-      );
+      router.push(ROUTES.login);
     } finally {
       setIsSubmitting(false);
     }
@@ -140,15 +176,27 @@ export function AuthPanel({ mode }: AuthPanelProps) {
 
             <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
               {mode === "register" ? (
+                <>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-text-primary">Nama owner</span>
+                    <Input name="name" placeholder="Nama kamu" required />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-text-primary">Email</span>
+                    <Input name="email" type="email" placeholder="owner@bisnis.com" required />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-text-primary">Nomor WhatsApp admin</span>
+                    <Input name="phoneNumber" placeholder="08123456789" required />
+                  </label>
+                </>
+              ) : null}
+              {mode !== "register" ? (
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-text-primary">Nama</span>
-                  <Input name="name" placeholder="Nama kamu" required />
+                  <span className="mb-2 block text-sm font-medium text-text-primary">Email / Nomor HP</span>
+                  <Input name="identifier" placeholder="contoh@mail.com atau 08123456789" required />
                 </label>
               ) : null}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text-primary">Email / Nomor HP</span>
-                <Input name="identifier" placeholder="contoh@mail.com atau 08123456789" required />
-              </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-text-primary">Password</span>
                 <PasswordInput name="password" placeholder="Masukkan password" required />
@@ -166,6 +214,12 @@ export function AuthPanel({ mode }: AuthPanelProps) {
             </form>
 
             <div className="space-y-2 text-center text-sm text-text-secondary">
+              {mode === "login" ? (
+                <div className="rounded-md border border-border/80 bg-muted/20 px-3 py-2 text-left text-xs text-text-secondary">
+                  Demo super admin lokal: <span className="font-medium text-text-primary">superadmin@rapiin.local</span> /{" "}
+                  <span className="font-medium text-text-primary">superadmin123</span>
+                </div>
+              ) : null}
               {mode === "login" ? (
                 <div>
                   <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-brand-700">
