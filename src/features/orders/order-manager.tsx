@@ -286,6 +286,64 @@ export function OrderManager() {
     [bookingDurationMinutes, editingId, form.resourceId, form.scheduledDate, form.scheduledTime, orders]
   );
   const slotAvailability = isResourceBookingMode ? selectedResourceAvailability ?? resourceBookingAvailability : bookingAvailability;
+
+  const alternativeTimes = useMemo(() => {
+    if (!form.scheduledDate) {
+      return [];
+    }
+
+    const candidates = [
+      "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
+      "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", 
+      "20:00", "21:00"
+    ];
+
+    return candidates.filter((time) => {
+      if (time === form.scheduledTime) {
+        return false;
+      }
+
+      if (isResourceBookingMode) {
+        const avail = form.resourceId
+          ? getResourceAvailabilityForSelection(
+              orders,
+              form.resourceId,
+              form.scheduledDate,
+              time,
+              bookingDurationMinutes,
+              editingId
+            )
+          : getResourceBookingAvailability(
+              orders,
+              business.resources ?? [],
+              form.scheduledDate,
+              time,
+              bookingDurationMinutes,
+              editingId
+            );
+        return !avail.isFull;
+      } else {
+        const avail = getBookingAvailability(
+          orders,
+          form.scheduledDate,
+          time,
+          bookingDurationMinutes,
+          editingId
+        );
+        return !avail.isFull;
+      }
+    });
+  }, [
+    form.scheduledDate,
+    form.scheduledTime,
+    form.resourceId,
+    orders,
+    business.resources,
+    bookingDurationMinutes,
+    editingId,
+    isResourceBookingMode
+  ]);
+
   const slotHint = useMemo(() => {
     if (!form.scheduledDate || !form.scheduledTime) {
       return isResourceBookingMode
@@ -895,6 +953,27 @@ export function OrderManager() {
                       <p className={`text-xs font-medium leading-relaxed ${slotAvailability.isFull ? "text-[var(--color-danger)]" : "text-[var(--color-text-secondary)]"}`}>
                         {slotHint}
                       </p>
+
+                      {slotAvailability.isFull && alternativeTimes.length > 0 && (
+                        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                          <p className="text-xs font-bold text-amber-600 flex items-center gap-1">
+                            <span>⚠️ Penuh / Bentrok! Jam alternatif yang kosong:</span>
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {alternativeTimes.slice(0, 4).map((time) => (
+                              <button
+                                key={time}
+                                type="button"
+                                onClick={() => updateFormField("scheduledTime", time)}
+                                className="px-2.5 py-1 text-[11px] font-bold rounded-xl bg-amber-500 hover:bg-amber-600 text-black transition"
+                              >
+                                {time}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
                         {isResourceBookingMode
                           ? `* Sistem Rapiin mendeteksi ketersediaan per ${business.resourceLabel?.toLowerCase() ?? "unit"} secara realtime.`

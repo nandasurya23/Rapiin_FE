@@ -3,15 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Clock3, MapPin, PhoneCall, Sparkles } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 import { Card, CardBody } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
-import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { TimeSelect } from "@/components/ui/time-select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import {
@@ -27,9 +26,6 @@ import {
   getPublicCatalog,
   inferCatalogDurationMinutes,
   getPublicFormFields,
-  getPublicFormSubmitLabel,
-  getPublicFormTitle,
-  getPublicPageSubtitle,
   isBusinessSlugMatch,
 } from "@/lib/public-business";
 import type { Business, BusinessMode } from "@/types/business";
@@ -187,12 +183,13 @@ function clearCatalogSelectionFromForm(mode: BusinessMode, current: FormState, d
 export function PublicOrderForm({ slug }: { slug: string }) {
   const toast = useToast();
   const searchParams = useSearchParams();
-  const { business, hydrated, orders, submitPublicOrder, canCreateOrder, readOnlyReason } = useAppData();
+  const { business, hydrated, orders, submitPublicOrder, canCreateOrder } = useAppData();
   const defaultBookingDuration = business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
   const [form, setForm] = useState<FormState>(initialStateByMode[business.mode]);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
     if (!hydrated) {
@@ -205,6 +202,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     });
     setSubmitted(false);
     setError("");
+    setCurrentStep(1);
   }, [business.mode, defaultBookingDuration, hydrated]);
 
   const isMatch = isBusinessSlugMatch(business, slug);
@@ -243,6 +241,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     [bookingDurationMinutes, business.resources, form.scheduledDate, form.scheduledTime, orders]
   );
   const activeAvailability = business.operationalModel === "RESOURCE_BOOKING" ? resourceBookingAvailability : bookingAvailability;
+
   const slotHint = useMemo(() => {
     if (business.mode !== "BOOKING_SERVICE") {
       return "";
@@ -281,9 +280,6 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     return activeAvailability.remaining === 1 ? "Slot tersisa 1" : `Slot tersisa ${activeAvailability.remaining}`;
   }, [activeAvailability.count, activeAvailability.earliestHoldExpiresAt, activeAvailability.hasHold, activeAvailability.isFull, activeAvailability.remaining, business.mode, business.operationalModel, form.scheduledDate, form.scheduledTime]);
 
-  const fields = useMemo(() => getPublicFormFields(business), [business]);
-  const submitLabel = getPublicFormSubmitLabel(business);
-  const hasSelectedBookingService = business.mode === "BOOKING_SERVICE" && Boolean(form.service.trim());
   const waMessage = useMemo(() => createPublicWhatsAppMessage(business, form), [business, form]);
   const waLink = useMemo(
     () => buildWhatsAppUrl(business.whatsappNumber, waMessage),
@@ -393,296 +389,553 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     }
   }
 
+  const timeCandidates = [
+    "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
+    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", 
+    "20:00", "21:00"
+  ];
+
+  const getCandidateAvailability = (time: string) => {
+    if (business.operationalModel === "RESOURCE_BOOKING") {
+      return getResourceBookingAvailability(
+        orders,
+        business.resources ?? [],
+        form.scheduledDate,
+        time,
+        bookingDurationMinutes
+      );
+    } else {
+      return getBookingAvailability(orders, form.scheduledDate, time, bookingDurationMinutes);
+    }
+  };
+
+  const steps = [
+    { num: 1, label: business.mode === "BOOKING_SERVICE" ? "Pilih Layanan" : business.mode === "PRODUCT_ORDER" ? "Pilih Produk" : "Detail Request" },
+    { num: 2, label: business.mode === "BOOKING_SERVICE" ? "Tentukan Jadwal" : business.mode === "PRODUCT_ORDER" ? "Pengiriman" : "Data Kontak" },
+    ...(business.mode !== "CUSTOM_REQUEST" ? [{ num: 3, label: "Data Kontak" }] : [])
+  ];
+
   return (
     <main className="page-enter mx-auto min-h-screen max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      <section>
-        <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)]">
-          <CardBody className="space-y-4 p-5">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
-                {business.logoUrl && (
-                  <Image
-                    src={business.logoUrl}
-                    alt={business.name}
-                    width={80}
-                    height={80}
-                    className="h-20 w-20 shrink-0 rounded-2xl object-contain border border-[var(--color-border)] bg-white p-1"
-                    unoptimized
-                  />
-                )}
-                <div>
-                  <Badge tone="info">Form Publik</Badge>
-                  <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--color-text)]">
-                    {getPublicFormTitle(business)}
-                  </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-                    {getPublicPageSubtitle(business)}
-                  </p>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-                    Isi form singkat ini. Admin akan lanjut menghubungi lewat WhatsApp.
-                  </p>
-                  {!canCreateOrder ? <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-warning-text)]">{readOnlyReason}</p> : null}
-                  {selectedCatalogItem ? (
-                    <div className="mt-3">
-                      <Badge tone="success">Pilihan aktif: {selectedCatalogItem.name}</Badge>
+      {submitted ? (
+        // ── SUCCESS SCREEN ──
+        <div className="max-w-xl mx-auto mt-10">
+          <Card className="border-[var(--color-border)] shadow-[var(--shadow-lg)]">
+            <CardBody className="p-6 sm:p-8 space-y-6 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                <CheckCircle2 className="h-10 w-10 animate-bounce" />
+              </div>
+              
+              <div className="space-y-2">
+                <h1 className="text-2xl font-black text-[var(--color-text)]">Pemesanan Terkirim!</h1>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  Terima kasih, data Anda sudah masuk ke sistem kami. Admin akan segera menghubungi Anda melalui WhatsApp untuk konfirmasi.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-left text-sm space-y-3.5 shadow-inner">
+                <p className="font-extrabold text-xs uppercase tracking-wider text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/40 pb-2">
+                  Ringkasan Pemesanan
+                </p>
+                <div className="space-y-2">
+                  {form.service || form.product ? (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[var(--color-text-secondary)]">{business.mode === "BOOKING_SERVICE" ? "Layanan" : "Produk"}:</span>
+                      <span className="font-extrabold text-[var(--color-text)]">{form.service || form.product}</span>
+                    </div>
+                  ) : null}
+                  {form.scheduledDate ? (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[var(--color-text-secondary)]">Tanggal &amp; Waktu:</span>
+                      <span className="font-extrabold text-[var(--color-text)]">{form.scheduledDate} {form.scheduledTime ? `pada ${form.scheduledTime}` : ""}</span>
+                    </div>
+                  ) : null}
+                  {form.name ? (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[var(--color-text-secondary)]">Pelanggan:</span>
+                      <span className="font-bold text-[var(--color-text)]">{form.name} ({form.whatsappNumber})</span>
+                    </div>
+                  ) : null}
+                  {form.notes ? (
+                    <div className="text-xs pt-1 border-t border-[var(--color-border)]/20">
+                      <p className="text-[var(--color-text-secondary)]">Catatan:</p>
+                      <p className="font-medium text-[var(--color-text)] mt-0.5">{form.notes}</p>
                     </div>
                   ) : null}
                 </div>
               </div>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row xl:flex-col xl:items-stretch xl:self-start">
-                <LinkButton
-                  href={ROUTES.publicBusiness(business.slug)}
-                  variant="secondary"
-                  className="justify-center sm:min-w-[220px]"
-                >
-                  Lihat Halaman Bisnis
+
+              <div className="grid gap-2.5 sm:grid-cols-2 pt-2">
+                <LinkButton href={ROUTES.publicBusiness(business.slug)} variant="secondary" className="w-full justify-center rounded-xl font-bold py-3">
+                  Kembali ke Toko
                 </LinkButton>
-                <LinkButton href={waLink} className="justify-center sm:min-w-[220px]">
-                  <PhoneCall className="h-4 w-4" />
-                  Chat WhatsApp
+                <LinkButton href={waLink} className="w-full justify-center rounded-xl font-bold py-3">
+                  Chat WhatsApp Sekarang
                 </LinkButton>
               </div>
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-[1.08fr_0.92fr]">
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
+            </CardBody>
+          </Card>
+        </div>
+      ) : (
+        // ── FORM STEPS SCREEN ──
+        <div className="space-y-6">
+          {/* Header Business Info Card */}
+          <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)] overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-[var(--color-primary)] via-indigo-500 to-purple-500" />
+            <CardBody className="p-5">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-4">
+                  {business.logoUrl ? (
+                    <Image
+                      src={business.logoUrl}
+                      alt={business.name}
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 shrink-0 rounded-2xl object-contain border border-[var(--color-border)] bg-white p-1"
+                      unoptimized
+                    />
+                  ) : null}
                   <div>
-                    <p className="font-medium text-[var(--color-text)]">{business.name}</p>
-                    <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Preview singkat layanan dan info dasar yang dilihat customer.</p>
-                  </div>
-                  <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {catalog.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        const isSelected = fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name;
-                        const nextForm = isSelected
-                          ? clearCatalogSelectionFromForm(business.mode, form, defaultBookingDuration)
-                          : applyCatalogSelectionToForm(
-                              business.mode,
-                              form,
-                              item.name,
-                              inferCatalogDurationMinutes(item)
-                            );
-                        setError("");
-                        setForm(nextForm);
-                      }}
-                      className={`rounded-lg border px-4 py-3 text-left transition ${
-                        fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name
-                          ? "border-brand-300 bg-[var(--color-primary-surface)]"
-                          : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
-                      }`}
-                      aria-pressed={fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-[var(--color-text)]">{item.name}</p>
-                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">{item.priceLabel ?? "Harga fleksibel"}</p>
-                        </div>
-                        {fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name ? (
-                          <Badge tone="success">Dipilih</Badge>
-                        ) : (
-                          <span className="text-xs font-medium text-[var(--color-primary)]">Pilih</span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-sm text-[var(--color-text-secondary)]">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 text-[var(--color-primary)]" />
-                  <p>{business.address}</p>
-                </div>
-                <div className="mt-3 flex items-start gap-3">
-                  <Clock3 className="mt-0.5 h-4 w-4 text-[var(--color-primary)]" />
-                  <p>{business.openingHours}</p>
-                </div>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
-
-      <section className="mt-6 grid gap-6 2xl:grid-cols-[1.02fr_0.98fr]">
-        <Card>
-          <CardBody className="space-y-4 p-5">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Isi data</h2>
-              <p className="text-sm text-[var(--color-text-secondary)]">Form tetap singkat dan nyaman di HP.</p>
-            </div>
-
-            {fields.map((field) => {
-              const value = fieldValueFromState(form, field.name);
-
-              return (
-                <label key={field.name} className="block">
-                  <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                    {field.label}
-                    {field.required ? <span className="ml-1 text-[var(--color-danger)]">*</span> : null}
-                  </span>
-                  {field.type === "date" ? (
-                    <>
-                      <DatePicker
-                        value={value}
-                        onValueChange={(nextValue) => updateField(field.name, nextValue)}
-                        placeholder={field.placeholder}
-                        disabledDates={Object.keys(business.closedDates || {})}
-                      />
-                      {field.name === "scheduledDate" && value && business.closedDates?.[value] && (
-                        <p className="mt-2 text-xs font-semibold text-[var(--color-danger-text)] bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] rounded-[var(--radius-md)] px-3 py-2 animate-pulse">
-                          ⚠️ Operasional tutup / libur pada tanggal ini karena: &quot;{business.closedDates[value]}&quot;. Silakan pilih tanggal lain.
-                        </p>
-                      )}
-                    </>
-                  ) : field.name === "budget" ? (
-                    <FormattedNumberInput
-                      value={value}
-                      onValueChange={(nextValue) => updateField(field.name, nextValue)}
-                      placeholder={field.placeholder}
-                    />
-                  ) : field.type === "time" ? (
-                    <>
-                      <TimeSelect
-                        value={value}
-                        onValueChange={(nextValue) => updateField(field.name, nextValue)}
-                        placeholder={field.placeholder}
-                      />
-                      {field.name === "scheduledTime" && business.mode === "BOOKING_SERVICE" ? (
-                        <div className="mt-2 space-y-2">
-                          <div className="flex flex-wrap gap-2">
-                            <Badge tone={activeAvailability.isFull ? "danger" : activeAvailability.hasHold ? "warning" : activeAvailability.count > 0 ? "success" : "neutral"}>
-                              {activeAvailability.isFull ? "Penuh" : activeAvailability.hasHold ? "Ditahan sementara" : activeAvailability.count > 0 ? "Tersedia" : "Kosong"}
-                            </Badge>
-                            {activeAvailability.count > 0 && !activeAvailability.isFull && !activeAvailability.hasHold ? (
-                              <Badge tone="info">Slot tersisa {activeAvailability.remaining}</Badge>
-                            ) : null}
-                          </div>
-                          <p className={`text-xs ${activeAvailability.isFull ? "text-[var(--color-danger)]" : activeAvailability.hasHold ? "text-[var(--color-warning-text)]" : "text-[var(--color-text-muted)]"}`}>{slotHint}</p>
-                        </div>
-                      ) : null}
-                    </>
-                  ) : field.name === "bookingDurationMinutes" && business.mode === "BOOKING_SERVICE" ? (
-                    hasSelectedBookingService ? (
-                      <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-3 text-sm text-[var(--color-text)]">
-                        <div className="font-medium">
-                          {value ? `${value} menit` : "Pilih layanan dulu"}
-                        </div>
-                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                          Durasi otomatis mengikuti layanan yang dipilih.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <Input
-                          type="number"
-                          min={15}
-                          step={15}
-                          value={value}
-                          onChange={(event) => updateField(field.name, event.target.value)}
-                          placeholder={field.placeholder}
-                        />
-                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                          Kalau belum pilih layanan, durasi bisa diisi manual.
-                        </p>
-                      </>
-                    )
-                  ) : field.type === "number" ? (
-                    <>
-                      <Input
-                        type={field.type}
-                        value={value}
-                        onChange={(event) => updateField(field.name, event.target.value)}
-                        placeholder={field.placeholder}
-                      />
-                    </>
-                  ) : field.name === "notes" || field.name === "requestDetail" ? (
-                    <Textarea
-                      value={value}
-                      onChange={(event) => updateField(field.name, event.target.value)}
-                      placeholder={field.placeholder}
-                    />
-                  ) : field.name === "service" || field.name === "product" ? (
-                    <Select
-                      value={value}
-                      onValueChange={(nextValue) => updateField(field.name, nextValue)}
-                      options={catalog.map((item) => ({
-                        value: item.name,
-                        label: item.name,
-                      }))}
-                      placeholder={field.placeholder}
-                    />
-                  ) : (
-                    <Input
-                      value={value}
-                      onChange={(event) => updateField(field.name, event.target.value)}
-                      placeholder={field.placeholder}
-                    />
-                  )}
-                </label>
-              );
-            })}
-
-            {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
-
-            <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()} disabled={!canCreateOrder}>
-              {submitLabel}
-            </Button>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="space-y-4 p-5">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Sesudah dikirim</h2>
-              <p className="text-sm text-[var(--color-text-secondary)]">Karena backend belum ada, form menampilkan success state dulu.</p>
-            </div>
-
-            {submitted ? (
-              <div className="space-y-4 rounded-2xl border border-[var(--color-info-border)] bg-[var(--color-primary-surface)] p-5">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-[var(--color-primary)]" />
-                  <div>
-                    <p className="font-semibold text-[var(--color-text)]">Data kamu sudah masuk.</p>
-                    <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                      Admin akan menghubungi kamu lewat WhatsApp.
+                    <h1 className="text-xl font-black text-[var(--color-text)]">{business.name}</h1>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span>📍 {business.address}</span>
+                      <span className="text-[var(--color-border)] hidden sm:inline">•</span>
+                      <span>🕒 {business.openingHours}</span>
                     </p>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-sm text-[var(--color-text-secondary)]">
-                  <p className="font-medium text-[var(--color-text)]">Ringkasan</p>
-                  <div className="mt-2 space-y-1">
-                    {Object.entries(form).map(([key, value]) =>
-                      value ? (
-                        <p key={key}>
-                          <span className="capitalize">{key.replace(/([A-Z])/g, " $1")}</span>: {value}
-                        </p>
-                      ) : null
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <LinkButton href={ROUTES.publicBusiness(business.slug)}>Lihat Halaman</LinkButton>
-                  <LinkButton href={waLink} variant="secondary">
-                    Chat WhatsApp
+                <div className="flex items-center gap-2">
+                  <LinkButton href={ROUTES.publicBusiness(business.slug)} variant="secondary" className="rounded-xl text-xs py-2 px-3">
+                    Lihat Toko
+                  </LinkButton>
+                  <LinkButton href={waLink} className="rounded-xl text-xs py-2 px-3">
+                    Chat WA
                   </LinkButton>
                 </div>
               </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-text-secondary)]">
-                Belum ada data terkirim. Isi form lalu klik tombol kirim.
+            </CardBody>
+          </Card>
+
+          {/* Form Wizard Step Card */}
+          <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)]">
+            <CardBody className="p-5 sm:p-6">
+              {/* Steps Progress Indicator */}
+              <div className="flex items-center justify-center gap-2 mb-6 border-b border-[var(--color-border)]/40 pb-5">
+                {steps.map((s, idx) => (
+                  <div key={s.num} className="flex items-center gap-2">
+                    <div className={cn(
+                      "h-6 w-6 rounded-full flex items-center justify-center text-xs font-black transition",
+                      currentStep === s.num
+                        ? "bg-[var(--color-primary)] text-white shadow-sm"
+                        : currentStep > s.num
+                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                          : "bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]"
+                    )}>
+                      {s.num}
+                    </div>
+                    <span className={cn(
+                      "text-xs font-bold transition",
+                      currentStep === s.num ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
+                    )}>
+                      {s.label}
+                    </span>
+                    {idx < steps.length - 1 && <span className="text-[var(--color-border)] text-xs mx-1">➔</span>}
+                  </div>
+                ))}
               </div>
-            )}
-          </CardBody>
-        </Card>
-      </section>
+
+              {/* Step Forms */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  {business.mode === "CUSTOM_REQUEST" ? (
+                    <div className="space-y-4">
+                      <div>
+                        <h2 className="text-base font-bold text-[var(--color-text)]">Detail Permintaan</h2>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Tulis secara lengkap detail request kustom Anda.</p>
+                      </div>
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Ceritakan Kebutuhan Anda <span className="text-red-500">*</span></span>
+                        <Textarea
+                          value={form.requestDetail || ""}
+                          onChange={(e) => updateField("requestDetail", e.target.value)}
+                          placeholder="Jelaskan jenis kustom request, warna, atau instruksi pengerjaan..."
+                          rows={5}
+                        />
+                      </label>
+                      <label className="block pt-2">
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Target Deadline (Opsional)</span>
+                        <DatePicker
+                          value={form.deadline || ""}
+                          onValueChange={(val) => updateField("deadline", val)}
+                          placeholder="Pilih tanggal deadline"
+                        />
+                      </label>
+                      
+                      <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-end">
+                        <Button
+                          type="button"
+                          disabled={!form.requestDetail?.trim()}
+                          onClick={() => setCurrentStep(2)}
+                          className="w-full sm:w-auto font-bold rounded-xl"
+                        >
+                          Lanjut ke Kontak
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <h2 className="text-base font-bold text-[var(--color-text)]">
+                          Pilih {business.mode === "BOOKING_SERVICE" ? "Layanan" : "Produk"}
+                        </h2>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                          Pilih salah satu menu di bawah untuk melanjutkan pemesanan.
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {catalog.map((item) => {
+                          const catalogField = getCatalogFieldName(business.mode);
+                          const isSelected = fieldValueFromState(form, catalogField) === item.name;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                const nextForm = isSelected
+                                  ? clearCatalogSelectionFromForm(business.mode, form, defaultBookingDuration)
+                                  : applyCatalogSelectionToForm(
+                                      business.mode,
+                                      form,
+                                      item.name,
+                                      inferCatalogDurationMinutes(item)
+                                    );
+                                setError("");
+                                setForm(nextForm);
+                                setTimeout(() => setCurrentStep(2), 250);
+                              }}
+                              className={cn(
+                                "rounded-2xl border p-4 text-left transition flex flex-col justify-between h-32 hover:scale-[1.01] active:scale-[0.99] shadow-sm",
+                                isSelected
+                                  ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]"
+                                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
+                              )}
+                            >
+                              <div className="min-w-0">
+                                <p className="font-extrabold text-[var(--color-text)] text-sm leading-tight truncate">{item.name}</p>
+                                <p className="mt-1.5 text-xs text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed">
+                                  {item.description || "Layanan/produk premium dari kami."}
+                                </p>
+                              </div>
+                              <div className="mt-2 flex justify-between items-center w-full">
+                                <span className="text-xs font-black text-[var(--color-primary)]">
+                                  {item.priceLabel || "Harga by chat"}
+                                </span>
+                                {isSelected && (
+                                  <Badge tone="success" className="font-black text-[9px] uppercase tracking-wider">Dipilih</Badge>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-end">
+                        <Button
+                          type="button"
+                          disabled={!fieldValueFromState(form, getCatalogFieldName(business.mode))}
+                          onClick={() => setCurrentStep(2)}
+                          className="w-full sm:w-auto font-bold rounded-xl"
+                        >
+                          Lanjut
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  {business.mode === "BOOKING_SERVICE" ? (
+                    <div className="space-y-4">
+                      <div>
+                        <h2 className="text-base font-bold text-[var(--color-text)]">Pilih Tanggal &amp; Jam</h2>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Sistem mendeteksi slot unit yang kosong secara real-time.</p>
+                      </div>
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Tanggal Booking <span className="text-red-500">*</span></span>
+                        <DatePicker
+                          value={form.scheduledDate || ""}
+                          onValueChange={(val) => {
+                            updateField("scheduledDate", val);
+                            updateField("scheduledTime", "");
+                          }}
+                          disabledDates={Object.keys(business.closedDates || {})}
+                        />
+                        {form.scheduledDate && business.closedDates?.[form.scheduledDate] && (
+                          <p className="mt-2 text-xs font-semibold text-[var(--color-danger-text)] bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] rounded-xl px-3 py-2 animate-pulse">
+                            ⚠️ Operasional tutup / libur pada tanggal ini karena: &quot;{business.closedDates[form.scheduledDate]}&quot;. Silakan pilih tanggal lain.
+                          </p>
+                        )}
+                      </label>
+
+                      {form.scheduledDate && !business.closedDates?.[form.scheduledDate] && (
+                        <div className="space-y-3 pt-2">
+                          <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Jam yang Tersedia <span className="text-red-500">*</span></span>
+                          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                            {timeCandidates.map((time) => {
+                              const avail = getCandidateAvailability(time);
+                              const isSelected = form.scheduledTime === time;
+                              const isFull = avail.isFull;
+
+                              return (
+                                <button
+                                  key={time}
+                                  type="button"
+                                  onClick={() => {
+                                    if (!isFull) {
+                                      updateField("scheduledTime", time);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "py-2 px-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-0.5",
+                                    isFull
+                                      ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
+                                      : isSelected
+                                        ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                        : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+                                  )}
+                                  disabled={isFull}
+                                >
+                                  <span className="text-xs font-bold">{time}</span>
+                                  <span className={cn(
+                                    "text-[8px] tracking-wide uppercase font-extrabold",
+                                    isFull ? "text-red-500/60" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
+                                  )}>
+                                    {isFull ? "Penuh" : avail.hasHold ? "Ditahan" : "Tersedia"}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Alternative Warnings / Overlap details */}
+                          {form.scheduledTime && (
+                            <div className="pt-2">
+                              <p className={`text-xs ${activeAvailability.isFull ? "text-[var(--color-danger)]" : activeAvailability.hasHold ? "text-[var(--color-warning-text)]" : "text-[var(--color-text-muted)]"}`}>
+                                {slotHint}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-between gap-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setCurrentStep(1)}
+                          className="font-bold rounded-xl"
+                        >
+                          Kembali
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={!form.scheduledDate || !form.scheduledTime || Boolean(business.closedDates?.[form.scheduledDate])}
+                          onClick={() => setCurrentStep(3)}
+                          className="font-bold rounded-xl"
+                        >
+                          Lanjut
+                        </Button>
+                      </div>
+                    </div>
+                  ) : business.mode === "PRODUCT_ORDER" ? (
+                    <div className="space-y-4">
+                      <div>
+                        <h2 className="text-base font-bold text-[var(--color-text)]">Jumlah &amp; Pengiriman</h2>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Tentukan kuantitas pesanan produk Anda.</p>
+                      </div>
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Jumlah Unit <span className="text-red-500">*</span></span>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={form.quantity || "1"}
+                          onChange={(e) => updateField("quantity", e.target.value)}
+                          placeholder="1"
+                        />
+                      </label>
+                      <label className="block pt-2">
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Metode Pengiriman</span>
+                        <Select
+                          value={form.deliveryMethod || "Ambil Sendiri"}
+                          onValueChange={(val) => updateField("deliveryMethod", val)}
+                          options={[
+                            { value: "Ambil Sendiri", label: "Ambil Sendiri ke Toko" },
+                            { value: "Kirim Kurir", label: "Kirim via Kurir Ekspedisi" }
+                          ]}
+                          placeholder="Pilih metode"
+                        />
+                      </label>
+
+                      <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-between gap-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setCurrentStep(1)}
+                          className="font-bold rounded-xl"
+                        >
+                          Kembali
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={!form.quantity || Number(form.quantity) < 1}
+                          onClick={() => setCurrentStep(3)}
+                          className="font-bold rounded-xl"
+                        >
+                          Lanjut
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    // CUSTOM REQUEST step 2 is Data Kontak
+                    <div className="space-y-4">
+                      <div>
+                        <h2 className="text-base font-bold text-[var(--color-text)]">Informasi Kontak Anda</h2>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Kami akan menghubungi Anda ke WhatsApp nomor ini.</p>
+                      </div>
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Nama Lengkap <span className="text-red-500">*</span></span>
+                        <Input
+                          value={form.name || ""}
+                          onChange={(e) => updateField("name", e.target.value)}
+                          placeholder="Nama lengkap Anda"
+                        />
+                      </label>
+                      <label className="block pt-2">
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Nomor WhatsApp <span className="text-red-500">*</span></span>
+                        <Input
+                          type="tel"
+                          value={form.whatsappNumber || ""}
+                          onChange={(e) => updateField("whatsappNumber", e.target.value)}
+                          placeholder="08123456789"
+                        />
+                      </label>
+
+                      {error ? <p className="text-xs font-bold text-[var(--color-danger)]">{error}</p> : null}
+
+                      <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-between gap-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setCurrentStep(1)}
+                          className="font-bold rounded-xl"
+                        >
+                          Kembali
+                        </Button>
+                        <Button
+                          type="button"
+                          isLoading={isSubmitting}
+                          disabled={!form.name?.trim() || !form.whatsappNumber?.trim() || !canCreateOrder}
+                          onClick={() => void handleSubmit()}
+                          className="font-bold rounded-xl"
+                        >
+                          Kirim Permintaan
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {currentStep === 3 && business.mode !== "CUSTOM_REQUEST" && (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-base font-bold text-[var(--color-text)]">Informasi Kontak &amp; Kirim</h2>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Isi data kontak Anda dan kirim pesanan.</p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Nama Lengkap <span className="text-red-500">*</span></span>
+                      <Input
+                        value={form.name || ""}
+                        onChange={(e) => updateField("name", e.target.value)}
+                        placeholder="Nama lengkap Anda"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Nomor WhatsApp <span className="text-red-500">*</span></span>
+                      <Input
+                        type="tel"
+                        value={form.whatsappNumber || ""}
+                        onChange={(e) => updateField("whatsappNumber", e.target.value)}
+                        placeholder="08123456789"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block pt-2">
+                    <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Catatan Tambahan (Opsional)</span>
+                    <Textarea
+                      value={form.notes || ""}
+                      onChange={(e) => updateField("notes", e.target.value)}
+                      placeholder="Tulis catatan jika ada permintaan khusus..."
+                      rows={3}
+                    />
+                  </label>
+
+                  {/* Summary before submit */}
+                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-sm space-y-2">
+                    <p className="font-extrabold text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border)]/30 pb-1.5">
+                      Tinjauan Pemesanan
+                    </p>
+                    <div className="space-y-1.5 text-xs text-[var(--color-text)]">
+                      <p className="flex justify-between">
+                        <span className="text-[var(--color-text-secondary)]">Item:</span>
+                        <span className="font-bold">{form.service || form.product}</span>
+                      </p>
+                      {business.mode === "BOOKING_SERVICE" ? (
+                        <p className="flex justify-between">
+                          <span className="text-[var(--color-text-secondary)]">Jadwal:</span>
+                          <span className="font-bold">{form.scheduledDate} jam {form.scheduledTime}</span>
+                        </p>
+                      ) : (
+                        <p className="flex justify-between">
+                          <span className="text-[var(--color-text-secondary)]">Jumlah &amp; Kirim:</span>
+                          <span className="font-bold">{form.quantity} unit ({form.deliveryMethod})</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {error ? <p className="text-xs font-bold text-[var(--color-danger)]">{error}</p> : null}
+
+                  <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-between gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setCurrentStep(2)}
+                      className="font-bold rounded-xl"
+                    >
+                      Kembali
+                    </Button>
+                    <Button
+                      type="button"
+                      isLoading={isSubmitting}
+                      disabled={!form.name?.trim() || !form.whatsappNumber?.trim() || !canCreateOrder}
+                      onClick={() => void handleSubmit()}
+                      className="font-bold rounded-xl"
+                    >
+                      Konfirmasi &amp; Kirim
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        </div>
+      )}
     </main>
   );
 }
