@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock3, MapPin, PhoneCall, Sparkles } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -316,8 +317,8 @@ export function PublicOrderForm({ slug }: { slug: string }) {
           <CardBody className="space-y-4 p-6">
             <Badge tone="danger">Link tidak ditemukan</Badge>
             <div>
-              <h1 className="text-2xl font-semibold text-text-primary">Form publik belum cocok</h1>
-              <p className="mt-2 text-sm text-text-secondary">
+              <h1 className="text-2xl font-semibold text-[var(--color-text)]">Form publik belum cocok</h1>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                 Slug yang dibuka tidak sesuai dengan bisnis aktif di mock data saat ini.
               </p>
             </div>
@@ -343,6 +344,12 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
     if (missing) {
       setError("Lengkapi semua field wajib dulu.");
+      setSubmitted(false);
+      return;
+    }
+
+    if (form.scheduledDate && business.closedDates?.[form.scheduledDate]) {
+      setError(`Toko sedang tutup/libur pada tanggal terpilih karena: "${business.closedDates[form.scheduledDate]}". Silakan pilih tanggal lain.`);
       setSubmitted(false);
       return;
     }
@@ -389,26 +396,38 @@ export function PublicOrderForm({ slug }: { slug: string }) {
   return (
     <main className="page-enter mx-auto min-h-screen max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       <section>
-        <Card className="border-border/80 shadow-soft">
+        <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)]">
           <CardBody className="space-y-4 p-5">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <Badge tone="info">Form Publik</Badge>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">
-                  {getPublicFormTitle(business)}
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
-                  {getPublicPageSubtitle(business)}
-                </p>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">
-                  Isi form singkat ini. Admin akan lanjut menghubungi lewat WhatsApp.
-                </p>
-                {!canCreateOrder ? <p className="mt-3 max-w-2xl text-sm leading-6 text-amber-700">{readOnlyReason}</p> : null}
-                {selectedCatalogItem ? (
-                  <div className="mt-3">
-                    <Badge tone="success">Pilihan aktif: {selectedCatalogItem.name}</Badge>
-                  </div>
-                ) : null}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+                {business.logoUrl && (
+                  <Image
+                    src={business.logoUrl}
+                    alt={business.name}
+                    width={80}
+                    height={80}
+                    className="h-20 w-20 shrink-0 rounded-2xl object-contain border border-[var(--color-border)] bg-white p-1"
+                    unoptimized
+                  />
+                )}
+                <div>
+                  <Badge tone="info">Form Publik</Badge>
+                  <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--color-text)]">
+                    {getPublicFormTitle(business)}
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
+                    {getPublicPageSubtitle(business)}
+                  </p>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
+                    Isi form singkat ini. Admin akan lanjut menghubungi lewat WhatsApp.
+                  </p>
+                  {!canCreateOrder ? <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-warning-text)]">{readOnlyReason}</p> : null}
+                  {selectedCatalogItem ? (
+                    <div className="mt-3">
+                      <Badge tone="success">Pilihan aktif: {selectedCatalogItem.name}</Badge>
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row xl:flex-col xl:items-stretch xl:self-start">
                 <LinkButton
@@ -426,13 +445,13 @@ export function PublicOrderForm({ slug }: { slug: string }) {
             </div>
 
             <div className="grid gap-3 lg:grid-cols-[1.08fr_0.92fr]">
-              <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-4">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-text-primary">{business.name}</p>
-                    <p className="mt-1 text-sm text-text-secondary">Preview singkat layanan dan info dasar yang dilihat customer.</p>
+                    <p className="font-medium text-[var(--color-text)]">{business.name}</p>
+                    <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Preview singkat layanan dan info dasar yang dilihat customer.</p>
                   </div>
-                  <Sparkles className="h-5 w-5 text-brand-700" />
+                  <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {catalog.map((item) => (
@@ -454,20 +473,20 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                       }}
                       className={`rounded-lg border px-4 py-3 text-left transition ${
                         fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name
-                          ? "border-brand-300 bg-brand-50"
-                          : "border-border/70 bg-surface hover:bg-muted"
+                          ? "border-brand-300 bg-[var(--color-primary-surface)]"
+                          : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
                       }`}
                       aria-pressed={fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-medium text-text-primary">{item.name}</p>
-                          <p className="mt-1 text-xs text-text-muted">{item.priceLabel ?? "Harga fleksibel"}</p>
+                          <p className="font-medium text-[var(--color-text)]">{item.name}</p>
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">{item.priceLabel ?? "Harga fleksibel"}</p>
                         </div>
                         {fieldValueFromState(form, getCatalogFieldName(business.mode)) === item.name ? (
                           <Badge tone="success">Dipilih</Badge>
                         ) : (
-                          <span className="text-xs font-medium text-brand-700">Pilih</span>
+                          <span className="text-xs font-medium text-[var(--color-primary)]">Pilih</span>
                         )}
                       </div>
                     </button>
@@ -475,13 +494,13 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-surface px-4 py-4 text-sm text-text-secondary">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-sm text-[var(--color-text-secondary)]">
                 <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 text-brand-700" />
+                  <MapPin className="mt-0.5 h-4 w-4 text-[var(--color-primary)]" />
                   <p>{business.address}</p>
                 </div>
                 <div className="mt-3 flex items-start gap-3">
-                  <Clock3 className="mt-0.5 h-4 w-4 text-brand-700" />
+                  <Clock3 className="mt-0.5 h-4 w-4 text-[var(--color-primary)]" />
                   <p>{business.openingHours}</p>
                 </div>
               </div>
@@ -494,8 +513,8 @@ export function PublicOrderForm({ slug }: { slug: string }) {
         <Card>
           <CardBody className="space-y-4 p-5">
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Isi data</h2>
-              <p className="text-sm text-text-secondary">Form tetap singkat dan nyaman di HP.</p>
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Isi data</h2>
+              <p className="text-sm text-[var(--color-text-secondary)]">Form tetap singkat dan nyaman di HP.</p>
             </div>
 
             {fields.map((field) => {
@@ -503,16 +522,24 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
               return (
                 <label key={field.name} className="block">
-                  <span className="mb-2 block text-sm font-medium text-text-primary">
+                  <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">
                     {field.label}
-                    {field.required ? <span className="ml-1 text-status-danger">*</span> : null}
+                    {field.required ? <span className="ml-1 text-[var(--color-danger)]">*</span> : null}
                   </span>
                   {field.type === "date" ? (
-                    <DatePicker
-                      value={value}
-                      onValueChange={(nextValue) => updateField(field.name, nextValue)}
-                      placeholder={field.placeholder}
-                    />
+                    <>
+                      <DatePicker
+                        value={value}
+                        onValueChange={(nextValue) => updateField(field.name, nextValue)}
+                        placeholder={field.placeholder}
+                        disabledDates={Object.keys(business.closedDates || {})}
+                      />
+                      {field.name === "scheduledDate" && value && business.closedDates?.[value] && (
+                        <p className="mt-2 text-xs font-semibold text-[var(--color-danger-text)] bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] rounded-[var(--radius-md)] px-3 py-2 animate-pulse">
+                          ⚠️ Operasional tutup / libur pada tanggal ini karena: &quot;{business.closedDates[value]}&quot;. Silakan pilih tanggal lain.
+                        </p>
+                      )}
+                    </>
                   ) : field.name === "budget" ? (
                     <FormattedNumberInput
                       value={value}
@@ -536,17 +563,17 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                               <Badge tone="info">Slot tersisa {activeAvailability.remaining}</Badge>
                             ) : null}
                           </div>
-                          <p className={`text-xs ${activeAvailability.isFull ? "text-status-danger" : activeAvailability.hasHold ? "text-amber-700" : "text-text-muted"}`}>{slotHint}</p>
+                          <p className={`text-xs ${activeAvailability.isFull ? "text-[var(--color-danger)]" : activeAvailability.hasHold ? "text-[var(--color-warning-text)]" : "text-[var(--color-text-muted)]"}`}>{slotHint}</p>
                         </div>
                       ) : null}
                     </>
                   ) : field.name === "bookingDurationMinutes" && business.mode === "BOOKING_SERVICE" ? (
                     hasSelectedBookingService ? (
-                      <div className="rounded-md border border-border bg-muted/25 px-4 py-3 text-sm text-text-primary">
+                      <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-3 text-sm text-[var(--color-text)]">
                         <div className="font-medium">
                           {value ? `${value} menit` : "Pilih layanan dulu"}
                         </div>
-                        <p className="mt-1 text-xs text-text-secondary">
+                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                           Durasi otomatis mengikuti layanan yang dipilih.
                         </p>
                       </div>
@@ -560,7 +587,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                           onChange={(event) => updateField(field.name, event.target.value)}
                           placeholder={field.placeholder}
                         />
-                        <p className="mt-1 text-xs text-text-secondary">
+                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                           Kalau belum pilih layanan, durasi bisa diisi manual.
                         </p>
                       </>
@@ -601,7 +628,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
               );
             })}
 
-            {error ? <p className="text-sm text-status-danger">{error}</p> : null}
+            {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
 
             <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()} disabled={!canCreateOrder}>
               {submitLabel}
@@ -612,24 +639,24 @@ export function PublicOrderForm({ slug }: { slug: string }) {
         <Card>
           <CardBody className="space-y-4 p-5">
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Sesudah dikirim</h2>
-              <p className="text-sm text-text-secondary">Karena backend belum ada, form menampilkan success state dulu.</p>
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Sesudah dikirim</h2>
+              <p className="text-sm text-[var(--color-text-secondary)]">Karena backend belum ada, form menampilkan success state dulu.</p>
             </div>
 
             {submitted ? (
-              <div className="space-y-4 rounded-2xl border border-brand-100 bg-brand-50 p-5">
+              <div className="space-y-4 rounded-2xl border border-[var(--color-info-border)] bg-[var(--color-primary-surface)] p-5">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-brand-700" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-[var(--color-primary)]" />
                   <div>
-                    <p className="font-semibold text-text-primary">Data kamu sudah masuk.</p>
-                    <p className="mt-1 text-sm text-text-secondary">
+                    <p className="font-semibold text-[var(--color-text)]">Data kamu sudah masuk.</p>
+                    <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                       Admin akan menghubungi kamu lewat WhatsApp.
                     </p>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-surface px-4 py-4 text-sm text-text-secondary">
-                  <p className="font-medium text-text-primary">Ringkasan</p>
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-sm text-[var(--color-text-secondary)]">
+                  <p className="font-medium text-[var(--color-text)]">Ringkasan</p>
                   <div className="mt-2 space-y-1">
                     {Object.entries(form).map(([key, value]) =>
                       value ? (
@@ -649,7 +676,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border/80 p-5 text-sm text-text-secondary">
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-text-secondary)]">
                 Belum ada data terkirim. Isi form lalu klik tombol kirim.
               </div>
             )}

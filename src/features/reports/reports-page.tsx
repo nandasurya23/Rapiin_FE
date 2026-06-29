@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, FileSpreadsheet, CalendarDays, TrendingUp, UserRoundPlus, WalletCards, Ban, BadgeCheck } from "lucide-react";
+import {
+  Download,
+  FileSpreadsheet,
+  Sparkles
+} from "lucide-react";
+import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -11,6 +16,7 @@ import { ROUTES } from "@/lib/routes";
 import { LinkButton } from "@/components/ui/button";
 import { getReportSummary } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { cn } from "@/lib/cn";
 
 type PeriodFilter = "TODAY" | "WEEK" | "MONTH";
 
@@ -49,123 +55,149 @@ export function ReportsPage() {
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section>
-        <Card className="border-border/80 shadow-soft">
-          <CardBody className="space-y-4 p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <div className="inline-flex rounded-md bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">Laporan</div>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">
-                  Laporan sederhana, bukan dashboard berat
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
-                  Lihat total order, selesai, batal, customer baru, omzet, dan tagihan belum beres tanpa chart berlebihan.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <LinkButton href={ROUTES.dashboard}>Kembali ke Hari Ini</LinkButton>
-                <LinkButton href={ROUTES.orders} variant="secondary">
-                  Lihat Order
-                </LinkButton>
-              </div>
+      {/* SECTION 1: HERO HEADER */}
+      <section className="animate-fade-up">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
+          {/* Background decorative glows */}
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
+          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
+          
+          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            {/* Left */}
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                Laporan & Statistik
+              </span>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
+                Rangkuman Kinerja Bisnis
+              </h1>
+              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
+                Analisis perkembangan omzet, status order, dan penambahan pelanggan baru dalam satu halaman ringkas tanpa chart yang rumit.
+              </p>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-text-primary">Filter periode</p>
-                    <p className="mt-1 text-sm text-text-secondary">Pilih hari, minggu, atau bulan sesuai kebutuhan cek cepat.</p>
-                  </div>
-                  <CalendarDays className="h-5 w-5 text-brand-700" />
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {periodOptions.map((option) => {
-                    const active = period === option.value;
-
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setPeriod(option.value)}
-                        className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-                          active ? "border-brand-500 bg-brand-50 text-brand-800" : "border-border bg-surface text-text-secondary hover:bg-muted"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                  <p className="text-xs text-text-muted">Periode aktif</p>
-                  <p className="mt-1 text-sm font-semibold text-text-primary">{periodLabel}</p>
-                </div>
-                <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                  <p className="text-xs text-text-muted">Data mock</p>
-                  <p className="mt-1 text-sm font-semibold text-text-primary">Siap diganti backend</p>
-                </div>
-              </div>
+            {/* Right: Actions */}
+            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+              <LinkButton href={ROUTES.dashboard} className="shadow-sm">
+                Kembali ke Hari Ini
+              </LinkButton>
+              <LinkButton href={ROUTES.orders} variant="secondary" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
+                Lihat Order
+              </LinkButton>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Total Order" value={summary.totalOrders} icon={FileSpreadsheet} />
-        <MetricCard title="Order Selesai" value={summary.completedOrders} icon={BadgeCheck} />
-        <MetricCard title="Order Batal" value={summary.cancelledOrders} icon={Ban} />
-        <MetricCard title="Customer Baru" value={summary.newCustomers} icon={UserRoundPlus} />
-        <MetricCard title="Omzet" value={formatCurrency(summary.revenue)} icon={TrendingUp} />
-        <MetricCard title="Belum Bayar" value={summary.unpaidCount} icon={WalletCards} />
+      {/* SECTION 2: PERIOD FILTER + COMPACT SUMMARY STATS */}
+      <section className="animate-fade-up-delay-1">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-5 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Period filter */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)] shrink-0">Periode</p>
+            <FilterChipGroup
+              options={periodOptions}
+              value={period}
+              onChange={(v) => setPeriod(v as PeriodFilter)}
+              size="sm"
+            />
+          </div>
+
+          {/* Divider (only visible on sm+) */}
+          <div className="hidden sm:block self-stretch w-px bg-[var(--color-border)]" />
+
+          {/* Inline stats row */}
+          <div className="flex flex-wrap gap-x-6 gap-y-3 sm:shrink-0">
+            <StatPill label="Total Order" value={String(summary.totalOrders)} />
+            <StatPill label="Selesai" value={String(summary.completedOrders)} accent="emerald" />
+            <StatPill label="Batal" value={String(summary.cancelledOrders)} accent="rose" />
+            <StatPill label="Customer Baru" value={String(summary.newCustomers)} accent="blue" />
+            <StatPill label="Omzet" value={formatCurrency(summary.revenue)} accent="amber" />
+            <StatPill label="Belum Bayar" value={String(summary.unpaidCount)} />
+          </div>
+        </div>
       </section>
 
-      <section className="grid gap-6 2xl:grid-cols-[1fr_0.96fr]">
-        <Card>
+      {/* SECTION 4: LEADERBOARD & EXPORT */}
+      <section className="grid gap-6 xl:grid-cols-[1fr_0.96fr] animate-fade-up-delay-2">
+        {/* Top Product Leaderboard */}
+        <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-4 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-text-primary">Produk / layanan terlaris</h2>
-                <p className="text-sm text-text-secondary">Top item sederhana tanpa chart berat.</p>
+                <h2 className="text-lg font-bold text-[var(--color-text)]">Produk / Layanan Terlaris</h2>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Top item sederhana tanpa visualisasi chart yang rumit.</p>
               </div>
               <Badge tone="info">Top 3</Badge>
             </div>
+            
             <div className="space-y-3">
               {topItems.map((item, index) => (
-                <div key={item.name} className="rounded-xl border border-border/80 bg-surface px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
+                <div
+                  key={item.name}
+                  className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black uppercase tracking-wider text-white",
+                      index === 0 && "bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm border border-amber-300/35",
+                      index === 1 && "bg-gradient-to-br from-slate-400 to-slate-500 shadow-sm border border-slate-300/35",
+                      index === 2 && "bg-gradient-to-br from-[#b0743b] to-[#804f21] shadow-sm border border-amber-800/35"
+                    )}>
+                      {index + 1}
+                    </span>
                     <div>
-                      <p className="font-medium text-text-primary">
-                        {index + 1}. {item.name}
-                      </p>
-                      <p className="mt-1 text-sm text-text-secondary">{item.count} kali dipilih</p>
+                      <p className="text-sm font-bold text-[var(--color-text)]">{item.name}</p>
+                      <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">{item.count} kali dipesan</p>
                     </div>
-                    <Badge tone="neutral">{item.count}</Badge>
                   </div>
+                  <Badge tone="neutral" className="font-extrabold">{item.count}</Badge>
                 </div>
               ))}
             </div>
           </CardBody>
         </Card>
 
-        <Card>
+        {/* CSV Export Preview & Actions */}
+        <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-4 p-5">
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Export CSV</h2>
-              <p className="text-sm text-text-secondary">Placeholder export yang bisa dipakai untuk laporan sederhana.</p>
+              <h2 className="text-lg font-bold text-[var(--color-text)]">Export Data CSV</h2>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Salin draf teks CSV untuk diimpor ke aplikasi spreadsheet eksternal.</p>
             </div>
 
-            <div className="rounded-xl border border-border/80 bg-muted/20 p-4 text-sm text-text-secondary">
-              <p className="font-medium text-text-primary">Preview CSV</p>
-              <pre className="mt-3 overflow-x-auto whitespace-pre-wrap">{exportCsv}</pre>
+            <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[var(--color-surface-elevated)] border-b border-[var(--color-border)]">
+                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Periode</th>
+                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Total Order</th>
+                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Selesai</th>
+                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Batal</th>
+                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Cust. Baru</th>
+                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Omzet</th>
+                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Belum Bayar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="divide-x divide-[var(--color-border)]/40 hover:bg-[var(--color-surface-elevated)]/40 transition">
+                    <td className="px-4 py-3 text-xs font-semibold text-[var(--color-text)] whitespace-nowrap">{periodLabel}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.totalOrders}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.completedOrders}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.cancelledOrders}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.newCustomers}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{formatCurrency(summary.revenue)}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.unpaidCount}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-2">
               <Button
                 type="button"
+                className="rounded-xl font-bold py-2 px-4 text-xs flex items-center gap-1.5 shadow-sm"
                 isLoading={loadingAction === "copy-csv"}
                 onClick={async () => {
                   setLoadingAction("copy-csv");
@@ -180,7 +212,7 @@ export function ReportsPage() {
                 <Download className="h-4 w-4" />
                 Salin CSV
               </Button>
-              <LinkButton href={ROUTES.businessLink} variant="secondary">
+              <LinkButton href={ROUTES.businessLink} variant="secondary" className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold">
                 <FileSpreadsheet className="h-4 w-4" />
                 Cek Link Bisnis
               </LinkButton>
@@ -192,26 +224,30 @@ export function ReportsPage() {
   );
 }
 
-function MetricCard({
-  title,
+function StatPill({
+  label,
   value,
-  icon: Icon,
+  accent,
 }: {
-  title: string;
-  value: string | number;
-  icon: typeof FileSpreadsheet;
+  label: string;
+  value: string;
+  accent?: "emerald" | "rose" | "blue" | "amber";
 }) {
+  const valueColor =
+    accent === "emerald"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : accent === "rose"
+      ? "text-rose-600 dark:text-rose-400"
+      : accent === "blue"
+      ? "text-blue-600 dark:text-blue-400"
+      : accent === "amber"
+      ? "text-amber-600 dark:text-amber-400"
+      : "text-[var(--color-text)]";
+
   return (
-    <Card>
-      <CardBody className="flex items-start gap-4 p-5">
-        <div className="rounded-2xl bg-brand-50 p-3 text-brand-700">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm text-text-secondary">{title}</p>
-          <p className="mt-1 text-2xl font-semibold text-text-primary">{value}</p>
-        </div>
-      </CardBody>
-    </Card>
+    <div className="flex flex-col gap-0.5">
+      <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">{label}</p>
+      <p className={`text-sm font-extrabold whitespace-nowrap ${valueColor}`}>{value}</p>
+    </div>
   );
 }

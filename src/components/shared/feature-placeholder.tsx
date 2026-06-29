@@ -21,8 +21,8 @@ export function FeaturePlaceholder({ title, description, nextStep }: FeaturePlac
           />
           <Card>
             <CardBody className="space-y-2">
-              <p className="text-sm font-medium text-text-primary">Status phase</p>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm font-medium text-[var(--color-text)]">Status phase</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">
                 Struktur halaman sudah ada. Fitur detail akan diisi pada phase berikutnya.
               </p>
             </CardBody>

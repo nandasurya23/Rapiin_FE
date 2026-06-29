@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ReceiptText, Send, FileSpreadsheet, Plus, ExternalLink, FileText } from "lucide-react";
+import { ReceiptText, Send, FileSpreadsheet, Plus, ExternalLink, FileText, Sparkles, Phone, Calendar, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/shared/status-badge";
@@ -16,6 +17,7 @@ import { getEntityById } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { Pagination } from "@/components/ui/pagination";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
+import { cn } from "@/lib/cn";
 
 type InvoiceFilter = "ALL" | "PAID" | "DP_PAID" | "UNPAID" | "REFUNDED" | "CANCELLED";
 
@@ -55,6 +57,16 @@ export function InvoicesPage() {
     const startIndex = (currentPage - 1) * INVOICE_PAGE_SIZE;
     return filteredInvoices.slice(startIndex, startIndex + INVOICE_PAGE_SIZE);
   }, [currentPage, filteredInvoices]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get("orderId");
+      if (orderId && orders.some((o) => o.id === orderId)) {
+        setSelectedOrderId(orderId);
+      }
+    }
+  }, [orders]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -107,60 +119,95 @@ export function InvoicesPage() {
 
   const selectedInvoiceOrder = selectedInvoice ? getEntityById(orders, selectedInvoice.orderId) : undefined;
 
+  // Helpers for CRM Initials Avatar and gradients
+  function getInitials(name: string) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0 || !parts[0]) return "?";
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function getAvatarGradient(name: string) {
+    const code = name.charCodeAt(0) % 4;
+    if (code === 0) return "from-blue-400 to-indigo-600";
+    if (code === 1) return "from-emerald-400 to-teal-600";
+    if (code === 2) return "from-amber-400 to-orange-600";
+    return "from-pink-400 to-rose-600";
+  }
+
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section>
-        <Card className="border-border/80 shadow-soft">
-          <CardBody className="space-y-4 p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <div className="inline-flex rounded-md bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">Nota</div>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">
-                  Nota sederhana, rapi, dan siap dibagikan
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
-                  Buat nota dari order, cek preview, lalu kirim ke customer lewat WhatsApp tanpa proses yang ribet.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <LinkButton href={ROUTES.orders}>
-                  <Plus className="h-4 w-4" />
-                  Buat dari Order
-                </LinkButton>
-                <LinkButton href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices} variant="secondary">
-                  <ExternalLink className="h-4 w-4" />
-                  Lihat Nota Publik
-                </LinkButton>
-              </div>
+      {/* SECTION 1: HERO HEADER */}
+      <section className="animate-fade-up">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
+          {/* Background decorative glows */}
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
+          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
+          
+          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            {/* Left */}
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+                <ReceiptText className="h-3.5 w-3.5 text-[var(--color-accent)]" />
+                Manajemen Nota Tagihan
+              </span>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
+                Nota Rapi &amp; Siap Dibagikan
+              </h1>
+              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
+                Buat invoice tagihan atau tanda terima DP otomatis dari data order, preview tampilan secara langsung, dan kirimkan format link publik ke customer lewat WhatsApp.
+              </p>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-4 text-sm text-text-secondary">
+            {/* Right Actions */}
+            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+              <LinkButton href={ROUTES.orders} className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-bold text-xs px-4 py-2 rounded-xl">
+                <Plus className="h-4 w-4" />
+                Buat Nota Baru
+              </LinkButton>
+              <LinkButton
+                href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices}
+                variant="secondary"
+                className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold text-xs px-4 py-2 rounded-xl"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Buka Link Publik
+              </LinkButton>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 2: STATS SUMMARY */}
+      <section className="animate-fade-up-delay-1">
+        <Card className="border-[var(--color-border)] shadow-none">
+          <CardBody className="p-5">
+            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 text-sm text-[var(--color-text-secondary)]">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-text-primary">Ringkasan nota</p>
-                    <p className="mt-1">Data mock ini sudah cukup untuk flow create, preview, dan kirim nota di MVP.</p>
+                    <p className="font-extrabold text-[var(--color-text)] uppercase tracking-wider text-xs">Penagihan Tagihan &amp; DP</p>
+                    <p className="mt-1.5 text-xs leading-relaxed">System Rapiin membuat flow generate, preview, dan sharing invoice tagihan (pembayaran penuh maupun parsial / DP) menjadi sangat praktis.</p>
                   </div>
-                  <ReceiptText className="h-5 w-5 text-brand-700" />
+                  <ReceiptText className="h-6 w-6 text-[var(--color-primary)] shrink-0" />
                 </div>
-                <div className="mt-4 rounded-xl border border-border/70 bg-surface px-4 py-4">
-                  <p className="font-medium text-text-primary">Status kerja</p>
-                  <p className="mt-1 text-sm text-text-secondary">
-                    PDF dan download masih placeholder. Nanti bisa diganti ke export nyata tanpa rombak layout utama.
-                  </p>
+                <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                  <span className="font-bold text-[var(--color-text)]">💡 Informasi Nota:</span> PDF download dan cetak kertas struk thermal akan langsung terformat rapi menyesuaikan ukuran layar penerima.
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                  <p className="text-xs text-text-muted">Total invoice</p>
-                  <p className="mt-1 text-2xl font-semibold text-text-primary">{invoices.length}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Total Invoice</p>
+                  <p className="mt-2 text-3xl font-black text-[var(--color-text)] tracking-tight">{invoices.length}</p>
+                  <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Nota terdaftar</p>
                 </div>
-                <div className="rounded-lg border border-border/70 bg-surface px-4 py-3">
-                  <p className="text-xs text-text-muted">Invoice lunas</p>
-                  <p className="mt-1 text-2xl font-semibold text-text-primary">
+                <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-5 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-success-text)]">Invoice Lunas</p>
+                  <p className="mt-2 text-3xl font-black text-[var(--color-text)] tracking-tight">
                     {invoices.filter((invoice) => invoice.paymentStatus === "PAID").length}
                   </p>
+                  <p className="text-[9px] text-[var(--color-success-text)] font-semibold">Telah selesai</p>
                 </div>
               </div>
             </div>
@@ -168,96 +215,122 @@ export function InvoicesPage() {
         </Card>
       </section>
 
-      <section className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr]">
-        <Card>
+      {/* SECTION 3: INVOICES GRID */}
+      <section className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr] animate-fade-up-delay-2">
+        {/* Left Card: Invoice List */}
+        <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-4 p-5">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
               <div>
-                <h2 className="text-lg font-semibold text-text-primary">List invoice</h2>
-                <p className="text-sm text-text-secondary">Filter, lihat detail, dan kirim via WhatsApp.</p>
+                <h2 className="text-lg font-bold text-[var(--color-text)]">Daftar Riwayat Invoice</h2>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Filter, pantau status pembayaran, dan bagikan tanda terima.</p>
               </div>
-              <Badge tone="info">{filteredInvoices.length} item</Badge>
+              <Badge tone="info" className="font-extrabold">{filteredInvoices.length} Nota</Badge>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {invoiceFilterOptions.map((option) => {
-                const active = filter === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setFilter(option.value)}
-                  className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-                      active ? "border-brand-500 bg-brand-50 text-brand-800" : "border-border bg-surface text-text-secondary hover:bg-muted"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+            <FilterChipGroup
+              options={invoiceFilterOptions}
+              value={filter}
+              onChange={(v) => setFilter(v as InvoiceFilter)}
+              size="sm"
+            />
 
-            <div className="space-y-3">
+            <div className="space-y-3 pt-1">
               {paginatedInvoices.map((invoice) => {
                 const active = selectedInvoice?.id === invoice.id;
+                
+                // Indicator border stripe based on payment status
+                let leftBorderStripe = "border-l-4 border-l-stone-300";
+                if (invoice.paymentStatus === "PAID") {
+                  leftBorderStripe = "border-l-4 border-l-emerald-500";
+                } else if (invoice.paymentStatus === "DP_PAID") {
+                  leftBorderStripe = "border-l-4 border-l-blue-500";
+                } else if (invoice.paymentStatus === "UNPAID") {
+                  leftBorderStripe = "border-l-4 border-l-rose-500";
+                }
 
                 return (
                   <button
                     key={invoice.id}
                     type="button"
                     onClick={() => setSelectedInvoiceId(invoice.id)}
-                    className={`w-full rounded-xl border border-border/80 bg-surface px-4 py-4 text-left transition ${
-                      active ? "border-brand-500 bg-brand-50" : "border-border bg-surface hover:bg-muted"
-                    }`}
+                    className={cn(
+                      "w-full rounded-2xl border px-4 py-4 text-left transition-all duration-300",
+                      leftBorderStripe,
+                      active
+                        ? "border-[var(--color-primary-border)] bg-[var(--color-primary-surface)] shadow-md"
+                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
+                    )}
                   >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="font-semibold text-text-primary">{invoice.invoiceCode}</p>
-                        <p className="mt-1 text-sm text-text-secondary">{invoice.customerName}</p>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      {/* Avatar + Code info */}
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white text-[10px] font-black shadow-xs select-none border border-white/20",
+                          getAvatarGradient(invoice.customerName)
+                        )}>
+                          {getInitials(invoice.customerName)}
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-sm text-[var(--color-text)] tracking-tight">{invoice.invoiceCode}</p>
+                          <p className="text-xs text-[var(--color-text-secondary)] font-medium mt-0.5">{invoice.customerName}</p>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+
+                      {/* Right metadata */}
+                      <div className="flex flex-wrap items-center gap-2 sm:self-center">
                         <PaymentStatusBadge status={invoice.paymentStatus} />
-                        <Badge tone="neutral">{formatCurrency(invoice.totalAmount)}</Badge>
+                        <Badge tone="neutral" className="text-[10px] font-bold">{formatCurrency(invoice.totalAmount)}</Badge>
                       </div>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
-                      <span>{formatDate(invoice.createdAt)}</span>
-                      <span>{invoice.notes ?? "-"}</span>
+
+                    <div className="mt-3.5 pt-3.5 border-t border-[var(--color-border)]/40 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-text-muted)] font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                        Tgl Dibuat: {formatDate(invoice.createdAt)}
+                      </span>
+                      <span className="max-w-[200px] truncate">{invoice.notes ?? "-"}</span>
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            <Pagination
-              currentPage={currentPage}
-              pageSize={INVOICE_PAGE_SIZE}
-              totalItems={filteredInvoices.length}
-              onPageChange={setCurrentPage}
-            />
+            <div className="pt-2">
+              <Pagination
+                currentPage={currentPage}
+                pageSize={INVOICE_PAGE_SIZE}
+                totalItems={filteredInvoices.length}
+                onPageChange={setCurrentPage}
+              />
+            </div>
           </CardBody>
         </Card>
 
-        <Card>
+        {/* Right Card: Preview Sheet & Form */}
+        <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-5 p-5">
-            <div>
-              <h2 className="text-lg font-semibold text-text-primary">Preview invoice</h2>
-              <p className="text-sm text-text-secondary">Tampilan ringkas yang siap dibagikan ke customer.</p>
+            <div className="border-b border-[var(--color-border)] pb-3">
+              <h2 className="text-lg font-bold text-[var(--color-text)]">Preview Lembar Invoice</h2>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Tampilan struk digital interaktif yang akan dikirim ke WhatsApp customer.</p>
             </div>
 
             {selectedInvoice ? (
               <>
-                <div className="rounded-2xl border border-border/80 bg-muted/20 p-4">
+                {/* Paper Receipt Mockup Wrapper */}
+                <div className="rounded-2xl border border-[var(--color-border)] bg-white dark:bg-[#101725] shadow-lg p-6 relative overflow-hidden">
                   <InvoiceSheet business={business} invoice={selectedInvoice} order={selectedInvoiceOrder} compact />
-                  <div className="mt-5 flex flex-wrap gap-2">
+                  
+                  <div className="mt-5 flex flex-wrap gap-2 border-t border-dashed border-[var(--color-border)] pt-5">
                     <WhatsAppButton
                       phoneNumber={selectedInvoiceOrder?.whatsappNumber ?? business.whatsappNumber}
-                      message={`Halo ${selectedInvoice.customerName}, ini nota untuk ${selectedInvoice.invoiceCode}.`}
+                      message={`Halo ${selectedInvoice.customerName}, ini nota untuk ${selectedInvoice.invoiceCode}. Silakan cek preview nota detail di link berikut: ${ROUTES.invoice(selectedInvoice.invoiceCode)}`}
                       label="Kirim WA"
                     />
                     <Button
                       type="button"
                       variant="secondary"
+                      className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4 flex items-center gap-1.5"
                       isLoading={loadingAction === "copy-invoice-code"}
                       onClick={async () => {
                         setLoadingAction("copy-invoice-code");
@@ -272,39 +345,72 @@ export function InvoicesPage() {
                       <Send className="h-4 w-4" />
                       Salin Kode
                     </Button>
-                    <LinkButton href={ROUTES.invoice(selectedInvoice.invoiceCode)} variant="secondary">
+                    <LinkButton
+                      href={ROUTES.invoice(selectedInvoice.invoiceCode)}
+                      variant="secondary"
+                      className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4"
+                    >
                       <FileText className="h-4 w-4" />
                       Buka Publik
                     </LinkButton>
                   </div>
                 </div>
 
-                <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {/* Create Invoice Form Block */}
+                <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)]/60 pb-3">
                     <div>
-                      <h3 className="text-base font-semibold text-text-primary">Buat nota dari order</h3>
-                      <p className="text-sm text-text-secondary">Pilih order lalu simpan sebagai nota baru.</p>
+                      <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">Buat Nota Baru dari Order</h3>
+                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">Pilih status order yang sudah selesai untuk diubah menjadi invoice resmi.</p>
                     </div>
-                    <Badge tone="success">{orders.filter((order) => order.status === "SELESAI").length} selesai</Badge>
+                    <Badge tone="success" className="font-extrabold uppercase text-[9px] tracking-wider shrink-0">
+                      {orders.filter((order) => order.status === "SELESAI").length} Order Selesai
+                    </Badge>
                   </div>
-                  <Select
-                    value={selectedOrderId}
-                    onValueChange={setSelectedOrderId}
-                    options={orders.map((order) => ({
-                      value: order.id,
-                      label: `${order.customerName} - ${order.title}`,
-                    }))}
-                  />
-                  <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Catatan tambahan nota" />
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" isLoading={loadingAction === "create-invoice"} onClick={() => void createFromOrder()} disabled={!canCreateInvoice}>
+                  
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Order Pelanggan</span>
+                    <Select
+                      value={selectedOrderId}
+                      onValueChange={setSelectedOrderId}
+                      options={orders.map((order) => ({
+                        value: order.id,
+                        label: `${order.customerName} - ${order.title}`,
+                      }))}
+                    />
+                  </label>
+                  
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Catatan Tambahan Tagihan / Syarat</span>
+                    <Textarea
+                      value={notes}
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="Contoh: Pembayaran DP 50% sisanya lunas saat pengambilan barang..."
+                      rows={2}
+                    />
+                  </label>
+                  
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <Button
+                      type="button"
+                      isLoading={loadingAction === "create-invoice"}
+                      onClick={() => void createFromOrder()}
+                      disabled={!canCreateInvoice}
+                      className="shadow-sm font-bold text-sm px-5 py-2 rounded-xl flex items-center gap-1.5"
+                    >
                       <FileSpreadsheet className="h-4 w-4" />
                       Buat Nota
                     </Button>
                     {!canCreateInvoice ? (
-                      <p className="text-xs text-amber-700">{readOnlyReason}</p>
+                      <p className="text-xs font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 rounded-xl">
+                        ⚠️ {readOnlyReason}
+                      </p>
                     ) : null}
-                    <LinkButton href={selectedOrderLink} variant="secondary">
+                    <LinkButton
+                      href={selectedOrderLink}
+                      variant="secondary"
+                      className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4"
+                    >
                       <ExternalLink className="h-4 w-4" />
                       Preview Route
                     </LinkButton>
@@ -312,8 +418,8 @@ export function InvoicesPage() {
                 </div>
               </>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border/80 p-5 text-sm text-text-secondary">
-                Belum ada invoice yang bisa dipreview.
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-text-secondary)] text-center">
+                Belum ada invoice yang bisa dipreview. Silakan buat nota baru terlebih dahulu.
               </div>
             )}
           </CardBody>

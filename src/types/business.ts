@@ -39,6 +39,8 @@ export type Business = Timestamped & {
   address?: string;
   openingHours?: string;
   logoUrl?: string;
+  paymentInstructions?: string;
+  closedDates?: Record<string, string>;
 };
 
 export type BusinessModeOption = {

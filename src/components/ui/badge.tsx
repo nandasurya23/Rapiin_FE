@@ -1,26 +1,58 @@
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { StatusTone } from "@/types/common";
 
 const toneStyles: Record<StatusTone, string> = {
-  info: "bg-blue-50 text-blue-700 border-blue-100",
-  warning: "bg-amber-50 text-amber-700 border-amber-100",
-  success: "bg-green-50 text-green-700 border-green-100",
-  danger: "bg-red-50 text-red-700 border-red-100",
-  neutral: "bg-slate-100 text-slate-700 border-slate-200",
+  info:    "bg-[var(--color-info-surface)]    text-[var(--color-info-text)]    border-[var(--color-info-border)]",
+  warning: "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)] border-[var(--color-warning-border)]",
+  success: "bg-[var(--color-success-surface)] text-[var(--color-success-text)] border-[var(--color-success-border)]",
+  danger:  "bg-[var(--color-danger-surface)]  text-[var(--color-danger-text)]  border-[var(--color-danger-border)]",
+  neutral: "bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]  border-[var(--color-border)]",
+};
+
+type BadgeSizeStyle = "sm" | "md";
+
+const sizeStyles: Record<BadgeSizeStyle, string> = {
+  sm: "px-2 py-0.5 text-[11px]",
+  md: "px-2.5 py-1 text-xs",
+};
+
+type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
+  tone?: StatusTone;
+  size?: BadgeSizeStyle;
+  dot?: boolean;
 };
 
 export function Badge({
   children,
   tone = "neutral",
+  size = "md",
+  dot = false,
   className,
   ...props
-}: HTMLAttributes<HTMLSpanElement> & { tone?: StatusTone }) {
+}: BadgeProps) {
   return (
     <span
-      className={cn("inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-medium tracking-wide", toneStyles[tone], className)}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border font-medium tracking-wide",
+        toneStyles[tone],
+        sizeStyles[size],
+        className
+      )}
       {...props}
     >
+      {dot && (
+        <span
+          className={cn(
+            "h-1.5 w-1.5 rounded-full flex-shrink-0",
+            tone === "info"    && "bg-[var(--color-info)]",
+            tone === "warning" && "bg-[var(--color-warning)]",
+            tone === "success" && "bg-[var(--color-success)]",
+            tone === "danger"  && "bg-[var(--color-danger)]",
+            tone === "neutral" && "bg-[var(--color-text-muted)]"
+          )}
+        />
+      )}
       {children}
     </span>
   );

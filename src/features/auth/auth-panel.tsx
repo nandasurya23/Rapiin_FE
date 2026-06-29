@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +11,18 @@ import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { isValidEmail, isValidEmailOrPhone, isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
+import { cn } from "@/lib/cn";
 
 type AuthPanelProps = {
   mode: "login" | "register" | "forgot-password";
 };
+
+const benefits = [
+  "Customer dan order tidak berantakan",
+  "Follow-up lebih cepat via WhatsApp",
+  "Nota dan laporan sederhana siap pakai",
+  "Kalender booking bawaan tanpa integrasi lain",
+];
 
 export function AuthPanel({ mode }: AuthPanelProps) {
   const router = useRouter();
@@ -36,81 +45,33 @@ export function AuthPanel({ mode }: AuthPanelProps) {
     const email = emailRaw.trim().toLowerCase();
     const phoneNumber = normalizePhoneNumber(phoneNumberRaw);
 
-    if (mode === "register" && !name.trim()) {
-      setError("Nama wajib diisi.");
-      return;
-    }
-
-    if (mode === "register" && !email) {
-      setError("Email wajib diisi.");
-      return;
-    }
-
-    if (mode === "register" && !isValidEmail(email)) {
-      setError("Gunakan email yang valid.");
-      return;
-    }
-
-    if (mode === "register" && !phoneNumber) {
-      setError("Nomor WhatsApp admin wajib diisi.");
-      return;
-    }
-
-    if (mode === "register" && !isValidPhoneNumber(phoneNumber)) {
-      setError("Nomor WhatsApp harus 9-15 digit angka.");
-      return;
-    }
-
-    if (mode !== "register" && !identifier.trim()) {
-      setError("Email / nomor HP wajib diisi.");
-      return;
-    }
-
-    if (mode !== "register" && !isValidEmailOrPhone(identifierRaw)) {
-      setError("Gunakan email yang valid atau nomor HP 9-15 digit.");
-      return;
-    }
-
-    if (password.trim().length < 6) {
-      setError("Password minimal 6 karakter.");
-      return;
-    }
-
-    if (mode === "forgot-password" && password !== confirmPassword) {
-      setError("Konfirmasi password harus sama.");
-      return;
-    }
+    if (mode === "register" && !name.trim()) { setError("Nama wajib diisi."); return; }
+    if (mode === "register" && !email) { setError("Email wajib diisi."); return; }
+    if (mode === "register" && !isValidEmail(email)) { setError("Gunakan email yang valid."); return; }
+    if (mode === "register" && !phoneNumber) { setError("Nomor WhatsApp admin wajib diisi."); return; }
+    if (mode === "register" && !isValidPhoneNumber(phoneNumber)) { setError("Nomor WhatsApp harus 9-15 digit angka."); return; }
+    if (mode !== "register" && !identifier.trim()) { setError("Email / nomor HP wajib diisi."); return; }
+    if (mode !== "register" && !isValidEmailOrPhone(identifierRaw)) { setError("Gunakan email yang valid atau nomor HP 9-15 digit."); return; }
+    if (password.trim().length < 6) { setError("Password minimal 6 karakter."); return; }
+    if (mode === "forgot-password" && password !== confirmPassword) { setError("Konfirmasi password harus sama."); return; }
 
     setIsSubmitting(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
+
       if (mode === "login") {
         const result = login({ identifier, password });
-
-        if (!result.ok) {
-          setError(result.message);
-          return;
-        }
-
+        if (!result.ok) { setError(result.message); return; }
         toast.success("Berhasil masuk");
         await new Promise((resolve) => setTimeout(resolve, 180));
-        if (result.user.role === "SUPER_ADMIN") {
-          router.push(ROUTES.superAdminBusinesses);
-          return;
-        }
-
+        if (result.user.role === "SUPER_ADMIN") { router.push(ROUTES.superAdminBusinesses); return; }
         router.push(!auth.onboardingCompleted ? ROUTES.onboarding : ROUTES.dashboard);
         return;
       }
 
       if (mode === "register") {
         const result = registerOwner({ name: name.trim(), email, phoneNumber, password });
-
-        if (!result.ok) {
-          setError(result.message);
-          return;
-        }
-
+        if (!result.ok) { setError(result.message); return; }
         toast.success("Akun berhasil dibuat");
         await new Promise((resolve) => setTimeout(resolve, 180));
         router.push(ROUTES.onboarding);
@@ -118,10 +79,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
       }
 
       const result = resetPassword({ identifier, password });
-      if (!result.ok) {
-        setError(result.message);
-        return;
-      }
+      if (!result.ok) { setError(result.message); return; }
       toast.success("Password berhasil diperbarui");
       await new Promise((resolve) => setTimeout(resolve, 180));
       router.push(ROUTES.login);
@@ -131,111 +89,175 @@ export function AuthPanel({ mode }: AuthPanelProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl items-center px-4 py-10 sm:px-6 lg:px-8">
-      <div className="grid w-full gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="flex flex-col justify-center gap-6 text-text-primary">
-          <div className="inline-flex w-fit rounded-md border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
-            Buku admin online untuk UMKM WhatsApp-first
+    <div className="min-h-screen flex">
+
+      {/* ── LEFT PANEL — Brand hero ─────────────────────── */}
+      <div
+        className={cn(
+          "hidden lg:flex lg:flex-col lg:justify-between lg:w-[420px] xl:w-[480px] shrink-0",
+          "relative overflow-hidden",
+          "bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] px-10 py-12"
+        )}
+      >
+        {/* Decorative background orbs */}
+        <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute -left-16 bottom-1/3 h-48 w-48 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute right-8 bottom-16 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
+
+        {/* Logo */}
+        <div className="relative flex items-center gap-3">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-xl
+              bg-gradient-to-br from-amber-400 to-yellow-500 text-slate-900 font-black text-base select-none shadow-lg shadow-amber-500/30"
+          >
+            R
           </div>
-          <div className="space-y-3">
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-              {mode === "login" ? "Masuk ke Rapiin" : mode === "register" ? "Mulai rapiin bisnismu" : "Atur ulang password"}
+          <span className="text-xl font-black text-white tracking-tight">Rapiin</span>
+        </div>
+
+        {/* Hero copy */}
+        <div className="relative space-y-8">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 mb-4">
+              ✦ Admin bisnis WA-first
+            </span>
+            <h1 className="text-3xl font-black text-white leading-snug tracking-tight">
+              Buku admin online<br />untuk bisnis WhatsApp‑first
             </h1>
-            <p className="max-w-xl text-base leading-7 text-text-secondary">
-              {mode === "forgot-password"
-                ? "Masukkan email atau nomor HP yang terdaftar, lalu buat password baru untuk lanjut masuk lagi."
-                : "Kelola customer, order, follow-up, nota, dan laporan sederhana dari satu tempat tanpa istilah teknis yang membingungkan."}
+            <p className="mt-4 text-white/50 text-sm leading-relaxed">
+              Kelola customer, order, follow-up, nota, dan laporan sederhana dari satu tempat —
+              tanpa istilah teknis yang bikin bingung.
             </p>
           </div>
-          <Card className="max-w-xl">
-            <CardBody className="space-y-3 p-5">
-              <p className="text-sm font-medium text-brand-700">Yang kamu dapat</p>
-              <ul className="space-y-2 text-sm text-text-secondary">
-                <li>• Customer dan order tidak berantakan</li>
-                <li>• Follow-up lebih cepat via WhatsApp</li>
-                <li>• Nota dan laporan sederhana langsung siap</li>
-              </ul>
+
+          {/* Benefits list */}
+          <ul className="space-y-3">
+            {benefits.map((benefit) => (
+              <li key={benefit} className="flex items-start gap-3">
+                <div className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-amber-400/20 flex items-center justify-center">
+                  <CheckCircle2 className="h-3 w-3 text-amber-300" />
+                </div>
+                <span className="text-sm text-white/75">{benefit}</span>
+              </li>
+            ))}
+          </ul>
+
+          {/* Demo hint */}
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-4 backdrop-blur-md space-y-2">
+            <p className="text-[10px] text-white/40 font-extrabold uppercase tracking-[0.15em]">Demo Local</p>
+            <div className="space-y-1">
+              <p className="text-xs text-white/60 font-mono bg-white/[0.04] rounded-lg px-3 py-1.5">superadmin@rapiin.local</p>
+              <p className="text-xs text-white/60 font-mono bg-white/[0.04] rounded-lg px-3 py-1.5">superadmin123</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="relative text-xs text-white/25">© {new Date().getFullYear()} Rapiin. All rights reserved.</p>
+      </div>
+
+      {/* ── RIGHT PANEL — Form ─────────────────────────── */}
+      <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 lg:px-12 bg-[var(--color-background)]">
+        <div className="w-full max-w-md">
+
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-xl
+                bg-gradient-to-br from-[#0c1d3b] to-[#122a57] text-white font-black text-sm select-none shadow-md"
+            >
+              R
+            </div>
+            <span className="text-lg font-black text-[var(--color-text)] tracking-tight">Rapiin</span>
+          </div>
+
+          {/* Heading */}
+          <div className="mb-7">
+            <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">
+              {mode === "login" ? "Masuk ke akun" : mode === "register" ? "Buat akun gratis" : "Atur ulang password"}
+            </h2>
+            <p className="mt-1.5 text-sm text-[var(--color-text-muted)] leading-relaxed">
+              {mode === "login"
+                ? "Gunakan akun yang sudah kamu daftarkan."
+                : mode === "register"
+                  ? "Buat akun dan lanjutkan onboarding bisnis."
+                  : "Ganti password akun yang terdaftar di perangkat ini."}
+            </p>
+          </div>
+
+          {/* Form card */}
+          <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)]">
+            <CardBody className="space-y-4 p-6">
+              <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+                {mode === "register" ? (
+                  <>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Owner</span>
+                      <Input name="name" placeholder="Nama kamu" required />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Email</span>
+                      <Input name="email" type="email" placeholder="owner@bisnis.com" required />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nomor WhatsApp</span>
+                      <Input name="phoneNumber" placeholder="08123456789" required />
+                    </label>
+                  </>
+                ) : null}
+
+                {mode !== "register" ? (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Email / Nomor HP</span>
+                    <Input name="identifier" placeholder="contoh@mail.com atau 08123456789" required />
+                  </label>
+                ) : null}
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Password</span>
+                  <PasswordInput name="password" placeholder="Masukkan password" required />
+                </label>
+
+                {mode === "forgot-password" ? (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Konfirmasi Password Baru</span>
+                    <PasswordInput name="confirmPassword" placeholder="Ulangi password baru" required />
+                  </label>
+                ) : null}
+
+                {error ? (
+                  <div className="rounded-xl bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] px-4 py-3 flex items-start gap-2.5">
+                    <span className="text-[var(--color-danger)] text-base leading-none mt-0.5">⚠</span>
+                    <p className="text-sm text-[var(--color-danger)] leading-relaxed">{error}</p>
+                  </div>
+                ) : null}
+
+                <Button type="submit" className="w-full h-11 font-bold rounded-xl" isLoading={isSubmitting}>
+                  {mode === "login" ? "Masuk ke Akun" : mode === "register" ? "Buat Akun Sekarang" : "Simpan Password Baru"}
+                </Button>
+              </form>
+
+              {/* Footer links */}
+              <div className="flex flex-col items-center gap-2 pt-2 text-sm text-[var(--color-text-muted)]">
+                {mode === "login" ? (
+                  <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-primary)] text-xs font-semibold">
+                    Lupa password?
+                  </LinkButton>
+                ) : null}
+                <span className="text-xs">
+                  {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
+                  <LinkButton
+                    href={mode === "login" ? ROUTES.register : ROUTES.login}
+                    variant="ghost"
+                    className="h-auto px-0 py-0 text-[var(--color-primary)] font-bold text-xs"
+                  >
+                    {mode === "login" ? "Daftar gratis" : "Masuk"}
+                  </LinkButton>
+                </span>
+              </div>
             </CardBody>
           </Card>
         </div>
-
-        <Card className="bg-surface/95">
-          <CardBody className="space-y-5 p-5 sm:p-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-text-primary">
-                {mode === "login" ? "Masuk" : mode === "register" ? "Buat akun" : "Lupa Password"}
-              </h2>
-              <p className="mt-1 text-sm text-text-secondary">
-                {mode === "login"
-                  ? "Gunakan akun yang sudah kamu daftarkan."
-                  : mode === "register"
-                    ? "Buat akun gratis dan lanjutkan onboarding bisnis."
-                    : "Ganti password akun yang sudah terdaftar di perangkat ini."}
-              </p>
-            </div>
-
-            <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
-              {mode === "register" ? (
-                <>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Nama owner</span>
-                    <Input name="name" placeholder="Nama kamu" required />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Email</span>
-                    <Input name="email" type="email" placeholder="owner@bisnis.com" required />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Nomor WhatsApp admin</span>
-                    <Input name="phoneNumber" placeholder="08123456789" required />
-                  </label>
-                </>
-              ) : null}
-              {mode !== "register" ? (
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-text-primary">Email / Nomor HP</span>
-                  <Input name="identifier" placeholder="contoh@mail.com atau 08123456789" required />
-                </label>
-              ) : null}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text-primary">Password</span>
-                <PasswordInput name="password" placeholder="Masukkan password" required />
-              </label>
-              {mode === "forgot-password" ? (
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-text-primary">Konfirmasi password baru</span>
-                  <PasswordInput name="confirmPassword" placeholder="Ulangi password baru" required />
-                </label>
-              ) : null}
-              {error ? <p className="text-sm text-status-danger">{error}</p> : null}
-              <Button type="submit" className="w-full" isLoading={isSubmitting}>
-                {mode === "login" ? "Masuk" : mode === "register" ? "Buat Akun" : "Simpan Password Baru"}
-              </Button>
-            </form>
-
-            <div className="space-y-2 text-center text-sm text-text-secondary">
-              {mode === "login" ? (
-                <div className="rounded-md border border-border/80 bg-muted/20 px-3 py-2 text-left text-xs text-text-secondary">
-                  Demo super admin lokal: <span className="font-medium text-text-primary">superadmin@rapiin.local</span> /{" "}
-                  <span className="font-medium text-text-primary">superadmin123</span>
-                </div>
-              ) : null}
-              {mode === "login" ? (
-                <div>
-                  <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-brand-700">
-                    Lupa password?
-                  </LinkButton>
-                </div>
-              ) : null}
-              <div>
-                {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
-                <LinkButton href={mode === "login" ? ROUTES.register : ROUTES.login} variant="ghost" className="h-auto px-0 py-0 text-brand-700">
-                  {mode === "login" ? "Daftar gratis" : "Masuk"}
-                </LinkButton>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
       </div>
     </div>
   );

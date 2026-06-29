@@ -12,8 +12,21 @@ export function MobileBottomNav() {
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : MOBILE_NAV_ITEMS;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/80 bg-surface/96 backdrop-blur lg:hidden">
-      <div className={cn("px-2", isSuperAdmin ? "grid grid-cols-2" : "grid grid-cols-6")}>
+    <nav
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-30 lg:hidden",
+        "border-t border-[var(--color-border)]",
+        "bg-[var(--color-surface)]/97 backdrop-blur-md",
+        "shadow-[0_-4px_16px_rgba(14,37,84,0.07)]"
+      )}
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      <div
+        className={cn(
+          "grid px-1 py-1",
+          isSuperAdmin ? "grid-cols-2" : "grid-cols-7"
+        )}
+      >
         {navItems.map((item) => {
           const active = pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -23,12 +36,36 @@ export function MobileBottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "my-2 flex flex-col items-center gap-1 rounded-md px-1 py-2 text-[10px] font-medium transition-all duration-200 sm:px-2 sm:text-[11px]",
-                active ? "bg-brand-50 text-brand-800" : "text-text-muted"
+                "relative flex flex-col items-center justify-center gap-0.5",
+                "min-h-[52px] rounded-[var(--radius-md)] px-1 py-2",
+                "text-[11px] font-medium",
+                "transition-all duration-[var(--transition-fast)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]",
+                active
+                  ? "text-[var(--color-primary)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--state-hover-bg)]"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              {/* Active top indicator bar */}
+              {active && (
+                <span
+                  className="absolute top-0 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-b-full bg-[var(--color-primary)]"
+                  aria-hidden
+                />
+              )}
+
+              {/* Icon */}
+              <Icon
+                className={cn(
+                  "transition-all duration-[var(--transition-fast)]",
+                  active
+                    ? "h-[20px] w-[20px] text-[var(--color-primary)]"
+                    : "h-[18px] w-[18px]"
+                )}
+              />
+
+              {/* Label */}
+              <span className="leading-none">{item.label}</span>
             </Link>
           );
         })}
