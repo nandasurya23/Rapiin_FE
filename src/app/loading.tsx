@@ -3,8 +3,8 @@ import { LoadingBlock, LoadingSpinner } from "@/components/shared/loading";
 export default function Loading() {
   return (
     <main className="page-enter flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm rounded-2xl border border-border/80 bg-surface p-6 text-center shadow-soft">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-brand-100 bg-brand-50">
+      <div className="w-full max-w-sm rounded-md border border-[var(--color-border)] shimmer p-6 text-center shadow-none">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-[var(--color-border)] shimmer">
           <LoadingSpinner />
         </div>
         <div className="mt-4 space-y-2">

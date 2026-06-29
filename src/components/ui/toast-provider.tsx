@@ -45,21 +45,21 @@ function toastIcon(tone: ToastTone) {
 function toastStyles(tone: ToastTone) {
   if (tone === "success") {
     return {
-      shell: "border-emerald-200/80 bg-white/92",
-      icon: "bg-emerald-50 text-emerald-700",
+      shell: "border-[var(--color-success-border)] bg-white",
+      icon: "bg-[var(--color-success-surface)] text-[var(--color-success)]",
     };
   }
 
   if (tone === "error") {
     return {
-      shell: "border-red-200/80 bg-white/92",
-      icon: "bg-red-50 text-red-700",
+      shell: "border-[var(--color-danger-border)] bg-white",
+      icon: "bg-[var(--color-danger-surface)] text-[var(--color-danger)]",
     };
   }
 
   return {
-    shell: "border-brand-200/80 bg-white/92",
-    icon: "bg-brand-50 text-brand-700",
+    shell: "border-[var(--color-info-border)] bg-white",
+    icon: "bg-[var(--color-info-surface)] text-[var(--color-info)]",
   };
 }
 
@@ -115,13 +115,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
                 <div className="min-w-0 pt-0.5">
-                  <p className="text-sm font-semibold leading-5 text-text-primary">{toast.title}</p>
-                  {toast.description ? <p className="mt-1 text-sm leading-5 text-text-secondary">{toast.description}</p> : null}
+                  <p className="text-sm font-semibold leading-5 text-[var(--color-text)]">{toast.title}</p>
+                  {toast.description ? <p className="mt-1 text-sm leading-5 text-[var(--color-text-secondary)]">{toast.description}</p> : null}
                 </div>
                 <button
                   type="button"
                   onClick={() => dismissToast(toast.id)}
-                  className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-lg text-text-muted transition hover:bg-muted hover:text-text-primary"
+                  className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-elevated)] hover:text-[var(--color-text)]"
                   aria-label="Tutup notifikasi"
                 >
                   <X className="h-4 w-4" />

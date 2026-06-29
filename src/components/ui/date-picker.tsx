@@ -11,6 +11,7 @@ type DatePickerProps = {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  disabledDates?: string[];
 };
 
 const weekdayLabels = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -52,7 +53,14 @@ function getMonthCells(viewDate: Date) {
   });
 }
 
-export function DatePicker({ value, onValueChange, placeholder = "Pilih tanggal", disabled, className }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onValueChange,
+  placeholder = "Pilih tanggal",
+  disabled,
+  className,
+  disabledDates,
+}: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(value ? parseDateValue(value) : new Date());
   const rootRef = useRef<HTMLDivElement>(null);
@@ -118,14 +126,14 @@ export function DatePicker({ value, onValueChange, placeholder = "Pilih tanggal"
           }
         }}
         className={cn(
-          "flex h-11 w-full items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 text-left text-sm text-text-primary outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-60",
+          "flex h-11 w-full items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-left text-sm text-[var(--color-text)] outline-none transition-all duration-[var(--transition-fast)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--state-focus-ring)] disabled:cursor-not-allowed disabled:opacity-60",
           className
         )}
       >
-        <span className={cn("min-w-0 flex-1 truncate", value ? "text-text-primary" : "text-text-muted")}>
+        <span className={cn("min-w-0 flex-1 truncate", value ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]")}>
           {value ? formatDate(value) : placeholder}
         </span>
-        <CalendarDays className="h-4 w-4 shrink-0 text-text-muted" />
+        <CalendarDays className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
       </button>
 
       {open ? (
@@ -133,29 +141,29 @@ export function DatePicker({ value, onValueChange, placeholder = "Pilih tanggal"
           id={menuId}
           role="dialog"
           aria-label="Date picker"
-          className="absolute left-0 right-0 z-30 mt-2 rounded-lg border border-border bg-surface p-4 shadow-soft"
+          className="absolute left-0 right-0 z-30 mt-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-lg)]"
         >
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => setViewDate((current) => addMonths(current, -1))}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-text-primary transition hover:bg-muted"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] transition hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
               aria-label="Bulan sebelumnya"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <div className="text-sm font-semibold text-text-primary">{monthLabel}</div>
+            <div className="text-sm font-semibold text-[var(--color-text)]">{monthLabel}</div>
             <button
               type="button"
               onClick={() => setViewDate((current) => addMonths(current, 1))}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-text-primary transition hover:bg-muted"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] transition hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
               aria-label="Bulan berikutnya"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-medium text-text-muted">
+          <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-medium text-[var(--color-text-muted)]">
             {weekdayLabels.map((label) => (
               <div key={label} className="py-1">
                 {label}
@@ -165,23 +173,27 @@ export function DatePicker({ value, onValueChange, placeholder = "Pilih tanggal"
 
           <div className="mt-2 grid grid-cols-7 gap-1">
             {monthCells.map((date) => {
+              const dateVal = toDateValue(date);
               const isCurrentMonth = date.getMonth() === viewDate.getMonth();
               const isSelected = selectedDate ? isSameDay(date, selectedDate) : false;
               const isToday = isSameDay(date, today);
+              const isDisabledDate = disabledDates?.includes(dateVal);
 
               return (
                 <button
-                  key={toDateValue(date)}
+                  key={dateVal}
                   type="button"
+                  disabled={isDisabledDate}
                   onClick={() => {
-                    onValueChange(toDateValue(date));
+                    onValueChange(dateVal);
                     setOpen(false);
                   }}
                   className={cn(
-                    "flex h-10 items-center justify-center rounded-lg text-sm transition",
-                    isCurrentMonth ? "text-text-primary hover:bg-muted" : "text-text-muted/60",
-                    isSelected && "bg-brand-700 font-medium text-white hover:bg-brand-700",
-                    isToday && !isSelected && "border border-brand-200 bg-brand-50 text-brand-800"
+                    "flex h-10 items-center justify-center rounded-[var(--radius-md)] text-sm transition-all duration-[var(--transition-fast)]",
+                    !isDisabledDate && (isCurrentMonth ? "text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)]" : "text-[var(--color-text-muted)] opacity-40"),
+                    isSelected && "bg-[var(--color-primary)] font-semibold text-white hover:bg-[var(--color-primary-hover)]",
+                    isToday && !isSelected && "border border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-semibold",
+                    isDisabledDate && "bg-red-50 text-red-500 border border-red-100 line-through cursor-not-allowed font-medium"
                   )}
                 >
                   {date.getDate()}
@@ -194,14 +206,14 @@ export function DatePicker({ value, onValueChange, placeholder = "Pilih tanggal"
             <button
               type="button"
               onClick={() => onValueChange(toDateValue(new Date()))}
-              className="text-sm font-medium text-brand-700 transition hover:text-brand-800"
+              className="text-sm font-medium text-[var(--color-primary)] transition hover:text-[var(--color-primary-hover)]"
             >
               Pilih hari ini
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="text-sm font-medium text-text-secondary transition hover:text-text-primary"
+              className="text-sm font-medium text-[var(--color-text-muted)] transition hover:text-[var(--color-text)]"
             >
               Tutup
             </button>

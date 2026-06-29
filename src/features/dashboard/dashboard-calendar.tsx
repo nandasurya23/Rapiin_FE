@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, CircleDot, ExternalLink, ReceiptText, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleDot, ExternalLink, ReceiptText, X, CalendarOff, CheckCircle2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -114,7 +116,179 @@ type DetailContentProps = {
   onCreateInvoice: (order: Order) => Promise<void>;
   onOpenInvoice: (invoiceCode: string) => void;
   savingOrderId: string | null;
+  onToggleClosedDate: (date: string, reason?: string, endDate?: string) => void;
 };
+
+function getDatesInRange(startDateStr: string, endDateStr: string): string[] {
+  const dates: string[] = [];
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return [startDateStr];
+  }
+
+  const current = new Date(start);
+  let iterations = 0;
+  while (current <= end && iterations < 366) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    dates.push(`${year}-${month}-${day}`);
+    current.setDate(current.getDate() + 1);
+    iterations++;
+  }
+  return dates;
+}
+
+function ClosedDaySection({
+  selectedDate,
+  closedReason,
+  onToggle,
+}: {
+  selectedDate: string;
+  closedReason?: string;
+  onToggle: (reason?: string, endDate?: string) => void;
+}) {
+  const [reasonInput, setReasonInput] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const [isRange, setIsRange] = useState(false);
+  const [endDateInput, setEndDateInput] = useState(selectedDate);
+
+  const isClosed = Boolean(closedReason);
+
+  useEffect(() => {
+    setEndDateInput(selectedDate);
+  }, [selectedDate]);
+
+  return (
+    <div className={cn(
+      "rounded-[var(--radius-lg)] border p-4 transition-all",
+      isClosed
+        ? "border-red-200 bg-red-50/50"
+        : "border-[var(--color-border)] bg-[var(--color-surface)]"
+    )}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          {isClosed ? (
+            <CalendarOff className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
+          ) : (
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[var(--color-text)]">
+              {isClosed ? "Operasional Tutup / Libur" : "Operasional Buka Normal"}
+            </p>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5 truncate max-w-[280px] sm:max-w-md" title={closedReason}>
+              {isClosed
+                ? `Alasan: "${closedReason}"`
+                : "Pelanggan bisa melakukan booking/order di tanggal ini."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isClosed ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => onToggle()}
+              className="bg-white border-red-200 text-red-700 hover:bg-red-50"
+            >
+              Buka Kembali Toko
+            </Button>
+          ) : !showInput ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setShowInput(true);
+                setReasonInput("");
+                setIsRange(false);
+                setEndDateInput(selectedDate);
+              }}
+              className="text-red-600 hover:text-red-700"
+            >
+              Setel Libur / Tutup Toko
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {showInput && !isClosed && (
+        <div className="mt-3 space-y-3 border-t border-[var(--color-border)] pt-3 animate-fade-in">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isRange}
+              onChange={(e) => {
+                setIsRange(e.target.checked);
+                if (!e.target.checked) setEndDateInput(selectedDate);
+              }}
+              className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] h-4 w-4"
+            />
+            <span className="text-xs font-semibold text-[var(--color-text)]">Setel Rentang Tanggal (Multi-Hari)</span>
+          </label>
+
+          {isRange && (
+            <div className="grid gap-3 md:grid-cols-2 animate-fade-in">
+              <label className="block opacity-60">
+                <span className="mb-2 block text-xs font-semibold text-[var(--color-text)]">Mulai Tanggal</span>
+                <DatePicker value={selectedDate} onValueChange={() => {}} disabled={true} />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold text-[var(--color-text)]">Sampai Tanggal</span>
+                <DatePicker
+                  value={endDateInput}
+                  onValueChange={(val) => {
+                    if (new Date(val) >= new Date(selectedDate)) {
+                      setEndDateInput(val);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          )}
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold text-[var(--color-text)]">
+              Alasan Libur / Tutup Toko <span className="text-red-500">*</span>
+            </span>
+            <Input
+              value={reasonInput}
+              onChange={(e) => setReasonInput(e.target.value)}
+              placeholder="Contoh: Libur Idul Fitri, Renovasi Studio, Staf Cuti Bersama"
+              className="text-xs"
+            />
+          </label>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowInput(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!reasonInput.trim() || (isRange && new Date(endDateInput) < new Date(selectedDate))}
+              onClick={() => {
+                onToggle(reasonInput, isRange ? endDateInput : undefined);
+                setShowInput(false);
+              }}
+            >
+              Simpan Libur
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CalendarDetailContent({
   business,
@@ -142,13 +316,20 @@ function CalendarDetailContent({
   onCreateInvoice,
   onOpenInvoice,
   savingOrderId,
+  onToggleClosedDate,
 }: DetailContentProps) {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border/70 bg-white/90 px-4 py-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Tanggal dipilih</p>
-        <p className="mt-1 text-lg font-semibold text-text-primary">{selectedDateLabel}</p>
-        <p className="mt-1 text-sm text-text-secondary">
+      <ClosedDaySection
+        selectedDate={selectedDate}
+        closedReason={business.closedDates?.[selectedDate]}
+        onToggle={(reason, endDate) => onToggleClosedDate(selectedDate, reason, endDate)}
+      />
+
+      <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Tanggal dipilih</p>
+        <p className="mt-1 text-lg font-semibold text-[var(--color-text)]">{selectedDateLabel}</p>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           {selectedDateCount ? `${selectedDateCount} order / booking ditemukan` : "Belum ada order / booking pada tanggal ini."}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -169,99 +350,103 @@ function CalendarDetailContent({
           </Badge>
           <Badge tone="neutral">{selectedDate} </Badge>
         </div>
-        {(isResourceMode ? selectedResourceAvailability.hasHold : hasHoldSlot) ? (
-          <p className="mt-3 text-xs text-amber-700">Ada booking pending DP. Slot akan kembali terbuka setelah hold aktif berakhir.</p>
+        {business.mode === "BOOKING_SERVICE" && (isResourceMode ? selectedResourceAvailability.hasHold : hasHoldSlot) ? (
+          <p className="mt-3 text-xs text-[var(--color-warning-text)]">Ada booking pending DP. Slot akan kembali terbuka setelah hold aktif berakhir.</p>
         ) : null}
       </div>
 
-      {isResourceMode ? (
-        <div className="space-y-3 rounded-xl border border-border/70 bg-white/90 px-4 py-4">
-          <div>
-            <p className="text-sm font-medium text-text-primary">Unit / slot</p>
-            <p className="mt-1 text-xs text-text-muted">
-              Detail ketersediaan per {business.resourceLabel?.toLowerCase() ?? "unit"} untuk tanggal ini.
-            </p>
-          </div>
-          <div className="space-y-2">
-            {visibleResourceDetails.map((resource) => (
-              <div key={resource.resourceId} className="rounded-lg border border-border/70 bg-surface px-3 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{resource.resourceName}</p>
-                    <p className="mt-0.5 text-xs text-text-muted">
-                      {!resource.isActive
-                        ? "Sedang dinonaktifkan"
-                        : resource.bookings.length
-                          ? `${resource.bookings.length} booking pada tanggal ini`
-                          : "Belum ada booking pada tanggal ini"}
-                    </p>
-                  </div>
-                  <Badge tone={resource.statusTone}>{resource.statusLabel}</Badge>
-                </div>
-                {resource.earliestHoldExpiresAt ? (
-                  <p className="mt-2 text-xs text-amber-700">
-                    Hold aktif sampai {formatDateTime(resource.earliestHoldExpiresAt.toISOString())}
-                  </p>
-                ) : null}
-                {resource.bookings.length ? (
-                  <div className="mt-3 space-y-2">
-                    {resource.bookings.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-white px-3 py-2 text-xs">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-text-primary">{order.customerName}</p>
-                          <p className="text-text-muted">
-                            {order.scheduledTime ?? "-"} • {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} menit
-                          </p>
-                        </div>
-                        <PaymentStatusBadge status={order.paymentStatus} />
+      {business.mode === "BOOKING_SERVICE" && (
+        <>
+          {isResourceMode ? (
+            <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Unit / slot</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Detail ketersediaan per {business.resourceLabel?.toLowerCase() ?? "unit"} untuk tanggal ini.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {visibleResourceDetails.map((resource) => (
+                  <div key={resource.resourceId} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-text)]">{resource.resourceName}</p>
+                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                          {!resource.isActive
+                            ? "Sedang dinonaktifkan"
+                            : resource.bookings.length
+                              ? `${resource.bookings.length} booking pada tanggal ini`
+                              : "Belum ada booking pada tanggal ini"}
+                        </p>
                       </div>
-                    ))}
+                      <Badge tone={resource.statusTone}>{resource.statusLabel}</Badge>
+                    </div>
+                    {resource.earliestHoldExpiresAt ? (
+                      <p className="mt-2 text-xs text-[var(--color-warning-text)]">
+                        Hold aktif sampai {formatDateTime(resource.earliestHoldExpiresAt.toISOString())}
+                      </p>
+                    ) : null}
+                    {resource.bookings.length ? (
+                      <div className="mt-3 space-y-2">
+                        {resource.bookings.map((order) => (
+                          <div key={order.id} className="flex items-center justify-between gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-inset)] px-3 py-2 text-xs">
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-[var(--color-text)]">{order.customerName}</p>
+                              <p className="text-[var(--color-text-muted)]">
+                                {order.scheduledTime ?? "-"} • {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} menit
+                              </p>
+                            </div>
+                            <PaymentStatusBadge status={order.paymentStatus} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+                {hiddenResourceCount > 0 ? (
+                  <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-surface-inset)] px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+                    +{hiddenResourceCount} unit lain disembunyikan dulu supaya detail tetap ringkas.
                   </div>
                 ) : null}
               </div>
-            ))}
-            {hiddenResourceCount > 0 ? (
-              <div className="rounded-lg border border-dashed border-border/70 bg-white px-3 py-2 text-xs text-text-secondary">
-                +{hiddenResourceCount} unit lain disembunyikan dulu supaya detail tetap ringkas.
+            </div>
+          ) : selectedSlotSummaries.length ? (
+            <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Slot jam</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Maksimal {BOOKING_SLOT_CAPACITY} booking untuk slot yang overlap.</p>
               </div>
-            ) : null}
-          </div>
-        </div>
-      ) : selectedSlotSummaries.length ? (
-        <div className="space-y-3 rounded-xl border border-border/70 bg-white/90 px-4 py-4">
-          <div>
-            <p className="text-sm font-medium text-text-primary">Slot jam</p>
-            <p className="mt-1 text-xs text-text-muted">Maksimal {BOOKING_SLOT_CAPACITY} booking untuk slot yang overlap.</p>
-          </div>
-          <div className="space-y-2">
-            {selectedSlotSummaries.map((slot) => (
-              <div key={slot.time} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-surface px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{slot.time}</p>
-                  <p className="mt-0.5 text-xs text-text-muted">
-                    {slot.count} booking overlap • {slot.holdCount} hold aktif
-                  </p>
-                </div>
-                <Badge tone={slot.isFull ? "danger" : slot.holdCount > 0 ? "warning" : getBookingSlotTone(slot.count)}>
-                  {slot.isFull ? "Full" : slot.holdCount > 0 ? `Hold ${slot.holdCount}` : getBookingSlotLabel(slot.count)}
-                </Badge>
+              <div className="space-y-2">
+                {selectedSlotSummaries.map((slot) => (
+                  <div key={slot.time} className="flex items-center justify-between gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text)]">{slot.time}</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                        {slot.count} booking overlap • {slot.holdCount} hold aktif
+                      </p>
+                    </div>
+                    <Badge tone={slot.isFull ? "danger" : slot.holdCount > 0 ? "warning" : getBookingSlotTone(slot.count)}>
+                      {slot.isFull ? "Full" : slot.holdCount > 0 ? `Hold ${slot.holdCount}` : getBookingSlotLabel(slot.count)}
+                    </Badge>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
 
       {isResourceMode && unassignedSelectedOrders.length ? (
-        <div className="space-y-2 rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-4">
+        <div className="space-y-2 rounded-md border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-4">
           <div>
-            <p className="text-sm font-medium text-text-primary">Booking belum ditetapkan ke unit</p>
-            <p className="mt-1 text-xs text-text-secondary">
+            <p className="text-sm font-medium text-[var(--color-text)]">Booking belum ditetapkan ke unit</p>
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
               Ini booking lama yang belum punya {business.resourceLabel?.toLowerCase() ?? "unit"}. Edit dari halaman order supaya availability lebih akurat.
             </p>
           </div>
           {unassignedSelectedOrders.map((order) => (
-            <div key={order.id} className="rounded-lg border border-amber-100 bg-white px-3 py-2 text-xs text-text-secondary">
-              <p className="font-medium text-text-primary">{order.customerName}</p>
+            <div key={order.id} className="rounded-md border border-[var(--color-warning-border)] bg-[var(--color-surface-inset)] px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+              <p className="font-medium text-[var(--color-text)]">{order.customerName}</p>
               <p>{order.scheduledTime ?? "-"} • {order.title}</p>
             </div>
           ))}
@@ -274,15 +459,15 @@ function CalendarDetailContent({
             const linkedInvoice = invoiceByOrderId[order.id];
 
             return (
-              <div key={order.id} className="rounded-xl border border-border/70 bg-white/90 px-4 py-4">
+              <div key={order.id} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-medium text-text-primary">{order.customerName}</p>
-                  <p className="text-sm text-text-secondary">{order.title}</p>
+                  <p className="font-medium text-[var(--color-text)]">{order.customerName}</p>
+                  <p className="text-sm text-[var(--color-text-secondary)]">{order.title}</p>
                 </div>
                 <PaymentStatusBadge status={order.paymentStatus} />
               </div>
-              <div className="mt-3 space-y-1 text-xs text-text-muted">
+              <div className="mt-3 space-y-1 text-xs text-[var(--color-text-muted)]">
                 <div className="flex items-center justify-between gap-2">
                   <span>{order.scheduledTime ?? "Belum ada jam"}</span>
                   <span>{order.status}</span>
@@ -292,7 +477,7 @@ function CalendarDetailContent({
                     <p>{order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} menit durasi</p>
                     {order.resourceNameSnapshot ? <p>{order.resourceNameSnapshot}</p> : null}
                     {isBookingHoldActive(order) ? (
-                      <p className="text-amber-700">
+                      <p className="text-[var(--color-warning-text)]">
                         Hold aktif sampai {formatDateTime(getBookingHoldExpiresAt(order)?.toISOString() ?? null)}
                       </p>
                     ) : order.paymentStatus === "DP_PAID" || order.paymentStatus === "PAID" ? (
@@ -301,7 +486,7 @@ function CalendarDetailContent({
                   </>
                 ) : null}
               </div>
-              <div className="mt-4 space-y-3 rounded-lg border border-border/60 bg-surface px-3 py-3">
+              <div className="mt-4 space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3">
                 <div className="flex flex-wrap gap-2">
                   <WhatsAppButton
                     phoneNumber={order.whatsappNumber}
@@ -367,7 +552,7 @@ function CalendarDetailContent({
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="block">
-                    <span className="mb-2 block text-xs font-medium text-text-primary">Status</span>
+                    <span className="mb-2 block text-xs font-medium text-[var(--color-text)]">Status</span>
                     <Select
                       value={getDraftStatus(order)}
                       onValueChange={(value) => onDraftStatusChange(order.id, value as OrderStatus)}
@@ -375,7 +560,7 @@ function CalendarDetailContent({
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-xs font-medium text-text-primary">Status bayar</span>
+                    <span className="mb-2 block text-xs font-medium text-[var(--color-text)]">Status bayar</span>
                     <Select
                       value={getDraftPaymentStatus(order)}
                       onValueChange={(value) => onDraftPaymentChange(order.id, value as PaymentStatus)}
@@ -400,20 +585,20 @@ function CalendarDetailContent({
             );
           })}
           {hiddenSelectedOrderCount > 0 ? (
-            <div className="rounded-xl border border-dashed border-border/80 p-4 text-sm text-text-secondary">
+            <div className="rounded-xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-text-secondary)]">
               +{hiddenSelectedOrderCount} order lain disembunyikan dulu. Lihat halaman order untuk detail penuh.
             </div>
           ) : null}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/80 p-4 text-sm text-text-secondary">
+        <div className="rounded-xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-text-secondary)]">
           Tidak ada detail untuk tanggal ini.
         </div>
       )}
 
-      <div className="rounded-xl border border-border/70 bg-surface px-4 py-4 text-sm text-text-secondary">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-sm text-[var(--color-text-secondary)]">
         <div className="flex items-start gap-3">
-          <CircleDot className="mt-0.5 h-4 w-4 text-brand-700" />
+          <CircleDot className="mt-0.5 h-4 w-4 text-[var(--color-primary)]" />
           <p>Kalender ini dipakai admin buat cek jadwal harian dengan cepat. Klik tanggal lain untuk buka detailnya.</p>
         </div>
       </div>
@@ -423,8 +608,32 @@ function CalendarDetailContent({
 
 export function DashboardCalendar({ business, orders, selectedDate, onDateSelect }: DashboardCalendarProps) {
   const toast = useToast();
-  const { invoices, updateOrder, createInvoiceFromOrder } = useAppData();
+  const { invoices, updateOrder, createInvoiceFromOrder, updateBusiness } = useAppData();
   const todayKey = toDateKey(new Date());
+
+  function handleToggleClosedDate(date: string, reason?: string, endDate?: string) {
+    const closedDates = { ...(business.closedDates || {}) };
+    if (closedDates[date] && !reason) {
+      delete closedDates[date];
+      toast.info("Toko dibuka kembali", `Operasional tanggal ${formatDate(date)} kembali dibuka.`);
+    } else {
+      if (!reason?.trim()) {
+        toast.error("Gagal mengatur libur", "Alasan libur wajib diisi.");
+        return;
+      }
+      if (endDate && endDate !== date) {
+        const dates = getDatesInRange(date, endDate);
+        dates.forEach((d) => {
+          closedDates[d] = reason.trim();
+        });
+        toast.success("Hari libur disimpan", `Toko tutup dari ${formatDate(date)} s.d ${formatDate(endDate)} karena: ${reason}`);
+      } else {
+        closedDates[date] = reason.trim();
+        toast.success("Hari libur disimpan", `Toko tutup tanggal ${formatDate(date)} karena: ${reason}`);
+      }
+    }
+    updateBusiness({ closedDates });
+  }
   const [viewDate, setViewDate] = useState(parseDateKey(todayKey));
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [draftStatuses, setDraftStatuses] = useState<Record<string, OrderStatus>>({});
@@ -617,6 +826,10 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
       return "Kosong";
     }
 
+    if (business.mode !== "BOOKING_SERVICE") {
+      return `${count} order`;
+    }
+
     if (fullSlotAvailable) {
       return "Full";
     }
@@ -633,6 +846,10 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
       return "0";
     }
 
+    if (business.mode !== "BOOKING_SERVICE") {
+      return String(count);
+    }
+
     if (fullSlotAvailable) {
       return "F";
     }
@@ -647,6 +864,10 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
   function getDayBadgeTone(count: number, fullSlotAvailable: boolean, holdSlotAvailable: boolean) {
     if (count <= 0) {
       return "neutral" as const;
+    }
+
+    if (business.mode !== "BOOKING_SERVICE") {
+      return "success" as const;
     }
 
     if (fullSlotAvailable) {
@@ -670,13 +891,13 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
 
   return (
     <>
-      <section className="animate-fade-up-delay-2 rounded-2xl border border-border/80 bg-surface p-4 shadow-soft sm:p-5">
+      <section className="animate-fade-up-delay-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-none sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-2">
-            <div className="inline-flex rounded-md bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">Kalender Jadwal</div>
+            <div className="inline-flex rounded-[var(--radius-md)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] border border-[var(--color-info-border)] px-3 py-1 text-xs font-medium">Kalender Jadwal</div>
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Pantau booking dan order bulan ini</h2>
-              <p className="mt-1 text-sm text-text-secondary">Klik tanggal untuk lihat detail order/booking pada hari itu.</p>
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Pantau booking dan order bulan ini</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Klik tanggal untuk lihat detail order/booking pada hari itu.</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -692,20 +913,20 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-border/80 bg-muted/20 p-3 sm:p-5">
+        <div className="mt-5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-3 sm:p-5">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:flex sm:flex-row sm:items-center sm:justify-between">
             <Button type="button" variant="secondary" size="sm" className="min-w-0 px-2.5 sm:w-auto sm:px-3" onClick={goToPreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Sebelumnya</span>
             </Button>
-            <div className="min-w-0 px-2 text-center text-sm font-semibold text-text-primary">{monthLabel}</div>
+            <div className="min-w-0 px-2 text-center text-sm font-semibold text-[var(--color-text)]">{monthLabel}</div>
             <Button type="button" variant="secondary" size="sm" className="min-w-0 px-2.5 sm:w-auto sm:px-3" onClick={goToNextMonth}>
               <span className="hidden sm:inline">Berikutnya</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-text-muted sm:text-[11px]">
+          <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-[var(--color-text-muted)] sm:text-[11px]">
             {weekdayLabels.map((label, index) => (
               <div key={`${label}-${index}`} className="py-1">
                 <span className="sm:hidden">{weekdayShortLabels[index]}</span>
@@ -725,9 +946,13 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
               const dateResourceAvailability = getResourceBookingAvailability(orders, business.resources ?? [], dateKey, "00:00", 24 * 60);
               const dateHasFullSlot = isResourceMode ? dateResourceAvailability.isFull : dateSlotSummaries.some((slot) => slot.isFull);
               const dateHasHoldSlot = isResourceMode ? dateResourceAvailability.hasHold : dateSlotSummaries.some((slot) => slot.holdCount > 0);
-              const badgeLabel = getDayBadgeLabel(count, dateHasFullSlot, dateHasHoldSlot);
-              const compactBadgeLabel = getDayBadgeCompactLabel(count, dateHasFullSlot, dateHasHoldSlot);
-              const badgeTone = getDayBadgeTone(count, dateHasFullSlot, dateHasHoldSlot);
+
+              const isClosed = Boolean(business.closedDates?.[dateKey]);
+              const closedReason = business.closedDates?.[dateKey] || "";
+
+              const badgeLabel = isClosed ? `TUTUP: ${closedReason}` : getDayBadgeLabel(count, dateHasFullSlot, dateHasHoldSlot);
+              const compactBadgeLabel = isClosed ? "TUTUP" : getDayBadgeCompactLabel(count, dateHasFullSlot, dateHasHoldSlot);
+              const badgeTone = isClosed ? ("danger" as const) : getDayBadgeTone(count, dateHasFullSlot, dateHasHoldSlot);
 
               return (
                 <button
@@ -738,21 +963,25 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                     setIsDetailOpen(true);
                   }}
                   className={cn(
-                    "relative flex h-11 flex-col items-center justify-center rounded-lg border px-0.5 text-sm transition-all duration-200 hover:-translate-y-0.5 sm:h-14 sm:px-1 md:h-16",
-                    isCurrentMonth ? "border-border/70 bg-surface text-text-primary" : "border-border/40 bg-muted/20 text-text-muted/60",
-                    isToday && !isSelected && "border-brand-300 bg-brand-50 text-brand-800",
-                    isSelected && "border-brand-700 !bg-brand-700 !text-white shadow-md ring-2 ring-brand-200/70"
+                    "relative flex h-11 flex-col items-center justify-center rounded-md border px-0.5 text-sm transition-colors duration-200 sm:h-14 sm:px-1 md:h-16",
+                    !isSelected && (
+                      isClosed
+                        ? "border-red-200 bg-red-50 text-red-700 font-semibold"
+                        : (isCurrentMonth ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]" : "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]/40")
+                    ),
+                    isToday && !isSelected && "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-semibold",
+                    isSelected && "border-transparent bg-[var(--color-primary)] !text-white shadow-[var(--shadow-sm)]"
                   )}
                 >
                   <span className="text-[10px] font-medium sm:text-xs md:text-sm">{date.getDate()}</span>
                   <span
                     className={cn(
                       "mt-0.5 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide sm:mt-1 sm:min-w-0 sm:px-1.5 sm:text-[9px]",
-                      badgeTone === "neutral" && !isSelected && "border-border/70 bg-white text-text-muted",
-                      badgeTone === "success" && !isSelected && "border-green-100 bg-green-50 text-green-700",
-                      badgeTone === "danger" && !isSelected && "border-red-100 bg-red-50 text-red-700",
-                      badgeTone === "warning" && !isSelected && "border-amber-100 bg-amber-50 text-amber-700",
-                      isSelected && "!border-white/25 !bg-white/10 !text-white"
+                      badgeTone === "neutral" && !isSelected && "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]",
+                      badgeTone === "success" && !isSelected && "border-[var(--color-success-border)] bg-[var(--color-success-surface)] text-[var(--color-success)]",
+                      badgeTone === "danger" && !isSelected && "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] text-[var(--color-danger)]",
+                      badgeTone === "warning" && !isSelected && "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]",
+                      isSelected && "!border-white/20 !bg-white/20 !text-white"
                     )}
                   >
                     <span className="sm:hidden">{compactBadgeLabel}</span>
@@ -763,17 +992,17 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
             })}
           </div>
 
-          <div className="mt-3 grid gap-2 text-xs text-text-secondary sm:flex sm:flex-wrap sm:gap-2">
+          <div className="mt-3 grid gap-2 text-xs text-[var(--color-text-secondary)] sm:flex sm:flex-wrap sm:gap-2">
             <div className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-brand-700" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" />
               Ada booking / order
             </div>
             <div className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full border border-brand-200 bg-brand-50" />
+              <span className="h-2.5 w-2.5 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-primary-surface)]" />
               Hari ini
             </div>
             <div className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-brand-700/20" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-surface-inset)]" />
               Tanggal terpilih
             </div>
           </div>
@@ -782,23 +1011,23 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
 
       {isDetailOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-0 sm:items-center sm:justify-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end bg-[var(--color-navy-900)]/50 backdrop-blur-[2px] p-0 sm:items-center sm:justify-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Detail kalender"
         >
           <button type="button" className="absolute inset-0 cursor-default" onClick={() => setIsDetailOpen(false)} aria-label="Tutup detail kalender" />
-          <div className="relative z-10 max-h-[88vh] w-full overflow-hidden rounded-t-3xl border border-border/80 bg-brand-50 shadow-soft sm:max-w-3xl sm:rounded-3xl">
-            <div className="flex items-start justify-between gap-4 border-b border-brand-100 px-5 py-4">
+          <div className="relative z-10 max-h-[88vh] w-full overflow-hidden rounded-t-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-modal)] sm:max-w-3xl sm:rounded-[var(--radius-xl)]">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
               <div>
-                <div className="inline-flex rounded-md bg-white px-3 py-1 text-xs font-medium text-brand-700">Detail Tanggal</div>
-                <h3 className="mt-3 text-xl font-semibold text-text-primary">{selectedDateLabel}</h3>
-                <p className="mt-1 text-sm text-text-secondary">Ringkasan booking, slot, dan status pada tanggal yang dipilih.</p>
+                <div className="inline-flex rounded-[var(--radius-md)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] border border-[var(--color-info-border)] px-3 py-1 text-xs font-medium">Detail Tanggal</div>
+                <h3 className="mt-3 text-xl font-semibold text-[var(--color-text)]">{selectedDateLabel}</h3>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Ringkasan booking, slot, dan status pada tanggal yang dipilih.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsDetailOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-white text-text-primary transition hover:bg-muted"
+                className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-inset)] hover:text-[var(--color-text)]"
                 aria-label="Tutup"
               >
                 <X className="h-4 w-4" />
@@ -832,6 +1061,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                 onCreateInvoice={onCreateInvoice}
                 onOpenInvoice={onOpenInvoice}
                 savingOrderId={savingOrderId}
+                onToggleClosedDate={handleToggleClosedDate}
               />
             </div>
           </div>

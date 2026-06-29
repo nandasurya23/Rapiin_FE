@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { PencilLine, ReceiptText, Search, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PencilLine, ReceiptText, Search, RotateCcw, ArrowRight, Copy, ClipboardList, Sparkles, Users, Phone, Calendar, MessageSquare, Clock, Plus } from "lucide-react";
+import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { Card, CardBody } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -25,14 +26,16 @@ import {
 import { formatCurrency, formatDate, formatPhoneNumber } from "@/lib/format";
 import { parseIndonesianNumber } from "@/lib/number";
 import { ORDER_STATUS_BY_MODE, PAYMENT_FILTER_OPTIONS, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
-import { BUSINESS_MODE_OPTIONS } from "@/lib/constants/business";
+
 import { PaymentStatusBadge } from "@/components/shared/status-badge";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import type { BusinessMode } from "@/types/business";
 import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
 import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
+import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
+import { renderTemplate } from "@/lib/messages";
+import { cn } from "@/lib/cn";
 
 type FilterValue = "ALL" | OrderStatus;
 type PaymentFilterValue = "ALL" | PaymentStatus;
@@ -91,7 +94,7 @@ function formatDateTime(value?: string | null) {
 
 export function OrderManager() {
   const toast = useToast();
-  const { business, hydrated, orders, createOrder, updateOrder, canCreateOrder, readOnlyReason } = useAppData();
+  const { business, hydrated, orders, createOrder, updateOrder, canCreateOrder, readOnlyReason, customers, messageTemplates } = useAppData();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterValue>("ALL");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilterValue>("ALL");
@@ -100,6 +103,108 @@ export function OrderManager() {
   const [form, setForm] = useState<OrderFormState>(createDefaultForm(business.mode));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [chatPasteText, setChatPasteText] = useState("");
+
+  const formRef = useRef<HTMLDivElement>(null);
+
+  async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus) {
+    try {
+      updateOrder(order.id, {
+        customerName: order.customerName,
+        whatsappNumber: order.whatsappNumber,
+        title: order.title,
+        mode: order.mode,
+        status: nextStatus,
+        paymentStatus: order.paymentStatus,
+        scheduledDate: order.scheduledDate || undefined,
+        scheduledTime: order.scheduledTime || undefined,
+        bookingDurationMinutes: order.bookingDurationMinutes || undefined,
+        resourceId: order.resourceId || undefined,
+        resourceNameSnapshot: order.resourceNameSnapshot || undefined,
+        totalAmount: order.totalAmount || undefined,
+        dpAmount: order.dpAmount || undefined,
+        notes: order.notes || undefined,
+      });
+      toast.success("Status order berhasil diperbarui!");
+    } catch (err) {
+      toast.error("Gagal memperbarui status", err instanceof Error ? err.message : "");
+    }
+  }
+
+  const isDuplicatePhone = useMemo(() => {
+    const normalized = normalizePhoneNumber(form.whatsappNumber);
+    if (!normalized || normalized.length < 9) return null;
+    return customers.find(
+      (c) => normalizePhoneNumber(c.whatsappNumber) === normalized
+    );
+  }, [customers, form.whatsappNumber]);
+
+  function handleChatPasteChange(text: string) {
+    setChatPasteText(text);
+    const parsed = parseWhatsAppChatText(text);
+    setForm((current) => ({
+      ...current,
+      customerName: parsed.name || current.customerName,
+      whatsappNumber: parsed.phone || current.whatsappNumber,
+      title: parsed.orderTitle || current.title,
+      notes: parsed.address ? `Alamat: ${parsed.address}\n${current.notes}`.trim() : current.notes,
+    }));
+  }
+
+  const customerSuggestions = useMemo(() => {
+    if (!form.customerName.trim()) {
+      return [];
+    }
+    const queryStr = form.customerName.toLowerCase();
+    return customers.filter(
+      (customer) =>
+        customer.name.toLowerCase().includes(queryStr) ||
+        customer.whatsappNumber.includes(queryStr)
+    );
+  }, [customers, form.customerName]);
+
+  function getWhatsAppButtonConfig(order: Order) {
+    let category: string | null = null;
+    let label = "Chat WA";
+
+    if (order.status === "WAITING_DP" || order.paymentStatus === "UNPAID" || order.paymentStatus === "DP_PAID") {
+      category = "PEMBAYARAN";
+      label = "Tagih DP/Bayar";
+    } else if (order.status === "CONFIRMED") {
+      category = "BOOKING_ORDER";
+      label = "Kirim Jadwal";
+    } else if (order.status === "SELESAI") {
+      category = "REVIEW";
+      label = "Minta Review";
+    } else {
+      category = "FOLLOW_UP";
+      label = "Follow-Up WA";
+    }
+
+    const template = messageTemplates.find(
+      (item) => item.category === category && item.businessId === business.id
+    ) ?? messageTemplates.find((item) => item.category === category);
+
+    const defaultMsg = `Halo ${order.customerName}, saya follow-up untuk ${order.title}.`;
+
+    if (!template) {
+      return { label, message: defaultMsg };
+    }
+
+    const values = {
+      customer_name: order.customerName,
+      business_name: business.name,
+      order_title: order.title,
+      scheduled_date: order.scheduledDate ? formatDate(order.scheduledDate) : "",
+      scheduled_time: order.scheduledTime ?? "",
+      total_amount: order.totalAmount ? formatCurrency(order.totalAmount) : "0",
+      dp_amount: order.dpAmount ? formatCurrency(order.dpAmount) : "0",
+    };
+
+    const rendered = renderTemplate(template.content, values);
+    return { label, message: rendered || defaultMsg };
+  }
 
   useEffect(() => {
     if (!hydrated || editingId) {
@@ -121,6 +226,21 @@ export function OrderManager() {
       notes: current.notes,
     }));
   }, [business.mode, editingId, hydrated]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const name = params.get("name");
+      const phone = params.get("phone");
+      if (name || phone) {
+        setForm((current) => ({
+          ...current,
+          customerName: name || current.customerName,
+          whatsappNumber: phone || current.whatsappNumber,
+        }));
+      }
+    }
+  }, []);
 
   const statusOptions = ORDER_STATUS_BY_MODE[mode];
   const bookingDurationMinutes = useMemo(() => {
@@ -245,6 +365,51 @@ export function OrderManager() {
     setMode(business.mode);
     setForm(createDefaultForm(business.mode));
     setError("");
+    setChatPasteText("");
+  }
+
+  async function handleShiftStatus(order: Order) {
+    const statusOptions = ORDER_STATUS_BY_MODE[order.mode];
+    const currentIndex = statusOptions.findIndex((opt) => opt.value === order.status);
+
+    if (currentIndex === -1 || currentIndex === statusOptions.length - 1) {
+      toast.error("Order sudah berada di status akhir.");
+      return;
+    }
+
+    const nextStatusOption = statusOptions[currentIndex + 1];
+    const nextStatus = nextStatusOption.value;
+
+    try {
+      updateOrder(order.id, {
+        customerName: order.customerName,
+        whatsappNumber: order.whatsappNumber,
+        title: order.title,
+        mode: order.mode,
+        status: nextStatus,
+        paymentStatus: order.paymentStatus,
+        scheduledDate: order.scheduledDate || undefined,
+        scheduledTime: order.scheduledTime || undefined,
+        bookingDurationMinutes: order.bookingDurationMinutes || undefined,
+        resourceId: order.resourceId || undefined,
+        resourceNameSnapshot: order.resourceNameSnapshot || undefined,
+        totalAmount: order.totalAmount || undefined,
+        dpAmount: order.dpAmount || undefined,
+        notes: order.notes || undefined,
+      });
+      toast.success(`Status berhasil diubah ke ${nextStatusOption.label}`);
+    } catch (err) {
+      toast.error("Gagal memindahkan status", err instanceof Error ? err.message : "");
+    }
+  }
+
+  async function handleCopyMessage(message: string) {
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success("Draf WhatsApp berhasil disalin!");
+    } catch {
+      toast.error("Gagal menyalin draf pesan.");
+    }
   }
 
   function startEdit(order: Order) {
@@ -266,19 +431,11 @@ export function OrderManager() {
       dpAmount: order.dpAmount ? String(order.dpAmount) : "",
       notes: order.notes ?? "",
     });
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   }
 
-  function handleModeChange(nextMode: BusinessMode) {
-    setMode(nextMode);
-    setStatusFilter("ALL");
-    setError("");
-    setForm((current) => ({
-      ...current,
-      mode: nextMode,
-      status: ORDER_STATUS_BY_MODE[nextMode][0].value,
-      resourceId: nextMode === "BOOKING_SERVICE" ? current.resourceId : "",
-    }));
-  }
 
   async function handleSubmit() {
     if (!form.customerName.trim() || !form.whatsappNumber.trim() || !form.title.trim()) {
@@ -370,101 +527,113 @@ export function OrderManager() {
     }
   }
 
+  // Helpers for CRM Initials Avatar and gradients
+  function getInitials(name: string) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0 || !parts[0]) return "?";
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function getAvatarGradient(name: string) {
+    const code = name.charCodeAt(0) % 4;
+    if (code === 0) return "from-blue-400 to-indigo-600";
+    if (code === 1) return "from-emerald-400 to-teal-600";
+    if (code === 2) return "from-amber-400 to-orange-600";
+    return "from-pink-400 to-rose-600";
+  }
+
   return (
-    <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section>
-        <Card>
-          <CardBody className="space-y-5 p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <div className="inline-flex rounded-md border border-brand-100 bg-brand-50 px-3 py-1 text-[11px] font-medium tracking-wide text-brand-800">
-                  Workflow status
-                </div>
-                <h1 className="mt-3 text-2xl font-semibold text-text-primary">Order / Booking</h1>
-                <p className="mt-1 text-sm text-text-secondary">
-                  Catat order, booking, dan request. Lalu geser statusnya sesuai alur kerja hari ini.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge tone="info">{filteredOrders.length} order</Badge>
-                <Badge tone="warning">{unpaidOrderCount} perlu bayar</Badge>
-                <Badge tone="success">{completedOrderCount} selesai</Badge>
-              </div>
+    <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8" id="order-manager">
+      {/* SECTION 1: HERO HEADER */}
+      <section className="animate-fade-up">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
+          {/* Background decorative glows */}
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
+          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
+          
+          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            {/* Left */}
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+                <ClipboardList className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
+                Manajemen Pesanan
+              </span>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
+                Daftar Order & Reservasi
+              </h1>
+              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
+                Pantau antrean pesanan masuk, ketersediaan unit slot operasional, status pembayaran uang muka (DP), dan kelola alur kerja dengan mudah.
+              </p>
             </div>
 
+            {/* Right: Summary Badge */}
+            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+              <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold">
+                {filteredOrders.length} Order Aktif
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 2: SEARCH & QUICK CONTROLS */}
+      <section className="animate-fade-up-delay-1">
+        <Card className="border-[var(--color-border)] shadow-none">
+          <CardBody className="space-y-5 p-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+              {/* Search & Filters */}
               <div className="space-y-4">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
                   <Input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Cari customer, order, atau nomor"
+                    placeholder="Cari nama customer, detail order, atau nomor WA..."
                     className="pl-9"
                   />
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Mode bisnis</span>
-                    <Select
-                      value={mode}
-                      onValueChange={(value) => handleModeChange(value as BusinessMode)}
-                      options={BUSINESS_MODE_OPTIONS}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Filter pembayaran</span>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Filter Status Bayar</span>
                     <Select
                       value={paymentFilter}
                       onValueChange={(value) => setPaymentFilter(value as PaymentFilterValue)}
                       options={PAYMENT_FILTER_OPTIONS}
                     />
                   </label>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter("ALL")}
-                    className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-                      statusFilter === "ALL" ? "border-brand-500 bg-brand-50 text-brand-800" : "border-border bg-surface text-text-secondary hover:bg-muted"
-                    }`}
-                  >
-                    Semua
-                  </button>
-                  {statusOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setStatusFilter(option.value)}
-                      className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-                        statusFilter === option.value
-                          ? "border-brand-500 bg-brand-50 text-brand-800"
-                          : "border-border bg-surface text-text-secondary hover:bg-muted"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Filter Alur Kerja (Lanes)</span>
+                    <FilterChipGroup
+                      options={[
+                        { value: "ALL", label: "Semua Status" },
+                        ...statusOptions.map((opt) => ({ value: opt.value, label: opt.label })),
+                      ]}
+                      value={statusFilter}
+                      onChange={(v) => setStatusFilter(v as FilterValue)}
+                      size="sm"
+                    />
+                  </label>
                 </div>
               </div>
 
+              {/* Stats Cards */}
               <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                <div className="rounded-xl border border-border/80 bg-muted/25 px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Aktif</p>
-                  <p className="mt-2 text-2xl font-semibold text-text-primary">{activeBookingCount}</p>
-                  <p className="mt-1 text-sm text-text-secondary">Booking/order yang masih berjalan.</p>
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Order Berjalan</p>
+                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{activeBookingCount}</p>
+                  <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Sedang diproses</p>
                 </div>
-                <div className="rounded-xl border border-border/80 bg-muted/25 px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Belum Bayar</p>
-                  <p className="mt-2 text-2xl font-semibold text-text-primary">{unpaidOrderCount}</p>
-                  <p className="mt-1 text-sm text-text-secondary">Perlu follow-up pembayaran atau DP.</p>
+                <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)]">Belum Bayar</p>
+                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{unpaidOrderCount}</p>
+                  <p className="text-[9px] text-[var(--color-warning-text)] font-semibold">Perlu penagihan</p>
                 </div>
-                <div className="rounded-xl border border-border/80 bg-muted/25 px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Selesai</p>
-                  <p className="mt-2 text-2xl font-semibold text-text-primary">{completedOrderCount}</p>
-                  <p className="mt-1 text-sm text-text-secondary">Order yang sudah ditutup rapi.</p>
+                <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-4 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-success-text)]">Selesai</p>
+                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{completedOrderCount}</p>
+                  <p className="text-[9px] text-[var(--color-success-text)] font-semibold">Ditutup rapi</p>
                 </div>
               </div>
             </div>
@@ -472,47 +641,133 @@ export function OrderManager() {
         </Card>
       </section>
 
-      <section>
-        <Card>
-          <CardBody className="space-y-5 p-5 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      {/* SECTION 3: FORM TAMBAH / EDIT ORDER */}
+      <section ref={formRef} className="animate-fade-up-delay-2">
+        <Card className="border-[var(--color-border)] shadow-none">
+          <CardBody className="space-y-4 p-5 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border)] pb-3">
               <div>
-                <h2 className="text-lg font-semibold text-text-primary">{editingId ? "Edit Order" : "Tambah Order"}</h2>
-                <p className="text-sm text-text-secondary">Input cepat, status sesuai mode bisnis.</p>
-                {!editingId && !canCreateOrder ? <p className="mt-2 text-xs text-amber-700">{readOnlyReason}</p> : null}
+                <h2 className="text-lg font-bold text-[var(--color-text)]">
+                  {editingId ? "Edit Rincian Pesanan" : "Tambah Pesanan Baru"}
+                </h2>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Input order baru secara manual atau gunakan pintasan pengisi otomatis.</p>
+                {!editingId && !canCreateOrder ? (
+                  <p className="mt-2 text-xs font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 rounded-xl">
+                    ⚠️ {readOnlyReason}
+                  </p>
+                ) : null}
               </div>
               {editingId ? (
-                <button type="button" onClick={resetForm} className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] active:scale-95 transition"
+                >
                   <RotateCcw className="h-4 w-4" />
-                  Batal edit
+                  Batal Edit
                 </button>
               ) : null}
             </div>
 
             <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+              {/* Left Column Form */}
               <div className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-2">
+                {/* Auto Parser */}
+                {!editingId && (
+                  <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/10 dark:border-indigo-900/60 dark:bg-indigo-950/20 p-4 space-y-2 relative overflow-hidden">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/60 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                        <Sparkles className="h-2.5 w-2.5 animate-pulse" />
+                        Pintasan Pengisi Otomatis
+                      </span>
+                      <p className="text-[10px] text-[var(--color-text-muted)] font-semibold">Salin & Tempel Chat WhatsApp</p>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                      Tempel format rekapan order WhatsApp di bawah. Sistem Rapiin akan membaca Nama, Nomor WA, Kebutuhan, &amp; Alamat otomatis.
+                    </p>
+                    <Textarea
+                      value={chatPasteText}
+                      onChange={(event) => handleChatPasteChange(event.target.value)}
+                      placeholder="Contoh format tempel:&#10;Nama: Budi Luhur&#10;No HP: 08123456789&#10;Pesanan: Booking Lapangan Futsal 2 Jam&#10;Alamat: Jl. Sudirman No 12"
+                      rows={3}
+                      className="bg-[var(--color-surface)] border-[var(--color-border)] rounded-xl"
+                    />
+                  </div>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="block relative">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nama Pelanggan</span>
+                    <Input
+                      value={form.customerName}
+                      onChange={(event) => {
+                        updateFormField("customerName", event.target.value);
+                        setShowSuggestions(true);
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => {
+                        setTimeout(() => setShowSuggestions(false), 200);
+                      }}
+                      placeholder="Ketik nama pelanggan..."
+                      autoComplete="off"
+                    />
+                    {showSuggestions && customerSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface)] py-1.5 shadow-[var(--shadow-lg)]">
+                        {customerSuggestions.map((customer) => (
+                          <button
+                            key={customer.id}
+                            type="button"
+                            onClick={() => {
+                              updateFormField("customerName", customer.name);
+                              updateFormField("whatsappNumber", customer.whatsappNumber);
+                              setShowSuggestions(false);
+                            }}
+                            className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)]"
+                          >
+                            <span className="font-semibold">{customer.name}</span>
+                            <span className="text-xs text-[var(--color-text-muted)]">{customer.whatsappNumber}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Nama customer</span>
-                    <Input value={form.customerName} onChange={(event) => updateFormField("customerName", event.target.value)} />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Nomor WhatsApp</span>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nomor WhatsApp</span>
                     <Input
                       value={form.whatsappNumber}
                       onChange={(event) => updateFormField("whatsappNumber", event.target.value)}
-                      placeholder="08123456789"
+                      placeholder="Contoh: 08123456789"
                     />
-                    <p className="mt-1 text-xs text-text-muted">Nomor dipakai untuk tombol Chat WA dan Follow-Up WA.</p>
+                    {isDuplicatePhone && (
+                      <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 text-xs text-[var(--color-warning-text)]">
+                        <span>
+                          Nomor terdaftar atas nama: <strong>{isDuplicatePhone.name}</strong>
+                        </span>
+                        {form.customerName !== isDuplicatePhone.name && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateFormField("customerName", isDuplicatePhone.name);
+                            }}
+                            className="font-bold underline text-[var(--color-warning)] hover:text-[var(--color-warning-hover)]"
+                          >
+                            Gunakan Nama
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </label>
                 </div>
+
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-text-primary">Kebutuhan / order</span>
-                  <Input value={form.title} onChange={(event) => updateFormField("title", event.target.value)} />
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Detail Order / Kebutuhan</span>
+                  <Input value={form.title} onChange={(event) => updateFormField("title", event.target.value)} placeholder="Contoh: Booking Studio Musik Room 1 (2 Jam)" />
                 </label>
-                <div className="grid gap-3 md:grid-cols-2">
+
+                <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Status</span>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pesanan</span>
                     <Select
                       value={form.status}
                       onValueChange={(value) => updateFormField("status", value as OrderStatus)}
@@ -520,7 +775,7 @@ export function OrderManager() {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Status bayar</span>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pembayaran</span>
                     <Select
                       value={form.paymentStatus}
                       onValueChange={(value) => updateFormField("paymentStatus", value as PaymentStatus)}
@@ -528,197 +783,331 @@ export function OrderManager() {
                     />
                   </label>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
+
+                <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Total</span>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Total Biaya (Rp)</span>
                     <FormattedNumberInput
                       value={form.totalAmount}
                       onValueChange={(value) => updateFormField("totalAmount", value)}
-                      placeholder="240000"
+                      placeholder="Contoh: 240000"
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">DP</span>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Uang Muka / DP (Rp)</span>
                     <FormattedNumberInput
                       value={form.dpAmount}
                       onValueChange={(value) => updateFormField("dpAmount", value)}
-                      placeholder="100000"
+                      placeholder="Contoh: 100000"
                     />
                   </label>
                 </div>
+
+                {((parseIndonesianNumber(form.totalAmount) ?? 0) > 0 || (parseIndonesianNumber(form.dpAmount) ?? 0) > 0) && (
+                  <p className="-mt-2 text-right text-xs font-extrabold text-[var(--color-text-secondary)]">
+                    Sisa Pelunasan: <span className="text-[var(--color-text)] font-black text-sm">{formatCurrency(Math.max(0, (parseIndonesianNumber(form.totalAmount) ?? 0) - (parseIndonesianNumber(form.dpAmount) ?? 0)))}</span>
+                  </p>
+                )}
               </div>
 
-              <div className="space-y-4 rounded-xl border border-border/80 bg-muted/25 px-4 py-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Jadwal & Slot</p>
-                  <p className="mt-1 text-sm text-text-secondary">Bagian ini dipakai untuk cek bentrok booking dan status hold slot.</p>
-                </div>
-                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Tanggal</span>
-                    <DatePicker
-                      value={form.scheduledDate}
-                      onValueChange={(value) => updateFormField("scheduledDate", value)}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Jam</span>
-                    <TimeSelect
-                      value={form.scheduledTime}
-                      onValueChange={(value) => updateFormField("scheduledTime", value)}
-                      placeholder="Pilih jam"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Durasi booking (menit)</span>
-                    <Input
-                      type="number"
-                      min={15}
-                      step={15}
-                      value={form.bookingDurationMinutes}
-                      onChange={(event) => updateFormField("bookingDurationMinutes", event.target.value)}
-                      placeholder="60"
-                    />
-                  </label>
-                </div>
-                {isResourceBookingMode ? (
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">{business.resourceLabel ?? "Unit"}</span>
-                    <Select
-                      value={form.resourceId}
-                      onValueChange={(value) => updateFormField("resourceId", value)}
-                      options={activeResources.map((resource) => ({
-                        value: resource.id,
-                        label: resource.name,
-                      }))}
-                      placeholder={`Pilih ${business.resourceLabel?.toLowerCase() ?? "unit"}`}
-                    />
-                    <p className="mt-1 text-xs text-text-muted">
-                      Customer publik tidak pilih unit. Admin tetapkan unitnya di sini.
-                    </p>
-                  </label>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Badge tone={slotAvailability.isFull ? "danger" : slotAvailability.hasHold ? "warning" : slotAvailability.count > 0 ? "success" : "neutral"}>
-                    {slotAvailability.isFull
-                      ? "Slot penuh"
-                      : slotAvailability.hasHold
-                        ? "Ada hold aktif"
-                        : slotAvailability.count > 0
-                          ? isResourceBookingMode
-                            ? `${slotAvailability.count} bentrok di unit`
-                            : `${slotAvailability.count} booking overlap`
-                          : "Belum ada overlap"}
-                  </Badge>
-                  {!slotAvailability.isFull ? (
-                    <Badge tone="info">
-                      {isResourceBookingMode ? `Unit kosong ${resourceBookingAvailability.availableResourceCount ?? 0}` : `Sisa slot ${slotAvailability.remaining}`}
-                    </Badge>
-                  ) : null}
-                </div>
-                <p className={`text-sm leading-6 ${slotAvailability.isFull ? "text-status-danger" : "text-text-secondary"}`}>{slotHint}</p>
-                <p className="text-xs text-text-muted">
-                  {isResourceBookingMode
-                    ? `Dipakai untuk cek bentrok per ${business.resourceLabel?.toLowerCase() ?? "unit"} saat admin input booking.`
-                    : "Dipakai untuk cek overlap slot studio / warnet secara langsung saat admin input order."}
-                </p>
+              {/* Right Column: Scheduling & Slot */}
+              <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 relative overflow-hidden">
+                {mode === "BOOKING_SERVICE" ? (
+                  <>
+                    <div className="border-b border-[var(--color-border)]/60 pb-3">
+                      <p className="text-xs uppercase font-extrabold tracking-wider text-[var(--color-text-secondary)] flex items-center gap-1.5">
+                        <Clock className="h-4 w-4 text-[var(--color-primary)]" />
+                        Jadwal &amp; Slot Availability
+                      </p>
+                      <p className="mt-1 text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
+                        Konfigurasi durasi booking, tanggal, and cek ketersediaan unit agar terhindar dari bentrok.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Tanggal</span>
+                        <DatePicker
+                          value={form.scheduledDate}
+                          onValueChange={(value) => updateFormField("scheduledDate", value)}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Jam</span>
+                        <TimeSelect
+                          value={form.scheduledTime}
+                          onValueChange={(value) => updateFormField("scheduledTime", value)}
+                          placeholder="Pilih jam"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi (Menit)</span>
+                        <Input
+                          type="number"
+                          min={15}
+                          step={15}
+                          value={form.bookingDurationMinutes}
+                          onChange={(event) => updateFormField("bookingDurationMinutes", event.target.value)}
+                          placeholder="60"
+                        />
+                      </label>
+                    </div>
+
+                    {isResourceBookingMode ? (
+                      <label className="block pt-1">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Alokasi {business.resourceLabel ?? "Unit"}</span>
+                        <Select
+                          value={form.resourceId}
+                          onValueChange={(value) => updateFormField("resourceId", value)}
+                          options={activeResources.map((resource) => ({
+                            value: resource.id,
+                            label: resource.name,
+                          }))}
+                          placeholder={`Pilih ${business.resourceLabel?.toLowerCase() ?? "unit"}`}
+                        />
+                        <p className="mt-1 text-[10px] text-[var(--color-text-muted)] leading-relaxed">
+                          Pelanggan di halaman publik hanya memilih slot kosong. Anda sebagai admin menetapkan unit meja/studio spesifik di sini.
+                        </p>
+                      </label>
+                    ) : null}
+
+                    {/* Availability Indicators */}
+                    <div className="pt-2 border-t border-[var(--color-border)]/40 space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge tone={slotAvailability.isFull ? "danger" : slotAvailability.hasHold ? "warning" : slotAvailability.count > 0 ? "success" : "neutral"} className="font-extrabold uppercase text-[9px] tracking-wider">
+                          {slotAvailability.isFull
+                            ? "Slot penuh"
+                            : slotAvailability.hasHold
+                              ? "Ada hold aktif"
+                              : slotAvailability.count > 0
+                                ? isResourceBookingMode
+                                  ? `${slotAvailability.count} bentrok di unit`
+                                  : `${slotAvailability.count} booking overlap`
+                                : "Slot Kosong (Aman)"}
+                        </Badge>
+                        {!slotAvailability.isFull ? (
+                          <Badge tone="info" className="font-extrabold uppercase text-[9px] tracking-wider">
+                            {isResourceBookingMode ? `Unit Tersisa: ${resourceBookingAvailability.availableResourceCount ?? 0}` : `Sisa Slot Overlap: ${slotAvailability.remaining}`}
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      <p className={`text-xs font-medium leading-relaxed ${slotAvailability.isFull ? "text-[var(--color-danger)]" : "text-[var(--color-text-secondary)]"}`}>
+                        {slotHint}
+                      </p>
+                      <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
+                        {isResourceBookingMode
+                          ? `* Sistem Rapiin mendeteksi ketersediaan per ${business.resourceLabel?.toLowerCase() ?? "unit"} secara realtime.`
+                          : "* Pengaturan ketersediaan default mengizinkan maksimal 2 pemesanan bertabrakan (overlap) pada jam yang sama."}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="border-b border-[var(--color-border)]/60 pb-3">
+                      <p className="text-xs uppercase font-extrabold tracking-wider text-[var(--color-text-secondary)] flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
+                        Batas Waktu Pengiriman
+                      </p>
+                      <p className="mt-1 text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
+                        Tentukan target tanggal jatuh tempo pengerjaan pesanan atau pengiriman paket order barang.
+                      </p>
+                    </div>
+
+                    <label className="block pt-1">
+                      <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Tanggal Batas Pengiriman</span>
+                      <DatePicker
+                        value={form.scheduledDate}
+                        onValueChange={(value) => updateFormField("scheduledDate", value)}
+                      />
+                    </label>
+                  </>
+                )}
               </div>
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-text-primary">Catatan</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Catatan Keterangan Tambahan</span>
               <Textarea
                 value={form.notes}
                 onChange={(event) => updateFormField("notes", event.target.value)}
-                placeholder="Catatan singkat order"
+                placeholder="Tulis alamat kirim, request khusus pelanggan, atau rincian item..."
+                rows={2}
               />
             </label>
-            {error ? <p className="text-sm text-status-danger">{error}</p> : null}
-              <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()} disabled={!editingId && !canCreateOrder}>
+
+            {error ? <p className="text-xs font-bold text-[var(--color-danger)]">{error}</p> : null}
+
+            <div className="pt-2">
+              <Button
+                type="button"
+                isLoading={isSubmitting}
+                onClick={() => void handleSubmit()}
+                disabled={!editingId && !canCreateOrder}
+                className="shadow-sm font-bold text-sm px-6 py-2.5 rounded-xl"
+              >
                 {editingId ? "Simpan Perubahan" : "Simpan Order"}
               </Button>
+            </div>
           </CardBody>
         </Card>
       </section>
 
-      <section className="rounded-2xl border border-border/80 bg-surface p-4 shadow-soft">
-        <div className="flex items-center justify-between gap-3 px-1 pb-3">
+      {/* SECTION 4: KANBAN STATUS BOARD */}
+      <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none animate-fade-up-delay-3 space-y-4">
+        <div className="flex items-center justify-between gap-3 px-1 border-b border-[var(--color-border)] pb-3">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">Board Status</h2>
-            <p className="text-sm text-text-secondary">Lihat alur kerja dari Inquiry sampai Selesai.</p>
+            <h2 className="text-lg font-bold text-[var(--color-text)]">Board Alur Status Pesanan</h2>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Pantau status pesanan masuk dan geser posisi alurnya dengan mudah.</p>
           </div>
-          <Badge tone="neutral">{statusOptions.length} lane</Badge>
+          <Badge tone="neutral" className="font-extrabold">{statusOptions.length} Status Board</Badge>
         </div>
 
-        <div className="overflow-x-auto pb-2">
-          <div className="flex min-w-full gap-4">
+        <div className="overflow-x-auto pb-2 no-scrollbar">
+          <div className="flex gap-4">
             {statusOptions.map((option) => {
               const laneOrders = filteredOrders.filter((order) => order.status === option.value);
 
               return (
-                <div key={option.value} className="w-[320px] shrink-0 rounded-xl border border-border/80 bg-muted/20 p-3 sm:w-[340px]">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-text-primary">{option.label}</p>
-                      <p className="text-xs text-text-muted">Status {option.label.toLowerCase()}</p>
-                    </div>
-                    <Badge tone={option.tone}>{laneOrders.length}</Badge>
+                <div key={option.value} className="w-[310px] shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 flex flex-col justify-between">
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5 mb-3">
+                    <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text)]">{option.label}</p>
+                    <Badge tone={option.tone} className="text-[9px] uppercase tracking-wider font-extrabold">{laneOrders.length}</Badge>
                   </div>
 
-                  <div className="mt-3 space-y-3">
+                  <div className="space-y-3 flex-1 min-h-[400px]">
                     {laneOrders.length ? (
-                      laneOrders.map((order) => (
-                        <div key={order.id} className="rounded-lg border border-border/80 bg-surface p-3.5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-text-primary">{order.customerName}</p>
-                              <p className="mt-1 text-sm text-text-secondary">{order.title}</p>
+                      laneOrders.map((order) => {
+                        const waConfig = getWhatsAppButtonConfig(order);
+                        
+                        // Left borders based on payment status
+                        let leftBorderStripe = "border-l-4 border-l-stone-300";
+                        if (order.paymentStatus === "PAID") {
+                          leftBorderStripe = "border-l-4 border-l-emerald-500";
+                        } else if (order.paymentStatus === "DP_PAID") {
+                          leftBorderStripe = "border-l-4 border-l-blue-500";
+                        } else if (order.paymentStatus === "UNPAID") {
+                          leftBorderStripe = "border-l-4 border-l-rose-500";
+                        }
+
+                        return (
+                          <div key={order.id} className={cn("rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm hover:shadow transition-all duration-300", leftBorderStripe)}>
+                            {/* Card Header: Avatar & Customer info */}
+                            <div className="flex items-start gap-3">
+                              <div className={cn(
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white text-[10px] font-black shadow-xs select-none border border-white/20",
+                                getAvatarGradient(order.customerName)
+                              )}>
+                                {getInitials(order.customerName)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-bold text-sm text-[var(--color-text)] tracking-tight">{order.customerName}</p>
+                                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)] truncate font-semibold">{order.title}</p>
+                              </div>
                             </div>
-                            <PaymentStatusBadge status={order.paymentStatus} />
-                          </div>
 
-                          <div className="mt-3 space-y-1 text-xs text-text-secondary">
-                            <p>{order.scheduledDate ? `${formatDate(order.scheduledDate)} ${order.scheduledTime ?? ""}` : "Belum dijadwalkan"}</p>
-                            {order.mode === "BOOKING_SERVICE" ? (
-                              <>
-                                <p>
-                                  Durasi {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} menit
-                                  {order.paymentStatus === "UNPAID" && order.status === "WAITING_DP" ? " • menunggu DP" : ""}
-                                </p>
-                                {order.resourceNameSnapshot ? <p>{order.resourceNameSnapshot}</p> : null}
-                                {isBookingHoldActive(order) ? (
-                                  <p className="text-amber-700">
-                                    Hold aktif sampai {formatDateTime(getBookingHoldExpiresAt(order)?.toISOString() ?? null)}
+                            {/* Card details */}
+                            <div className="mt-3.5 space-y-2 border-t border-[var(--color-border)]/40 pt-3">
+                              <p className="text-xs text-[var(--color-text-secondary)] font-medium flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                                {order.scheduledDate ? `${formatDate(order.scheduledDate)} ${order.scheduledTime ?? ""}` : "Belum dijadwalkan"}
+                              </p>
+                              
+                              {order.mode === "BOOKING_SERVICE" && (
+                                <div className="space-y-1.5 bg-[var(--color-surface-elevated)] border border-[var(--color-border)]/40 p-2.5 rounded-xl text-[11px] leading-normal text-[var(--color-text-secondary)]">
+                                  <p className="font-semibold flex items-center gap-1">
+                                    <Clock className="h-3 w-3 text-[var(--color-text-muted)]" />
+                                    Jadwal: {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} Menit
                                   </p>
-                                ) : order.paymentStatus === "DP_PAID" || order.paymentStatus === "PAID" ? (
-                                  <p className="text-green-700">DP/paid mengunci slot.</p>
-                                ) : null}
-                              </>
-                            ) : null}
-                            <p>{formatCurrency(order.totalAmount)} • DP {formatCurrency(order.dpAmount)}</p>
-                            <p>{formatPhoneNumber(order.whatsappNumber)}</p>
-                          </div>
+                                  {order.resourceNameSnapshot && (
+                                    <p className="text-[10px] font-bold text-[var(--color-text)]">
+                                      Unit: {order.resourceNameSnapshot}
+                                    </p>
+                                  )}
+                                  {isBookingHoldActive(order) ? (
+                                    <p className="text-[10px] font-extrabold text-orange-600 dark:text-orange-400">
+                                      Hold Expired: {formatDateTime(getBookingHoldExpiresAt(order)?.toISOString() ?? null)}
+                                    </p>
+                                  ) : order.paymentStatus === "DP_PAID" || order.paymentStatus === "PAID" ? (
+                                    <p className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">Pemesanan Mengunci Slot</p>
+                                  ) : null}
+                                </div>
+                              )}
+                              
+                              {/* Payment status badge card row */}
+                              <div className="pt-1 flex items-center justify-between gap-1.5 flex-wrap">
+                                {order.paymentStatus === "UNPAID" ? (
+                                  <span className="inline-flex items-center rounded-lg bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-danger)]">
+                                    Belum Bayar · {formatCurrency(order.totalAmount ?? 0)}
+                                  </span>
+                                ) : order.paymentStatus === "DP_PAID" ? (
+                                  <span className="inline-flex items-center rounded-lg bg-[var(--color-info-surface)] border border-[var(--color-info-border)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-info)]">
+                                    DP {formatCurrency(order.dpAmount ?? 0)} · Sisa {formatCurrency((order.totalAmount ?? 0) - (order.dpAmount ?? 0))}
+                                  </span>
+                                ) : order.paymentStatus === "PAID" ? (
+                                  <span className="inline-flex items-center rounded-lg bg-[var(--color-success-surface)] border border-[var(--color-success-border)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-success)]">
+                                    Lunas · {formatCurrency(order.totalAmount ?? 0)}
+                                  </span>
+                                ) : (
+                                  <p className="text-[10px] font-bold text-[var(--color-text-secondary)]">{formatCurrency(order.totalAmount)} · DP {formatCurrency(order.dpAmount)}</p>
+                                )}
+                                <span className="text-[10px] font-semibold text-[var(--color-text-muted)]">{formatPhoneNumber(order.whatsappNumber)}</span>
+                              </div>
+                            </div>
 
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <WhatsAppButton
-                              phoneNumber={order.whatsappNumber}
-                              message={`Halo ${order.customerName}, saya follow-up untuk ${order.title}.`}
-                              label="WA"
-                            />
-                            <LinkButton href={ROUTES.invoices} variant="secondary">
-                              <ReceiptText className="h-4 w-4" />
-                              Nota
-                            </LinkButton>
-                            <Button type="button" variant="secondary" onClick={() => startEdit(order)}>
-                              <PencilLine className="h-4 w-4" />
-                              Ubah
-                            </Button>
+                            {/* Card Actions block */}
+                            <div className="mt-4 pt-3.5 border-t border-[var(--color-border)]/40 flex flex-wrap gap-1.5">
+                              <WhatsAppButton
+                                phoneNumber={order.whatsappNumber}
+                                message={waConfig.message}
+                                label={waConfig.label}
+                              />
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)]"
+                                onClick={() => void handleCopyMessage(waConfig.message)}
+                                title="Salin draf pesan WA"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <LinkButton
+                                href={`${ROUTES.invoices}?orderId=${order.id}`}
+                                variant="secondary"
+                                className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                              >
+                                <ReceiptText className="h-4 w-4" />
+                                Nota
+                              </LinkButton>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                                onClick={() => startEdit(order)}
+                              >
+                                <PencilLine className="h-4 w-4" />
+                                Ubah
+                              </Button>
+                              <select
+                                value={order.status}
+                                onChange={(e) => void handleUpdateOrderStatus(order, e.target.value as OrderStatus)}
+                                className={cn(
+                                  "h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[11px] font-bold text-[var(--color-text)] outline-none hover:border-[var(--color-border-strong)] transition-colors cursor-pointer"
+                                )}
+                              >
+                                {statusOptions.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
-                      <div className="rounded-md border border-dashed border-border/80 bg-surface p-3 text-sm text-text-secondary">
-                        Belum ada order di lane ini.
+                      <div className="rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] py-12 px-4 text-center">
+                        <p className="text-xs text-[var(--color-text-muted)] font-medium">Belum ada order di lane ini.</p>
                       </div>
                     )}
                   </div>

@@ -12,6 +12,7 @@ export const ROUTES = {
   businessLink: "/app/business-link",
   settings: "/app/settings",
   plan: "/app/plan",
+  assistant: "/app/assistant",
   superAdminBusinesses: "/app/super-admin/businesses",
   superAdminBusinessDetail: (businessId: string) => `/app/super-admin/businesses/${businessId}`,
   superAdminUpgradeRequests: "/app/super-admin/upgrade-requests",

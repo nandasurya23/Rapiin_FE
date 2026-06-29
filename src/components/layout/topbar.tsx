@@ -1,71 +1,137 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Bell, LogOut, PanelLeftClose, PanelLeftOpen, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/toast-provider";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { Bell, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { QuickAddMenu } from "@/components/shared/quick-add-menu";
-import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { cn } from "@/lib/cn";
+import { APP_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 
 type TopbarProps = {
   sidebarCollapsed: boolean;
-  onToggleSidebar: () => void;
+  onOpenAssistant: () => void;
 };
 
-export function Topbar({ sidebarCollapsed, onToggleSidebar }: TopbarProps) {
-  const router = useRouter();
-  const toast = useToast();
-  const { business, currentUser, isSuperAdmin, logout } = useAppData();
+export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
+  const pathname = usePathname();
+  const { business, currentUser, isSuperAdmin, canAccessWriteMode } = useAppData();
+
+  // Derive current page label from nav items
+  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : APP_NAV_ITEMS;
+  const currentNav = navItems.find((item) => pathname.startsWith(item.href));
+  const pageLabel = currentNav?.label ?? "Rapiin";
+
+  // User initials for avatar
+  const name = currentUser?.name ?? business.ownerName ?? "U";
+  const initials = name
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/80 bg-surface/90 backdrop-blur">
-      <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-text-muted">Rapiin command center</p>
-            <div className="mt-1 flex items-center gap-2">
-              <p className="truncate text-sm font-semibold text-text-primary">{business.name}</p>
-              <span className="inline-flex items-center gap-1 rounded-md border border-brand-100 bg-brand-50 px-2 py-1 text-[11px] font-medium text-brand-800">
-                {isSuperAdmin ? <ShieldCheck className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                {isSuperAdmin ? "Manual approval" : "WhatsApp-first"}
-              </span>
-            </div>
-          </div>
+    <header
+      className={cn(
+        "sticky top-0 z-20",
+        "h-[var(--topbar-height)]",
+        "border-b border-[var(--color-border)]",
+        "bg-[var(--color-surface)]/95 backdrop-blur-md",
+        "shadow-[var(--shadow-xs)]"
+      )}
+    >
+      <div className="flex h-full items-center gap-4 px-4 sm:px-6 lg:px-8">
+
+        {/* Sidebar toggle — desktop only (now also in sidebar, this is topbar-level shortcut) */}
+        <button
+          type="button"
+          aria-label={sidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
+          className={cn(
+            "hidden lg:flex items-center justify-center",
+            "h-8 w-8 rounded-[var(--radius-md)]",
+            "text-[var(--color-text-muted)]",
+            "hover:bg-[var(--state-hover-bg)] hover:text-[var(--color-primary)]",
+            "transition-colors duration-[var(--transition-fast)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+          )}
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <PanelLeftClose className="h-4 w-4" />
+          )}
+        </button>
+
+        {/* Page context — breadcrumb / current page name */}
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" className="hidden lg:inline-flex" onClick={onToggleSidebar}>
-              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-              {sidebarCollapsed ? "Buka sidebar" : "Sembunyikan"}
-            </Button>
-            <Button variant="secondary" size="sm" className="hidden sm:inline-flex">
-              <Bell className="h-4 w-4" />
-            </Button>
-            {!isSuperAdmin ? <QuickAddMenu /> : null}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={async () => {
-                logout();
-                toast.info("Logout berhasil", "Kamu keluar dari sesi admin.");
-                await new Promise((resolve) => setTimeout(resolve, 180));
-                router.push(ROUTES.login);
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
+            {/* Mobile: show business name */}
+            <span className="block truncate text-sm font-semibold text-[var(--color-text)] lg:hidden">
+              {business.name}
+            </span>
+            {/* Desktop: show current page */}
+            <span className="hidden truncate text-sm font-semibold text-[var(--color-text)] lg:block">
+              {pageLabel}
+            </span>
           </div>
         </div>
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-          <label className="relative block lg:max-w-2xl">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-            <Input placeholder="Cari customer, order, nota, atau template" className="pl-9" />
-          </label>
-          <div className="hidden items-center gap-2 lg:flex">
-            <span className="rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
-              {isSuperAdmin ? `Login sebagai ${currentUser?.name ?? "Super Admin"}` : "Hari ini fokus follow-up dan jadwal"}
-            </span>
+
+        {/* ── RIGHT ACTIONS ───────────────────────── */}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Notification bell */}
+          <button
+            type="button"
+            aria-label="Notifikasi"
+            className={cn(
+              "flex items-center justify-center",
+              "h-8 w-8 rounded-[var(--radius-md)]",
+              "text-[var(--color-text-muted)]",
+              "hover:bg-[var(--state-hover-bg)] hover:text-[var(--color-primary)]",
+              "transition-colors duration-[var(--transition-fast)]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            )}
+          >
+            <Bell className="h-4 w-4" />
+          </button>
+
+          {/* ⚡ Asisten Pintar Rapiin — standalone prominent CTA (non-superadmin only) */}
+          {!isSuperAdmin ? (
+            <button
+              type="button"
+              disabled={!canAccessWriteMode}
+              onClick={onOpenAssistant}
+              title="Konsol Pembantu — Input Cepat (⌘K)"
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold",
+                "bg-gradient-to-r from-[#122a57] to-[#0c1d3b] text-amber-300",
+                "border border-amber-400/30",
+                "hover:from-[#1a3a73] hover:to-[#122a57] hover:text-amber-200",
+                "transition-all duration-200",
+                "disabled:opacity-40 disabled:cursor-not-allowed",
+                "shadow-[0_0_12px_rgba(218,159,78,0.15)]"
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              <span>Konsol Pembantu</span>
+              <kbd className="hidden lg:inline-flex items-center rounded border border-amber-400/20 bg-amber-400/10 px-1 text-[9px] font-mono text-amber-400/80">⌘K</kbd>
+            </button>
+          ) : null}
+
+          {/* Quick add */}
+          {!isSuperAdmin ? <QuickAddMenu /> : null}
+
+          {/* User avatar — visual only (logout in sidebar) */}
+          <div
+            title={name}
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+              "bg-[var(--color-primary-surface)]",
+              "border border-[var(--color-border-strong)]",
+              "text-[11px] font-bold text-[var(--color-primary)] select-none"
+            )}
+          >
+            {initials}
           </div>
         </div>
       </div>

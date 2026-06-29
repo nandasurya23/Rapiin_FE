@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Store } from "lucide-react";
+import { BarChart3, Building2, ShieldAlert, Store } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -18,77 +18,107 @@ export function SuperAdminBusinessesPage() {
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section>
-        <Card className="border-border/80 shadow-soft">
-          <CardBody className="space-y-4 p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <div className="inline-flex rounded-md bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">Super Admin</div>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">Daftar bisnis dan status trial</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
-                  Review trial, backup, limit customer, dan aksi manual approval dari satu panel.
-                </p>
-              </div>
-              <Badge tone="info">{businessDirectory.length} bisnis</Badge>
+      {/* HERO HEADER */}
+      <section className="animate-fade-up">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-rose-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none" />
+
+          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-rose-300">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Super Admin Panel
+              </span>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
+                Daftar Bisnis & Status Trial
+              </h1>
+              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
+                Review trial, backup, limit customer, dan aksi manual approval dari satu panel terpusat.
+              </p>
             </div>
-          </CardBody>
-        </Card>
+            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+              <div className="rounded-2xl bg-white/10 border border-white/[0.12] px-5 py-3 flex flex-col">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/50">Total Bisnis</p>
+                <p className="text-2xl font-black text-white mt-0.5">{businessDirectory.length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="space-y-4">
+      {/* BUSINESS LIST */}
+      <section className="space-y-4 animate-fade-up-delay-1">
         {businessDirectory.map((entry) => {
           const daysLeft = getDaysUntilExpiry(entry.subscription);
+          const isSuspended = entry.subscription?.status === "SUSPENDED";
+
           return (
-            <Card key={entry.business.id}>
-              <CardBody className="space-y-4 p-5">
+            <Card key={entry.business.id} className="border-[var(--color-border)] shadow-none overflow-hidden">
+              <div className={`h-1 w-full ${isSuspended ? "bg-rose-500" : "bg-gradient-to-r from-indigo-500 to-blue-500"}`} />
+              <CardBody className="space-y-5 p-5">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
-                      <Badge tone="neutral">{PLAN_LABELS[entry.subscription?.planCode ?? "FREE_TRIAL"]}</Badge>
-                      <Badge tone={entry.subscription?.hasCompletedRequiredBackup ? "success" : "warning"}>
-                        {entry.subscription?.hasCompletedRequiredBackup ? "Sudah backup" : "Belum backup"}
+                      <Badge tone="neutral" className="font-extrabold text-[9px] uppercase tracking-wider">
+                        {PLAN_LABELS[entry.subscription?.planCode ?? "FREE_TRIAL"]}
                       </Badge>
-                      <Badge tone={entry.subscription?.status === "SUSPENDED" ? "danger" : entry.subscription?.status === "PENDING_UPGRADE_APPROVAL" ? "warning" : "info"}>
+                      <Badge tone={entry.subscription?.hasCompletedRequiredBackup ? "success" : "warning"} className="font-extrabold text-[9px] uppercase tracking-wider">
+                        {entry.subscription?.hasCompletedRequiredBackup ? "✓ Sudah Backup" : "⚠ Belum Backup"}
+                      </Badge>
+                      <Badge
+                        tone={isSuspended ? "danger" : entry.subscription?.status === "PENDING_UPGRADE_APPROVAL" ? "warning" : "info"}
+                        className="font-extrabold text-[9px] uppercase tracking-wider"
+                      >
                         {entry.subscription?.status ?? "-"}
                       </Badge>
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-text-primary">{entry.business.name}</h2>
-                      <p className="mt-1 text-sm text-text-secondary">
-                        Owner: {entry.owner?.name ?? "-"} • {entry.owner?.email ?? "-"} • {entry.owner?.phoneNumber ?? "-"}
+                      <h2 className="text-xl font-extrabold text-[var(--color-text)] flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-[var(--color-primary)]" />
+                        {entry.business.name}
+                      </h2>
+                      <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                        Owner: <span className="font-semibold">{entry.owner?.name ?? "-"}</span> • {entry.owner?.email ?? "-"} • {entry.owner?.phoneNumber ?? "-"}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Link href={ROUTES.superAdminBusinessDetail(entry.business.id)} className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-surface px-4 text-sm font-medium text-text-primary hover:bg-muted">
+                    <Link
+                      href={ROUTES.superAdminBusinessDetail(entry.business.id)}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-xs font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] transition-colors"
+                    >
                       <Store className="h-4 w-4" />
-                      Detail bisnis
+                      Detail
                     </Link>
                     <Button
                       type="button"
                       variant="secondary"
+                      className="h-10 rounded-xl text-xs font-bold border-[var(--color-border)]"
                       onClick={() => {
                         extendTrial(entry.business.id, 7);
                         toast.success("Trial diperpanjang", "Tambahan 7 hari sudah diterapkan.");
                       }}
                     >
-                      +7 hari
+                      +7 Hari
                     </Button>
-                    {entry.subscription?.status === "SUSPENDED" ? (
+                    {isSuspended ? (
                       <Button
                         type="button"
                         variant="secondary"
+                        className="h-10 rounded-xl text-xs font-bold text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                         onClick={() => {
                           reactivateBusiness(entry.business.id);
                           toast.success("Bisnis diaktifkan kembali");
                         }}
                       >
-                        Aktifkan lagi
+                        Aktifkan Lagi
                       </Button>
                     ) : (
                       <Button
                         type="button"
                         variant="secondary"
+                        className="h-10 rounded-xl text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50"
                         onClick={() => {
                           suspendBusiness(entry.business.id, "Bisnis disuspend manual dari panel super admin.");
                           toast.info("Bisnis disuspend");
@@ -100,12 +130,12 @@ export function SuperAdminBusinessesPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-5">
                   <Stat label="Customer" value={`${entry.customerCount}/${entry.subscription?.customerLimit ?? 0}`} />
-                  <Stat label="Trial berakhir" value={entry.subscription ? formatDateTime(entry.subscription.expiresAt) : "-"} />
-                  <Stat label="Sisa hari" value={daysLeft !== null ? `${Math.max(daysLeft, 0)} hari` : "-"} />
-                  <Stat label="Backup terakhir" value={entry.latestBackup ? formatDateTime(entry.latestBackup.createdAt) : "Belum ada"} />
-                  <Stat label="Jumlah backup" value={`${entry.backupCount}`} />
+                  <Stat label="Trial Berakhir" value={entry.subscription ? formatDateTime(entry.subscription.expiresAt) : "-"} />
+                  <Stat label="Sisa Hari" value={daysLeft !== null ? `${Math.max(daysLeft, 0)} hari` : "-"} highlight={daysLeft !== null && daysLeft <= 3} />
+                  <Stat label="Backup Terakhir" value={entry.latestBackup ? formatDateTime(entry.latestBackup.createdAt) : "Belum ada"} />
+                  <Stat label="Jumlah Backup" value={`${entry.backupCount}`} />
                 </div>
               </CardBody>
             </Card>
@@ -116,11 +146,11 @@ export function SuperAdminBusinessesPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-surface px-4 py-4">
-      <p className="text-xs text-text-muted">{label}</p>
-      <p className="mt-1 font-medium text-text-primary">{value}</p>
+    <div className={`rounded-2xl border px-4 py-3 ${highlight ? "border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/30" : "border-[var(--color-border)] bg-[var(--color-surface-elevated)]"}`}>
+      <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">{label}</p>
+      <p className={`mt-0.5 text-sm font-extrabold ${highlight ? "text-rose-600 dark:text-rose-400" : "text-[var(--color-text)]"}`}>{value}</p>
     </div>
   );
 }

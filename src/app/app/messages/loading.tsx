@@ -3,7 +3,7 @@ import { LoadingBlock } from "@/components/shared/loading";
 export default function Loading() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section className="grid gap-4 rounded-2xl border border-border/80 bg-surface p-5 shadow-soft lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="grid gap-4 rounded-md border border-[var(--color-border)] shimmer p-5 shadow-none lg:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-4">
           <LoadingBlock className="h-6 w-24" />
           <LoadingBlock className="h-10 w-80 max-w-full" />
@@ -13,18 +13,18 @@ export default function Loading() {
             <LoadingBlock className="h-11 w-28" />
           </div>
         </div>
-        <div className="rounded-2xl border border-border/80 bg-brand-50 p-5 space-y-4">
+        <div className="rounded-md border border-[var(--color-border)] shimmer p-5 space-y-4">
           <LoadingBlock className="h-5 w-32" />
           <LoadingBlock className="h-4 w-full" />
           <div className="grid grid-cols-2 gap-3">
-            <LoadingBlock className="h-20 rounded-lg" />
-            <LoadingBlock className="h-20 rounded-lg" />
+            <LoadingBlock className="h-20 rounded-md" />
+            <LoadingBlock className="h-20 rounded-md" />
           </div>
         </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-2xl border border-border/80 bg-surface p-5 shadow-soft space-y-4">
+        <div className="rounded-md border border-[var(--color-border)] shimmer p-5 shadow-none space-y-4">
           <LoadingBlock className="h-5 w-36" />
           <div className="flex flex-wrap gap-2">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -32,19 +32,19 @@ export default function Loading() {
             ))}
           </div>
           <div className="space-y-2">
-            <LoadingBlock className="h-28 rounded-xl" />
-            <LoadingBlock className="h-28 rounded-xl" />
-            <LoadingBlock className="h-28 rounded-xl" />
+            <LoadingBlock className="h-28 rounded-md" />
+            <LoadingBlock className="h-28 rounded-md" />
+            <LoadingBlock className="h-28 rounded-md" />
           </div>
         </div>
-        <div className="rounded-2xl border border-border/80 bg-surface p-5 shadow-soft space-y-5">
+        <div className="rounded-md border border-[var(--color-border)] shimmer p-5 shadow-none space-y-5">
           <LoadingBlock className="h-5 w-36" />
           <div className="grid gap-3 sm:grid-cols-2">
             <LoadingBlock className="h-11 rounded-md" />
             <LoadingBlock className="h-11 rounded-md" />
           </div>
-          <LoadingBlock className="h-28 rounded-xl" />
-          <LoadingBlock className="h-20 rounded-xl" />
+          <LoadingBlock className="h-28 rounded-md" />
+          <LoadingBlock className="h-20 rounded-md" />
         </div>
       </section>
     </main>

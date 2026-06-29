@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { CheckCircle2, Sparkles } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -70,7 +71,13 @@ export function OnboardingFlow() {
     });
   }, [business.defaultBookingDurationMinutes, business.description, business.mode, business.name, business.niche, business.operationalModel, business.resourceCount, business.resourceLabel, business.resources, business.usesResources, business.whatsappNumber, hydrated]);
 
-  const progress = useMemo(() => `${step} / 5`, [step]);
+  const progress = useMemo(() => {
+    if (form.mode !== "BOOKING_SERVICE") {
+      const mappedStep = step === 5 ? 3 : step;
+      return `${mappedStep} / 3`;
+    }
+    return `${step} / 5`;
+  }, [step, form.mode]);
 
   function updateResources(resourceLabel: string, resourceCount: string) {
     const count = Math.max(1, Number(resourceCount) || 1);
@@ -116,11 +123,19 @@ export function OnboardingFlow() {
       return;
     }
 
-    setStep((current) => Math.min(5, current + 1) as Step);
+    if (step === 2 && form.mode !== "BOOKING_SERVICE") {
+      setStep(5);
+    } else {
+      setStep((current) => Math.min(5, current + 1) as Step);
+    }
   }
 
   function back() {
-    setStep((current) => Math.max(1, current - 1) as Step);
+    if (step === 5 && form.mode !== "BOOKING_SERVICE") {
+      setStep(2);
+    } else {
+      setStep((current) => Math.max(1, current - 1) as Step);
+    }
   }
 
   async function finish() {
@@ -168,44 +183,84 @@ export function OnboardingFlow() {
     }));
   }
 
+  const stepTitles: Record<number, { title: string; subtitle: string }> = {
+    1: { title: "Info Dasar Bisnis", subtitle: "Nama dan nomor WhatsApp aktif bisnis kamu." },
+    2: { title: "Mode Operasi", subtitle: "Cara jualan yang paling sesuai dengan model bisnismu." },
+    3: { title: "Cara Kerja Booking", subtitle: "Pengaturan slot atau request untuk layananmu." },
+    4: { title: "Konfigurasi Unit", subtitle: "Durasi dan sumber daya (jika ada) untuk booking." },
+    5: { title: "Template & Finalisasi", subtitle: "Pilih niche dan deskripsi untuk landing page publikmu." },
+  };
+  const currentStepInfo = stepTitles[step] ?? stepTitles[1];
+
   return (
     <div className="mx-auto flex min-h-screen max-w-4xl items-center px-4 py-10 sm:px-6 lg:px-8">
-      <Card className="w-full">
-        <CardBody className="space-y-6 p-6 sm:p-8">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-brand-700">Onboarding bisnis</p>
-              <h1 className="text-3xl font-semibold tracking-tight text-text-primary">Siapkan bisnis kamu</h1>
+      <div className="w-full space-y-5">
+
+        {/* HERO BANNER */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] px-6 py-6 sm:px-8 sm:py-7 text-white">
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
+
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
+                <Sparkles className="h-3 w-3" />
+                Setup Bisnis
+              </span>
+              <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+                {currentStepInfo.title}
+              </h1>
+              <p className="text-sm text-white/60 leading-relaxed">{currentStepInfo.subtitle}</p>
             </div>
-            <div className="rounded-md bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">{progress}</div>
+
+            {/* Progress indicator */}
+            <div className="flex items-center gap-3 sm:shrink-0">
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <div
+                    key={s}
+                    className={`h-1.5 w-6 rounded-full transition-all duration-300 ${
+                      s < step ? "bg-amber-400" : s === step ? "bg-white" : "bg-white/20"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="rounded-xl bg-white/10 border border-white/[0.12] px-3 py-1 text-xs font-extrabold text-white">
+                {progress}
+              </span>
+            </div>
           </div>
+        </div>
+
+        <Card className="w-full border-[var(--color-border)] shadow-[var(--shadow-md)]">
+          <CardBody className="space-y-6 p-6 sm:p-8">
 
           {step === 1 ? (
-            <div className="grid gap-4">
+            <div className="grid gap-5">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text-primary">Nama bisnis</span>
+                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Bisnis</span>
                 <Input
                   value={form.name}
                   onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                   placeholder="Contoh: Rapiin Studio"
                 />
-                {errors.name ? <p className="mt-1 text-xs text-status-danger">{errors.name}</p> : null}
+                {errors.name ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.name}</p> : null}
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text-primary">Nomor WhatsApp bisnis</span>
+                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nomor WhatsApp Bisnis</span>
                 <Input
                   value={form.whatsappNumber}
                   onChange={(event) => setForm((current) => ({ ...current, whatsappNumber: event.target.value }))}
                   placeholder="08123456789"
                 />
-                {errors.whatsappNumber ? <p className="mt-1 text-xs text-status-danger">{errors.whatsappNumber}</p> : null}
+                {errors.whatsappNumber ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.whatsappNumber}</p> : null}
               </label>
             </div>
           ) : null}
 
           {step === 2 ? (
             <div className="grid gap-4">
-              <p className="text-sm text-text-secondary">Pilih cara jualan yang paling dekat dengan bisnismu.</p>
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">Pilih cara jualan yang paling dekat dengan bisnismu.</p>
               <div className="grid gap-3 sm:grid-cols-3">
                 {BUSINESS_MODE_OPTIONS.map((option) => {
                   const active = form.mode === option.value;
@@ -215,12 +270,17 @@ export function OnboardingFlow() {
                       key={option.value}
                       type="button"
                       onClick={() => handleModeChange(option.value)}
-                      className={`rounded-xl border p-4 text-left transition ${
-                        active ? "border-brand-500 bg-brand-50" : "border-border bg-surface hover:bg-muted"
+                      className={`rounded-2xl border p-4 text-left transition-all duration-200 relative ${
+                        active
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 shadow-sm"
+                          : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
                       }`}
                     >
-                      <div className="text-sm font-semibold text-text-primary">{option.label}</div>
-                      <p className="mt-2 text-sm text-text-secondary">{option.helperText}</p>
+                      {active && (
+                        <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
+                      )}
+                      <div className="text-sm font-extrabold text-[var(--color-text)]">{option.label}</div>
+                      <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">{option.helperText}</p>
                     </button>
                   );
                 })}
@@ -232,7 +292,7 @@ export function OnboardingFlow() {
             <div className="grid gap-4">
               {form.mode === "BOOKING_SERVICE" ? (
                 <>
-                  <p className="text-sm text-text-secondary">Pilih cara kerja booking yang paling dekat dengan operasional bisnismu.</p>
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">Pilih cara kerja booking yang paling dekat dengan operasional bisnismu.</p>
                   <div className="grid gap-3">
                     {OPERATIONAL_MODEL_OPTIONS.filter((option) => option.value !== "ORDER_REQUEST").map((option) => {
                       const active = form.operationalModel === option.value;
@@ -242,36 +302,39 @@ export function OnboardingFlow() {
                           key={option.value}
                           type="button"
                           onClick={() => handleOperationalModelChange(option.value)}
-                          className={`rounded-xl border p-4 text-left transition ${
-                            active ? "border-brand-500 bg-brand-50" : "border-border bg-surface hover:bg-muted"
+                          className={`rounded-2xl border p-4 text-left transition-all duration-200 relative ${
+                            active
+                              ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 shadow-sm"
+                              : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
-                          <div className="text-sm font-semibold text-text-primary">{option.label}</div>
-                          <p className="mt-2 text-sm text-text-secondary">{option.helperText}</p>
+                          {active && (
+                            <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
+                          )}
+                          <div className="text-sm font-extrabold text-[var(--color-text)]">{option.label}</div>
+                          <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">{option.helperText}</p>
                         </button>
                       );
                     })}
                   </div>
                 </>
               ) : (
-                <Card className="bg-muted/25">
-                  <CardBody className="space-y-2 p-5">
-                    <p className="text-sm font-medium text-text-primary">Cara kerja bisnis</p>
-                    <p className="text-sm text-text-secondary">
-                      Untuk bisnis order/request, customer tidak perlu pilih slot atau unit. Customer cukup kirim detail order atau request.
-                    </p>
-                  </CardBody>
-                </Card>
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 space-y-2">
+                  <p className="text-sm font-extrabold text-[var(--color-text)]">Cara kerja bisnis</p>
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                    Untuk bisnis order/request, customer tidak perlu pilih slot atau unit. Customer cukup kirim detail order atau request.
+                  </p>
+                </div>
               )}
             </div>
           ) : null}
 
           {step === 4 ? (
-            <div className="grid gap-4">
+            <div className="grid gap-5">
               {form.mode === "BOOKING_SERVICE" ? (
                 <>
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-text-primary">Durasi default booking (menit)</span>
+                    <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Durasi Default Booking (menit)</span>
                     <Input
                       type="number"
                       min={15}
@@ -285,7 +348,7 @@ export function OnboardingFlow() {
                   {form.usesResources ? (
                     <>
                       <label className="block">
-                        <span className="mb-2 block text-sm font-medium text-text-primary">Nama unit</span>
+                        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Unit</span>
                         <Input
                           value={form.resourceLabel}
                           onChange={(event) => {
@@ -298,8 +361,8 @@ export function OnboardingFlow() {
                           }}
                           placeholder="Contoh: Lapangan, Meja, PS, Room"
                         />
-                        {errors.resourceLabel ? <p className="mt-1 text-xs text-status-danger">{errors.resourceLabel}</p> : null}
-                        <div className="mt-2 flex flex-wrap gap-2">
+                        {errors.resourceLabel ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceLabel}</p> : null}
+                        <div className="mt-3 flex flex-wrap gap-2">
                           {RESOURCE_LABEL_SUGGESTIONS.map((label) => (
                             <button
                               key={label}
@@ -311,7 +374,7 @@ export function OnboardingFlow() {
                                   resources: updateResources(label, current.resourceCount),
                                 }))
                               }
-                              className="rounded-md border border-border px-2.5 py-1 text-xs text-text-secondary hover:bg-muted"
+                              className="rounded-xl border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)] transition-colors"
                             >
                               {label}
                             </button>
@@ -319,7 +382,7 @@ export function OnboardingFlow() {
                         </div>
                       </label>
                       <label className="block">
-                        <span className="mb-2 block text-sm font-medium text-text-primary">Jumlah unit</span>
+                        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Jumlah Unit</span>
                         <Input
                           type="number"
                           min={1}
@@ -334,13 +397,13 @@ export function OnboardingFlow() {
                           }}
                           placeholder="2"
                         />
-                        {errors.resourceCount ? <p className="mt-1 text-xs text-status-danger">{errors.resourceCount}</p> : null}
+                        {errors.resourceCount ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceCount}</p> : null}
                       </label>
                       <div className="grid gap-3">
-                        <p className="text-sm font-medium text-text-primary">Nama tiap unit</p>
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Tiap Unit</p>
                         {form.resources.map((resource, index) => (
                           <label key={resource.id} className="block">
-                            <span className="mb-2 block text-sm text-text-secondary">Unit {index + 1}</span>
+                            <span className="mb-1.5 block text-xs text-[var(--color-text-secondary)] font-semibold">Unit {index + 1}</span>
                             <Input
                               value={resource.name}
                               onChange={(event) =>
@@ -351,28 +414,26 @@ export function OnboardingFlow() {
                             />
                           </label>
                         ))}
-                        {errors.resources ? <p className="text-xs text-status-danger">{errors.resources}</p> : null}
+                        {errors.resources ? <p className="text-xs text-[var(--color-danger)] font-medium">{errors.resources}</p> : null}
                       </div>
                     </>
                   ) : null}
                 </>
               ) : (
-                <Card className="bg-muted/25">
-                  <CardBody className="space-y-2 p-5">
-                    <p className="text-sm font-medium text-text-primary">Flow customer</p>
-                    <p className="text-sm text-text-secondary">
-                      Customer akan kirim order atau request tanpa pilih slot. Detail seperti jumlah, deadline, budget, dan catatan akan muncul sesuai mode bisnis.
-                    </p>
-                  </CardBody>
-                </Card>
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 space-y-2">
+                  <p className="text-sm font-extrabold text-[var(--color-text)]">Flow Customer</p>
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                    Customer akan kirim order atau request tanpa pilih slot. Detail seperti jumlah, deadline, budget, dan catatan akan muncul sesuai mode bisnis.
+                  </p>
+                </div>
               )}
             </div>
           ) : null}
 
           {step === 5 ? (
-            <div className="grid gap-4">
+            <div className="grid gap-5">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text-primary">Pilih template niche</span>
+                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Template Niche Bisnis</span>
                 <Select
                   value={form.niche}
                   onValueChange={(value) => setForm((current) => ({ ...current, niche: value as typeof form.niche }))}
@@ -380,58 +441,65 @@ export function OnboardingFlow() {
                 />
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-text-primary">Deskripsi singkat</span>
+                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Deskripsi Singkat Bisnis</span>
                 <Textarea
                   value={form.description}
                   onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
                   placeholder="Contoh: Booking studio, follow-up cepat, dan nota sederhana."
                 />
               </label>
-              <Card className="bg-brand-50">
-                <CardBody className="space-y-3 p-5">
-                  <p className="text-sm font-medium text-brand-800">Dashboard kamu sudah siap</p>
-                  <p className="text-sm text-text-secondary">
-                    Sekarang kamu bisa mulai tambah customer, catat order, atau bagikan link bisnis dengan flow yang sesuai cara kerja usahamu.
-                  </p>
-                  <div className="rounded-lg border border-brand-100 bg-white/70 px-4 py-3 text-sm text-text-secondary">
-                    <p className="font-medium text-text-primary">Ringkasan setup</p>
-                    <p className="mt-1">Mode bisnis: {BUSINESS_MODE_OPTIONS.find((option) => option.value === form.mode)?.label}</p>
-                    <p className="mt-1">
-                      Cara kerja:{" "}
+
+              {/* Setup Summary Card */}
+              <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-surface-elevated)] p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-[var(--color-primary)]" />
+                  <p className="font-extrabold text-[var(--color-text)]">Dashboard kamu sudah siap 🎉</p>
+                </div>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  Sekarang kamu bisa mulai tambah customer, catat order, atau bagikan link bisnis dengan flow yang sesuai cara kerja usahamu.
+                </p>
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 space-y-2">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Ringkasan Setup</p>
+                  <div className="space-y-1 text-sm">
+                    <p className="text-[var(--color-text)]"><span className="font-bold">Mode bisnis:</span> {BUSINESS_MODE_OPTIONS.find((option) => option.value === form.mode)?.label}</p>
+                    <p className="text-[var(--color-text)]">
+                      <span className="font-bold">Cara kerja:</span>{" "}
                       {form.mode === "BOOKING_SERVICE"
                         ? OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === form.operationalModel)?.label
                         : "Customer kirim order / request"}
                     </p>
-                    {form.usesResources ? <p className="mt-1">Unit aktif: {form.resources.map((resource) => resource.name).join(", ")}</p> : null}
+                    {form.usesResources ? <p className="text-[var(--color-text)]"><span className="font-bold">Unit aktif:</span> {form.resources.map((resource) => resource.name).join(", ")}</p> : null}
                   </div>
-                </CardBody>
-              </Card>
+                </div>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-3">
-                <Button type="button" variant="secondary" onClick={() => void finish()}>
+                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()}>
                   Tambah Order Pertama
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => void finish()}>
+                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()}>
                   Bagikan Link Bisnis
                 </Button>
-                <Button type="button" onClick={() => void finish()}>
+                <Button type="button" className="rounded-xl h-11 font-bold" onClick={() => void finish()}>
                   Lihat Dashboard
                 </Button>
               </div>
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-            <Button type="button" variant="secondary" onClick={back} disabled={step === 1}>
-              Kembali
+          <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-5">
+            <Button type="button" variant="secondary" className="rounded-xl h-11 px-5 font-bold text-sm" onClick={back} disabled={step === 1}>
+              ← Kembali
             </Button>
             {step < 5 ? (
-              <Button type="button" onClick={next}>
-                {step === 4 ? "Review Setup" : "Lanjut"}
+              <Button type="button" className="rounded-xl h-11 px-5 font-bold text-sm" onClick={next}>
+                {step === 4 ? "Review Setup →" : "Lanjut →"}
               </Button>
             ) : null}
           </div>
         </CardBody>
       </Card>
+      </div>
     </div>
   );
 }

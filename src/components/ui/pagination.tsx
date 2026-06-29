@@ -37,13 +37,13 @@ export function Pagination({ currentPage, pageSize, totalItems, onPageChange, cl
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-xl border border-border/70 bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
         className
       )}
     >
-      <p className="text-sm text-text-secondary">
-        Menampilkan <span className="font-medium text-text-primary">{startItem}-{endItem}</span> dari{" "}
-        <span className="font-medium text-text-primary">{totalItems}</span> data
+      <p className="text-sm text-[var(--color-text-muted)]">
+        Menampilkan <span className="font-medium text-[var(--color-text)]">{startItem}-{endItem}</span> dari{" "}
+        <span className="font-medium text-[var(--color-text)]">{totalItems}</span> data
       </p>
 
       <div className="flex items-center gap-1.5">
@@ -63,15 +63,15 @@ export function Pagination({ currentPage, pageSize, totalItems, onPageChange, cl
 
           return (
             <div key={page} className="flex items-center gap-1.5">
-              {shouldShowGap ? <span className="px-1 text-sm text-text-muted">...</span> : null}
+              {shouldShowGap ? <span className="px-1 text-sm text-[var(--color-text-muted)]">...</span> : null}
               <button
                 type="button"
                 onClick={() => onPageChange(page)}
                 className={cn(
-                  "inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm font-medium transition",
+                  "inline-flex h-9 min-w-9 items-center justify-center rounded-[var(--radius-md)] border px-3 text-sm font-medium transition-all duration-[var(--transition-fast)]",
                   currentPage === page
-                    ? "border-brand-500 bg-brand-50 text-brand-800"
-                    : "border-border bg-surface text-text-secondary hover:bg-muted hover:text-text-primary"
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-semibold"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] hover:text-[var(--color-text)] hover:border-[var(--color-border-strong)]"
                 )}
               >
                 {page}

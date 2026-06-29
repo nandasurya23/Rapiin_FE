@@ -44,8 +44,8 @@ export function TimeSelect({
   return (
     <Select
       value={value}
-      onValueChange={onValueChange}
       options={options}
+      onValueChange={onValueChange}
       placeholder={placeholder}
       disabled={disabled}
     />

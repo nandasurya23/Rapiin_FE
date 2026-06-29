@@ -56,6 +56,8 @@ type BusinessSettingsInput = Pick<
   | "description"
   | "openingHours"
   | "address"
+  | "paymentInstructions"
+  | "logoUrl"
 >;
 
 type CustomerInput = {
