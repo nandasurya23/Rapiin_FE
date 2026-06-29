@@ -35,6 +35,7 @@ function createStableMockNow() {
 const now = createStableMockNow();
 const today = toDateKey(now);
 const yesterday = toDateKey(addDays(now, -1));
+const tomorrow = toDateKey(addDays(now, 1));
 
 export const mockOrders: Order[] = [
   {
@@ -152,5 +153,51 @@ export const mockOrders: Order[] = [
     customerStatusSnapshot: "DONE",
     createdAt: addDays(now, -2).toISOString(),
     updatedAt: addMinutes(now, -60).toISOString(),
+  },
+  {
+    id: "ord_006",
+    businessId: "biz_001",
+    customerId: "cus_001",
+    customerName: "Agus Booking",
+    whatsappNumber: "08123456789",
+    title: "Booking Studio Terjadwal",
+    mode: "BOOKING_SERVICE",
+    status: "CONFIRMED",
+    paymentStatus: "DP_PAID",
+    scheduledDate: tomorrow,
+    scheduledTime: "14:00",
+    bookingDurationMinutes: 60,
+    resourceId: "res_1",
+    resourceNameSnapshot: "Studio 1",
+    totalAmount: 120000,
+    dpAmount: 60000,
+    notes: "Sudah dipesan.",
+    lastFollowUpAt: now.toISOString(),
+    customerStatusSnapshot: "DEAL",
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  },
+  {
+    id: "ord_007",
+    businessId: "biz_001",
+    customerId: "cus_002",
+    customerName: "Santi Studio",
+    whatsappNumber: "08129876543",
+    title: "Booking Studio Terjadwal B",
+    mode: "BOOKING_SERVICE",
+    status: "CONFIRMED",
+    paymentStatus: "DP_PAID",
+    scheduledDate: tomorrow,
+    scheduledTime: "14:00",
+    bookingDurationMinutes: 60,
+    resourceId: "res_2",
+    resourceNameSnapshot: "Studio 2",
+    totalAmount: 120000,
+    dpAmount: 60000,
+    notes: "Slot bentrok penuh.",
+    lastFollowUpAt: now.toISOString(),
+    customerStatusSnapshot: "DEAL",
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
   },
 ];

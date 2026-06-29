@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, CircleDot, ExternalLink, ReceiptText, X, CalendarOff, CheckCircle2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  ExternalLink,
+  ReceiptText,
+  X,
+  CalendarOff,
+  CheckCircle2,
+  User,
+  CalendarDays
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
@@ -635,6 +646,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
     updateBusiness({ closedDates });
   }
   const [viewDate, setViewDate] = useState(parseDateKey(todayKey));
+  const [viewMode, setViewMode] = useState<"MONTH" | "DAY_TIMELINE">("MONTH");
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [draftStatuses, setDraftStatuses] = useState<Record<string, OrderStatus>>({});
   const [draftPaymentStatuses, setDraftPaymentStatuses] = useState<Record<string, PaymentStatus>>({});
@@ -881,13 +893,60 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
     return "success" as const;
   }
 
-  function goToPreviousMonth() {
-    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+  function goToPrevious() {
+    if (viewMode === "MONTH") {
+      setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+    } else {
+      const current = parseDateKey(selectedDate);
+      current.setDate(current.getDate() - 1);
+      const nextKey = toDateKey(current);
+      onDateSelect(nextKey);
+      setViewDate(current);
+    }
   }
 
-  function goToNextMonth() {
-    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+  function goToNext() {
+    if (viewMode === "MONTH") {
+      setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+    } else {
+      const current = parseDateKey(selectedDate);
+      current.setDate(current.getDate() + 1);
+      const nextKey = toDateKey(current);
+      onDateSelect(nextKey);
+      setViewDate(current);
+    }
   }
+
+  const activeResources = useMemo(() => (business.resources ?? []).filter((resource) => resource.isActive), [business.resources]);
+
+  const positionedOrders = useMemo(() => {
+    const sorted = [...selectedOrders].sort((a, b) => (a.scheduledTime || "").localeCompare(b.scheduledTime || ""));
+    return sorted.map((order) => {
+      const [h, m] = (order.scheduledTime || "08:00").split(":").map(Number);
+      const start = h * 60 + m;
+      const end = start + (order.bookingDurationMinutes || 60);
+
+      const overlaps = sorted.filter((other) => {
+        if (other.id === order.id) return false;
+        const [oh, om] = (other.scheduledTime || "08:00").split(":").map(Number);
+        const ostart = oh * 60 + om;
+        const oend = ostart + (other.bookingDurationMinutes || 60);
+        return start < oend && end > ostart;
+      });
+
+      const hasOverlap = overlaps.length > 0;
+      const positionIdx = overlaps.findIndex((o) => o.id < order.id) > -1 ? 1 : 0;
+
+      return {
+        order,
+        top: ((start - 420) * 64) / 60,
+        height: ((order.bookingDurationMinutes || 60) * 64) / 60,
+        leftClass: hasOverlap ? (positionIdx === 0 ? "left-1 w-[47%]" : "left-[51%] w-[47%]") : "left-1 right-1",
+      };
+    });
+  }, [selectedOrders]);
+
+  const hours = Array.from({ length: 15 }, (_, i) => i + 7);
 
   return (
     <>
@@ -896,116 +955,324 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
           <div className="max-w-2xl space-y-2">
             <div className="inline-flex rounded-[var(--radius-md)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] border border-[var(--color-info-border)] px-3 py-1 text-xs font-medium">Kalender Jadwal</div>
             <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Pantau booking dan order bulan ini</h2>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Klik tanggal untuk lihat detail order/booking pada hari itu.</p>
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Pantau booking dan order secara real-time</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Lihat jadwal harian timeline (Google Calendar style) atau bulanan.</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge tone="neutral">{monthLabel}</Badge>
-            <Badge tone="info">
-              {
-                orders.filter((order) =>
-                  order.scheduledDate?.startsWith(`${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, "0")}`)
-                ).length
-              }{" "}
-              jadwal bulan ini
-            </Badge>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Mode Toggle */}
+            <div className="inline-flex rounded-xl bg-[var(--color-surface-elevated)] p-1 border border-[var(--color-border)] shadow-sm">
+              <button
+                type="button"
+                onClick={() => setViewMode("MONTH")}
+                className={cn(
+                  "rounded-lg px-3 py-1 text-xs font-bold transition-all",
+                  viewMode === "MONTH"
+                    ? "bg-[var(--color-primary)] text-white shadow-sm font-black"
+                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] font-semibold"
+                )}
+              >
+                Bulanan
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("DAY_TIMELINE")}
+                className={cn(
+                  "rounded-lg px-3 py-1 text-xs font-bold transition-all",
+                  viewMode === "DAY_TIMELINE"
+                    ? "bg-[var(--color-primary)] text-white shadow-sm font-black"
+                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] font-semibold"
+                )}
+              >
+                Timeline Harian (G-Cal)
+              </button>
+            </div>
+
+            <Badge tone="neutral">{viewMode === "MONTH" ? monthLabel : formatDate(selectedDate)}</Badge>
           </div>
         </div>
 
         <div className="mt-5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-3 sm:p-5">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:flex sm:flex-row sm:items-center sm:justify-between">
-            <Button type="button" variant="secondary" size="sm" className="min-w-0 px-2.5 sm:w-auto sm:px-3" onClick={goToPreviousMonth}>
+            <Button type="button" variant="secondary" size="sm" className="min-w-0 px-2.5 sm:w-auto sm:px-3" onClick={goToPrevious}>
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Sebelumnya</span>
             </Button>
-            <div className="min-w-0 px-2 text-center text-sm font-semibold text-[var(--color-text)]">{monthLabel}</div>
-            <Button type="button" variant="secondary" size="sm" className="min-w-0 px-2.5 sm:w-auto sm:px-3" onClick={goToNextMonth}>
+            <div className="min-w-0 px-2 text-center text-sm font-semibold text-[var(--color-text)]">
+              {viewMode === "MONTH" ? monthLabel : formatDate(selectedDate)}
+            </div>
+            <Button type="button" variant="secondary" size="sm" className="min-w-0 px-2.5 sm:w-auto sm:px-3" onClick={goToNext}>
               <span className="hidden sm:inline">Berikutnya</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-[var(--color-text-muted)] sm:text-[11px]">
-            {weekdayLabels.map((label, index) => (
-              <div key={`${label}-${index}`} className="py-1">
-                <span className="sm:hidden">{weekdayShortLabels[index]}</span>
-                <span className="hidden sm:inline">{label}</span>
+          {viewMode === "MONTH" ? (
+            <>
+              <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-[var(--color-text-muted)] sm:text-[11px]">
+                {weekdayLabels.map((label, index) => (
+                  <div key={`${label}-${index}`} className="py-1">
+                    <span className="sm:hidden">{weekdayShortLabels[index]}</span>
+                    <span className="hidden sm:inline">{label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="mt-2 grid grid-cols-7 gap-1">
-            {monthCells.map((date) => {
-              const dateKey = toDateKey(date);
-              const isCurrentMonth = date.getMonth() === viewDate.getMonth();
-              const isSelected = selectedDate === dateKey;
-              const isToday = dateKey === todayKey;
-              const count = orderCountByDate[dateKey] ?? 0;
-              const dateSlotSummaries = getBookingSlotsForDate(orders, dateKey);
-              const dateResourceAvailability = getResourceBookingAvailability(orders, business.resources ?? [], dateKey, "00:00", 24 * 60);
-              const dateHasFullSlot = isResourceMode ? dateResourceAvailability.isFull : dateSlotSummaries.some((slot) => slot.isFull);
-              const dateHasHoldSlot = isResourceMode ? dateResourceAvailability.hasHold : dateSlotSummaries.some((slot) => slot.holdCount > 0);
+              <div className="mt-2 grid grid-cols-7 gap-1">
+                {monthCells.map((date) => {
+                  const dateKey = toDateKey(date);
+                  const isCurrentMonth = date.getMonth() === viewDate.getMonth();
+                  const isSelected = selectedDate === dateKey;
+                  const isToday = dateKey === todayKey;
+                  const count = orderCountByDate[dateKey] ?? 0;
+                  const dateSlotSummaries = getBookingSlotsForDate(orders, dateKey);
+                  const dateResourceAvailability = getResourceBookingAvailability(orders, business.resources ?? [], dateKey, "00:00", 24 * 60);
+                  const dateHasFullSlot = isResourceMode ? dateResourceAvailability.isFull : dateSlotSummaries.some((slot) => slot.isFull);
+                  const dateHasHoldSlot = isResourceMode ? dateResourceAvailability.hasHold : dateSlotSummaries.some((slot) => slot.holdCount > 0);
 
-              const isClosed = Boolean(business.closedDates?.[dateKey]);
-              const closedReason = business.closedDates?.[dateKey] || "";
+                  const isClosed = Boolean(business.closedDates?.[dateKey]);
+                  const closedReason = business.closedDates?.[dateKey] || "";
 
-              const badgeLabel = isClosed ? `TUTUP: ${closedReason}` : getDayBadgeLabel(count, dateHasFullSlot, dateHasHoldSlot);
-              const compactBadgeLabel = isClosed ? "TUTUP" : getDayBadgeCompactLabel(count, dateHasFullSlot, dateHasHoldSlot);
-              const badgeTone = isClosed ? ("danger" as const) : getDayBadgeTone(count, dateHasFullSlot, dateHasHoldSlot);
+                  const badgeLabel = isClosed ? `TUTUP: ${closedReason}` : getDayBadgeLabel(count, dateHasFullSlot, dateHasHoldSlot);
+                  const compactBadgeLabel = isClosed ? "TUTUP" : getDayBadgeCompactLabel(count, dateHasFullSlot, dateHasHoldSlot);
+                  const badgeTone = isClosed ? ("danger" as const) : getDayBadgeTone(count, dateHasFullSlot, dateHasHoldSlot);
 
-              return (
-                <button
-                  key={dateKey}
-                  type="button"
-                  onClick={() => {
-                    onDateSelect(dateKey);
-                    setIsDetailOpen(true);
-                  }}
-                  className={cn(
-                    "relative flex h-11 flex-col items-center justify-center rounded-md border px-0.5 text-sm transition-colors duration-200 sm:h-14 sm:px-1 md:h-16",
-                    !isSelected && (
-                      isClosed
-                        ? "border-red-200 bg-red-50 text-red-700 font-semibold"
-                        : (isCurrentMonth ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]" : "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]/40")
-                    ),
-                    isToday && !isSelected && "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-semibold",
-                    isSelected && "border-transparent bg-[var(--color-primary)] !text-white shadow-[var(--shadow-sm)]"
-                  )}
-                >
-                  <span className="text-[10px] font-medium sm:text-xs md:text-sm">{date.getDate()}</span>
-                  <span
-                    className={cn(
-                      "mt-0.5 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide sm:mt-1 sm:min-w-0 sm:px-1.5 sm:text-[9px]",
-                      badgeTone === "neutral" && !isSelected && "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]",
-                      badgeTone === "success" && !isSelected && "border-[var(--color-success-border)] bg-[var(--color-success-surface)] text-[var(--color-success)]",
-                      badgeTone === "danger" && !isSelected && "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] text-[var(--color-danger)]",
-                      badgeTone === "warning" && !isSelected && "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]",
-                      isSelected && "!border-white/20 !bg-white/20 !text-white"
-                    )}
-                  >
-                    <span className="sm:hidden">{compactBadgeLabel}</span>
-                    <span className="hidden sm:inline">{badgeLabel}</span>
+                  return (
+                    <button
+                      key={dateKey}
+                      type="button"
+                      onClick={() => {
+                        onDateSelect(dateKey);
+                        setIsDetailOpen(true);
+                      }}
+                      className={cn(
+                        "relative flex h-11 flex-col items-center justify-center rounded-md border px-0.5 text-sm transition-colors duration-200 sm:h-14 sm:px-1 md:h-16",
+                        !isSelected && (
+                          isClosed
+                            ? "border-red-200 bg-red-50 text-red-700 font-semibold"
+                            : (isCurrentMonth ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]" : "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]/40")
+                        ),
+                        isToday && !isSelected && "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-semibold",
+                        isSelected && "border-transparent bg-[var(--color-primary)] !text-white shadow-[var(--shadow-sm)]"
+                      )}
+                    >
+                      <span className="text-[10px] font-medium sm:text-xs md:text-sm">{date.getDate()}</span>
+                      <span
+                        className={cn(
+                          "mt-0.5 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide sm:mt-1 sm:min-w-0 sm:px-1.5 sm:text-[9px]",
+                          badgeTone === "neutral" && !isSelected && "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]",
+                          badgeTone === "success" && !isSelected && "border-[var(--color-success-border)] bg-[var(--color-success-surface)] text-[var(--color-success)]",
+                          badgeTone === "danger" && !isSelected && "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] text-[var(--color-danger)]",
+                          badgeTone === "warning" && !isSelected && "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]",
+                          isSelected && "!border-white/20 !bg-white/20 !text-white"
+                        )}
+                      >
+                        <span className="sm:hidden">{compactBadgeLabel}</span>
+                        <span className="hidden sm:inline">{badgeLabel}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 grid gap-2 text-xs text-[var(--color-text-secondary)] sm:flex sm:flex-wrap sm:gap-2 border-t border-[var(--color-border)]/45 pt-3.5">
+                <div className="inline-flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" />
+                  Ada booking / order
+                </div>
+                <div className="inline-flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-primary-surface)]" />
+                  Hari ini
+                </div>
+                <div className="inline-flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-surface-inset)]" />
+                  Tanggal terpilih
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="mt-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] overflow-hidden">
+              {/* Day Header Info */}
+              <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)] flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-[var(--color-primary)]" />
+                  <span className="font-bold text-xs text-[var(--color-text)]">
+                    Jadwal Hari Ini: {formatDate(selectedDate)}
                   </span>
-                </button>
-              );
-            })}
-          </div>
+                </div>
+                {business.closedDates?.[selectedDate] && (
+                  <Badge tone="danger">TUTUP: {business.closedDates[selectedDate]}</Badge>
+                )}
+              </div>
 
-          <div className="mt-3 grid gap-2 text-xs text-[var(--color-text-secondary)] sm:flex sm:flex-wrap sm:gap-2">
-            <div className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" />
-              Ada booking / order
+              <div className="overflow-x-auto">
+                <div className="min-w-[600px] select-none">
+                  {isResourceMode && activeResources.length > 0 ? (
+                    // ── RESOURCE TIMELINE VIEW (G-CAL STYLE) ──
+                    <div className="relative">
+                      {/* Column titles */}
+                      <div className="grid border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/40" style={{ gridTemplateColumns: `80px repeat(${activeResources.length}, minmax(180px, 1fr))` }}>
+                        <div className="py-2.5">Waktu</div>
+                        {activeResources.map((res) => (
+                          <div key={res.id} className="py-2.5 truncate">{res.name}</div>
+                        ))}
+                      </div>
+
+                      {/* Hour rows and content grid */}
+                      <div className="relative flex" style={{ height: "960px" }}>
+                        {/* Time labels axis */}
+                        <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/40 flex flex-col z-10">
+                          {hours.map((h) => (
+                            <div key={h} className="h-16 text-[10px] text-[var(--color-text-muted)] border-b border-[var(--color-border)]/20 flex items-start justify-center pt-1 font-mono">
+                              {String(h).padStart(2, "0")}:00
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Resource columns content */}
+                        <div className="flex-1 grid divide-x divide-[var(--color-border)]/40 relative" style={{ gridTemplateColumns: `repeat(${activeResources.length}, minmax(180px, 1fr))` }}>
+                          {activeResources.map((res) => {
+                            const resOrders = selectedOrders.filter((o) => o.resourceId === res.id);
+                            return (
+                              <div key={res.id} className="relative h-full">
+                                {/* Grid backgrounds */}
+                                {hours.map((h, idx) => (
+                                  <div
+                                    key={h}
+                                    onClick={() => {
+                                      toast.info("Pembuatan Order", `Ketik "booking di ${res.name} jam ${h}" di Asisten Pintar (Cmd+K) untuk input cepat!`);
+                                    }}
+                                    className="absolute left-0 right-0 border-b border-[var(--color-border)]/20 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
+                                    style={{ top: `${idx * 64}px`, height: "64px" }}
+                                  />
+                                ))}
+
+                                {/* Order block cards */}
+                                {resOrders.map((order) => {
+                                  const [hStr, mStr] = (order.scheduledTime || "08:00").split(":");
+                                  const h = Number(hStr || 8);
+                                  const m = Number(mStr || 0);
+                                  const startOffset = h * 60 + m - 420; // 07:00 is 420
+                                  const top = (startOffset * 64) / 60;
+                                  const height = ((order.bookingDurationMinutes || 60) * 64) / 60;
+
+                                  return (
+                                    <button
+                                      key={order.id}
+                                      type="button"
+                                      onClick={() => {
+                                        onDateSelect(selectedDate);
+                                        setIsDetailOpen(true);
+                                      }}
+                                      className={cn(
+                                        "absolute left-1.5 right-1.5 rounded-xl border p-2 text-left flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
+                                        order.status === "BATAL" 
+                                          ? "bg-red-500/10 border-red-500/20 text-red-500 line-through"
+                                          : order.paymentStatus === "PAID"
+                                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
+                                            : order.paymentStatus === "DP_PAID"
+                                              ? "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300"
+                                              : "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-300"
+                                      )}
+                                      style={{ top: `${top}px`, height: `${height}px` }}
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <User className="h-3 w-3 shrink-0 opacity-70" />
+                                          <p className="font-extrabold text-[11px] truncate leading-none">{order.customerName}</p>
+                                        </div>
+                                        <p className="text-[10px] font-semibold mt-1 truncate opacity-90">{order.title}</p>
+                                      </div>
+                                      <div className="flex justify-between items-center text-[9px] font-bold opacity-60 font-mono">
+                                        <span>{order.scheduledTime}</span>
+                                        <span>{order.bookingDurationMinutes}m</span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // ── STANDARD TIMELINE VIEW (G-CAL STYLE) ──
+                    <div className="relative">
+                      {/* Column titles */}
+                      <div className="grid border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/40 grid-cols-[80px_1fr]">
+                        <div className="py-2.5">Waktu</div>
+                        <div className="py-2.5">Slot Pemesanan & Overlap</div>
+                      </div>
+
+                      {/* Hour rows and content grid */}
+                      <div className="relative flex" style={{ height: "960px" }}>
+                        {/* Time labels axis */}
+                        <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/40 flex flex-col z-10">
+                          {hours.map((h) => (
+                            <div key={h} className="h-16 text-[10px] text-[var(--color-text-muted)] border-b border-[var(--color-border)]/20 flex items-start justify-center pt-1 font-mono">
+                              {String(h).padStart(2, "0")}:00
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Content area */}
+                        <div className="flex-1 relative h-full">
+                          {/* Grid backgrounds */}
+                          {hours.map((h, idx) => (
+                            <div
+                              key={h}
+                              onClick={() => {
+                                toast.info("Pembuatan Order", `Ketik "booking jam ${h}" di Asisten Pintar (Cmd+K) untuk input cepat!`);
+                              }}
+                              className="absolute left-0 right-0 border-b border-[var(--color-border)]/20 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
+                              style={{ top: `${idx * 64}px`, height: "64px" }}
+                            />
+                          ))}
+
+                          {/* Order blocks */}
+                          {positionedOrders.map(({ order, top, height, leftClass }) => (
+                            <button
+                              key={order.id}
+                              type="button"
+                              onClick={() => {
+                                onDateSelect(selectedDate);
+                                setIsDetailOpen(true);
+                              }}
+                              className={cn(
+                                "absolute rounded-xl border p-2 text-left flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
+                                leftClass,
+                                order.status === "BATAL" 
+                                  ? "bg-red-500/10 border-red-500/20 text-red-500 line-through"
+                                  : order.paymentStatus === "PAID"
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
+                                    : order.paymentStatus === "DP_PAID"
+                                      ? "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300"
+                                      : "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-300"
+                              )}
+                              style={{ top: `${top}px`, height: `${height}px` }}
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <User className="h-3 w-3 shrink-0 opacity-70" />
+                                  <p className="font-extrabold text-[11px] truncate leading-none">{order.customerName}</p>
+                                </div>
+                                <p className="text-[10px] font-semibold mt-1 truncate opacity-90">{order.title}</p>
+                              </div>
+                              <div className="flex justify-between items-center text-[9px] font-bold opacity-60 font-mono">
+                                <span>{order.scheduledTime}</span>
+                                <span>{order.bookingDurationMinutes}m</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-primary-surface)]" />
-              Hari ini
-            </div>
-            <div className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-surface-inset)]" />
-              Tanggal terpilih
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
