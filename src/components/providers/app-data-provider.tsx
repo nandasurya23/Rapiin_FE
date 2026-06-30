@@ -150,6 +150,7 @@ type AppDataContextValue = AppStorageState & {
   saveMessageDraft: (templateId: string, payload: { title: string; content: string }) => void;
   submitPublicOrder: (input: PublicOrderInput) => { customer: Customer; order: Order };
   createBackup: () => BackupRecord;
+  restoreBackup: (backupPayload: string) => boolean;
   requestUpgrade: (toPlan: PlanCode, paymentNote?: string) => UpgradeRequest;
   approveUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
   rejectUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
@@ -838,6 +839,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return nextRecord;
   }
 
+  function restoreBackup(backupPayload: string): boolean {
+    try {
+      const parsed = JSON.parse(backupPayload);
+      if (!parsed.business || !parsed.business.id) {
+        return false;
+      }
+
+      setAppState((current) => {
+        const nextState = {
+          ...current,
+          business: { ...current.business, ...parsed.business },
+          customers: Array.isArray(parsed.customers) ? parsed.customers : current.customers,
+          orders: Array.isArray(parsed.orders) ? parsed.orders : current.orders,
+          invoices: Array.isArray(parsed.invoices) ? parsed.invoices : current.invoices,
+          messageTemplates: Array.isArray(parsed.messageTemplates) ? parsed.messageTemplates : current.messageTemplates,
+          publicSubmissions: Array.isArray(parsed.publicSubmissions) ? parsed.publicSubmissions : current.publicSubmissions,
+        };
+        writeAppStorageState(nextState);
+        return nextState;
+      });
+
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+
   function requestUpgrade(toPlan: PlanCode, paymentNote?: string) {
     const currentUserId = state.auth.currentUserId;
     if (!currentUserId) {
@@ -1115,6 +1144,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveMessageDraft,
     submitPublicOrder,
     createBackup,
+    restoreBackup,
     requestUpgrade,
     approveUpgrade,
     rejectUpgrade,

@@ -23,13 +23,11 @@ import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import {
   BOOKING_SLOT_CAPACITY,
   DEFAULT_BOOKING_DURATION_MINUTES,
-  getBookingHoldExpiresAt,
   getBookingSlotLabel,
   getBookingSlotTone,
   getResourceBookingDetailsForDate,
   getBookingSlotsForDate,
   getResourceBookingAvailability,
-  isBookingHoldActive,
 } from "@/lib/booking";
 import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
 import { formatDate } from "@/lib/format";
@@ -333,6 +331,7 @@ function CalendarDetailContent({
   viewMode,
   onSwitchToDayView,
 }: DetailContentProps) {
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   return (
     <div className="space-y-4">
       <ClosedDaySection
@@ -539,41 +538,34 @@ function CalendarDetailContent({
               );
             }
 
+            const isEditing = expandedOrderId === order.id;
+
             return (
-              <div key={order.id} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-medium text-[var(--color-text)]">{order.customerName}</p>
-                  <p className="text-sm text-[var(--color-text-secondary)]">{order.title}</p>
+              <div key={order.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 shadow-sm hover:border-[var(--color-border-strong)] transition space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-[var(--color-primary)]">{order.scheduledTime ?? "Jadwal bebas"}</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)]">• {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES}m</span>
+                    </div>
+                    <p className="font-extrabold text-sm text-[var(--color-text)] truncate">{order.customerName}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] font-medium truncate">{order.title}</p>
+                    {order.resourceNameSnapshot && (
+                      <Badge tone="info" className="text-[9px] py-0.5 px-1.5">{order.resourceNameSnapshot}</Badge>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <OrderStatusBadge status={order.status} />
+                    <PaymentStatusBadge status={order.paymentStatus} />
+                  </div>
                 </div>
-                <PaymentStatusBadge status={order.paymentStatus} />
-              </div>
-              <div className="mt-3 space-y-1 text-xs text-[var(--color-text-muted)]">
-                <div className="flex items-center justify-between gap-2">
-                  <span>{order.scheduledTime ?? "Belum ada jam"}</span>
-                  <span>{order.status}</span>
-                </div>
-                {order.mode === "BOOKING_SERVICE" ? (
-                  <>
-                    <p>{order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} menit durasi</p>
-                    {order.resourceNameSnapshot ? <p>{order.resourceNameSnapshot}</p> : null}
-                    {isBookingHoldActive(order) ? (
-                      <p className="text-[var(--color-warning-text)]">
-                        Hold aktif sampai {formatDateTime(getBookingHoldExpiresAt(order)?.toISOString() ?? null)}
-                      </p>
-                    ) : order.paymentStatus === "DP_PAID" || order.paymentStatus === "PAID" ? (
-                      <p className="text-green-700">DP/paid mengunci slot.</p>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-              <div className="mt-4 space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3">
-                <div className="flex flex-wrap gap-2">
+
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-[var(--color-border)]/40">
                   <WhatsAppButton
                     phoneNumber={order.whatsappNumber}
                     message={`Halo ${order.customerName}, saya follow-up untuk ${order.title}.`}
-                    label="Follow-Up WA"
-                    className="flex-1 min-w-[180px]"
+                    label="Hubungi WA"
+                    className="text-[11px] h-8 px-3"
                   />
                   {linkedInvoice ? (
                     <Button
@@ -581,9 +573,10 @@ function CalendarDetailContent({
                       variant="secondary"
                       size="sm"
                       onClick={() => onOpenInvoice(linkedInvoice.invoiceCode)}
+                      className="text-[11px] h-8"
                     >
-                      <ExternalLink className="h-4 w-4" />
-                      Lihat Nota
+                      <ExternalLink className="h-3 w-3" />
+                      Nota
                     </Button>
                   ) : (
                     <Button
@@ -592,76 +585,98 @@ function CalendarDetailContent({
                       size="sm"
                       isLoading={creatingInvoiceOrderId === order.id}
                       onClick={() => void onCreateInvoice(order)}
+                      className="text-[11px] h-8"
                     >
-                      <ReceiptText className="h-4 w-4" />
-                      Buat Nota 1 Klik
+                      <ReceiptText className="h-3 w-3" />
+                      Buat Nota
                     </Button>
                   )}
-                  {order.paymentStatus === "UNPAID" ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      isLoading={savingOrderId === order.id}
-                      onClick={() => void onQuickAction(order, { paymentStatus: "DP_PAID" })}
-                    >
-                      Tandai Sudah DP
-                    </Button>
-                  ) : null}
-                  {order.paymentStatus !== "PAID" ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      isLoading={savingOrderId === order.id}
-                      onClick={() => void onQuickAction(order, { paymentStatus: "PAID" })}
-                    >
-                      Tandai Lunas
-                    </Button>
-                  ) : null}
-                  {order.status !== "SELESAI" && order.status !== "BATAL" ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      isLoading={savingOrderId === order.id}
-                      onClick={() => void onQuickAction(order, { status: "SELESAI" })}
-                    >
-                      Tandai Selesai
-                    </Button>
-                  ) : null}
+                  
+                  <button
+                    type="button"
+                    onClick={() => setExpandedOrderId(isEditing ? null : order.id)}
+                    className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[11px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)] transition"
+                  >
+                    {isEditing ? "Tutup Edit" : "Ubah Status"}
+                  </button>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-medium text-[var(--color-text)]">Status</span>
-                    <Select
-                      value={getDraftStatus(order)}
-                      onValueChange={(value) => onDraftStatusChange(order.id, value as OrderStatus)}
-                      options={ORDER_STATUS_BY_MODE[order.mode]}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-medium text-[var(--color-text)]">Status bayar</span>
-                    <Select
-                      value={getDraftPaymentStatus(order)}
-                      onValueChange={(value) => onDraftPaymentChange(order.id, value as PaymentStatus)}
-                      options={Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => ({
-                        value,
-                        label,
-                      }))}
-                    />
-                  </label>
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  isLoading={savingOrderId === order.id}
-                  onClick={() => void onSaveOrder(order)}
-                  className="w-full"
-                >
-                  Simpan Perubahan
-                </Button>
-              </div>
+
+                {isEditing && (
+                  <div className="mt-3 space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs">
+                    <div className="flex flex-wrap gap-2 pb-2 border-b border-[var(--color-border)]/40">
+                      {order.paymentStatus === "UNPAID" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          isLoading={savingOrderId === order.id}
+                          onClick={() => void onQuickAction(order, { paymentStatus: "DP_PAID" })}
+                          className="h-7 text-[10px]"
+                        >
+                          Tandai Sudah DP
+                        </Button>
+                      )}
+                      {order.paymentStatus !== "PAID" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          isLoading={savingOrderId === order.id}
+                          onClick={() => void onQuickAction(order, { paymentStatus: "PAID" })}
+                          className="h-7 text-[10px]"
+                        >
+                          Tandai Lunas
+                        </Button>
+                      )}
+                      {order.status !== "SELESAI" && order.status !== "BATAL" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          isLoading={savingOrderId === order.id}
+                          onClick={() => void onQuickAction(order, { status: "SELESAI" })}
+                          className="h-7 text-[10px]"
+                        >
+                          Tandai Selesai
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid gap-3 grid-cols-2">
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Order</span>
+                        <Select
+                          value={getDraftStatus(order)}
+                          onValueChange={(value) => onDraftStatusChange(order.id, value as OrderStatus)}
+                          options={ORDER_STATUS_BY_MODE[order.mode]}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Bayar</span>
+                        <Select
+                          value={getDraftPaymentStatus(order)}
+                          onValueChange={(value) => onDraftPaymentChange(order.id, value as PaymentStatus)}
+                          options={Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => ({
+                            value,
+                            label,
+                          }))}
+                        />
+                      </label>
+                    </div>
+
+                    <Button
+                      type="button"
+                      isLoading={savingOrderId === order.id}
+                      onClick={() => {
+                        void onSaveOrder(order);
+                        setExpandedOrderId(null);
+                      }}
+                      className="w-full h-8 text-[11px] font-bold"
+                    >
+                      Simpan Perubahan
+                    </Button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -685,6 +700,33 @@ function CalendarDetailContent({
       </div>
     </div>
   );
+}
+
+function getTimelineCardClasses(status: OrderStatus, paymentStatus: PaymentStatus) {
+  if (status === "BATAL") {
+    return "bg-red-500/10 border-red-500/20 text-red-500 line-through";
+  }
+  if (status === "SELESAI") {
+    return "bg-slate-500/10 border-slate-500/20 text-slate-500";
+  }
+  if (status === "CONFIRMED" || paymentStatus === "PAID") {
+    return "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300";
+  }
+  if (status === "WAITING_DP" || paymentStatus === "DP_PAID") {
+    return "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300";
+  }
+  return "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-300";
+}
+
+function getTimelineStatusLabel(status: OrderStatus): string {
+  const labels: Record<string, string> = {
+    PENDING: "Pending",
+    CONFIRMED: "Konfirmasi",
+    SELESAI: "Selesai",
+    BATAL: "Batal",
+    WAITING_DP: "Tunggu DP",
+  };
+  return labels[status] ?? status;
 }
 
 export function DashboardCalendar({ business, orders, selectedDate, onDateSelect }: DashboardCalendarProps) {
@@ -1236,24 +1278,23 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                                       }}
                                       className={cn(
                                         "absolute left-1.5 right-1.5 rounded-xl border p-2 text-left flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
-                                        order.status === "BATAL" 
-                                          ? "bg-red-500/10 border-red-500/20 text-red-500 line-through"
-                                          : order.paymentStatus === "PAID"
-                                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
-                                            : order.paymentStatus === "DP_PAID"
-                                              ? "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300"
-                                              : "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-300"
+                                        getTimelineCardClasses(order.status, order.paymentStatus)
                                       )}
                                       style={{ top: `${top}px`, height: `${height}px` }}
                                     >
-                                      <div className="min-w-0">
-                                        <div className="flex items-center gap-1.5">
-                                          <User className="h-3 w-3 shrink-0 opacity-70" />
-                                          <p className="font-extrabold text-[11px] truncate leading-none">{order.customerName}</p>
+                                      <div className="min-w-0 w-full space-y-1">
+                                        <div className="flex items-center justify-between gap-1 w-full">
+                                          <div className="flex items-center gap-1 min-w-0">
+                                            <User className="h-3 w-3 shrink-0 opacity-70" />
+                                            <p className="font-extrabold text-[10px] truncate leading-none">{order.customerName}</p>
+                                          </div>
+                                          <span className="text-[7px] font-black uppercase shrink-0 tracking-wider px-1 py-0.5 rounded bg-black/5">
+                                            {getTimelineStatusLabel(order.status)}
+                                          </span>
                                         </div>
-                                        <p className="text-[10px] font-semibold mt-1 truncate opacity-90">{order.title}</p>
+                                        <p className="text-[9px] font-semibold truncate opacity-90">{order.title}</p>
                                       </div>
-                                      <div className="flex justify-between items-center text-[9px] font-bold opacity-60 font-mono">
+                                      <div className="flex justify-between items-center text-[8px] font-bold opacity-60 font-mono">
                                         <span>{order.scheduledTime}</span>
                                         <span>{order.bookingDurationMinutes}m</span>
                                       </div>
@@ -1312,24 +1353,23 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                               className={cn(
                                 "absolute rounded-xl border p-2 text-left flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
                                 leftClass,
-                                order.status === "BATAL" 
-                                  ? "bg-red-500/10 border-red-500/20 text-red-500 line-through"
-                                  : order.paymentStatus === "PAID"
-                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
-                                    : order.paymentStatus === "DP_PAID"
-                                      ? "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300"
-                                      : "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-300"
+                                getTimelineCardClasses(order.status, order.paymentStatus)
                               )}
                               style={{ top: `${top}px`, height: `${height}px` }}
                             >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <User className="h-3 w-3 shrink-0 opacity-70" />
-                                  <p className="font-extrabold text-[11px] truncate leading-none">{order.customerName}</p>
+                              <div className="min-w-0 w-full space-y-1">
+                                <div className="flex items-center justify-between gap-1 w-full">
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <User className="h-3 w-3 shrink-0 opacity-70" />
+                                    <p className="font-extrabold text-[10px] truncate leading-none">{order.customerName}</p>
+                                  </div>
+                                  <span className="text-[7px] font-black uppercase shrink-0 tracking-wider px-1 py-0.5 rounded bg-black/5">
+                                    {getTimelineStatusLabel(order.status)}
+                                  </span>
                                 </div>
-                                <p className="text-[10px] font-semibold mt-1 truncate opacity-90">{order.title}</p>
+                                <p className="text-[9px] font-semibold truncate opacity-90">{order.title}</p>
                               </div>
-                              <div className="flex justify-between items-center text-[9px] font-bold opacity-60 font-mono">
+                              <div className="flex justify-between items-center text-[8px] font-bold opacity-60 font-mono">
                                 <span>{order.scheduledTime}</span>
                                 <span>{order.bookingDurationMinutes}m</span>
                               </div>

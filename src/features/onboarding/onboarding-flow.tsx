@@ -71,6 +71,30 @@ export function OnboardingFlow() {
     });
   }, [business.defaultBookingDurationMinutes, business.description, business.mode, business.name, business.niche, business.operationalModel, business.resourceCount, business.resourceLabel, business.resources, business.usesResources, business.whatsappNumber, hydrated]);
 
+  // Auto-detect niche based on business name keywords
+  useEffect(() => {
+    const nameLower = form.name.toLowerCase().trim();
+    if (!nameLower) return;
+
+    if (nameLower.match(/barber|cukur|pangkas|rambut|salon|potong/i)) {
+      setForm((current) => current.niche === "BARBERSHOP" ? current : { ...current, niche: "BARBERSHOP" });
+    } else if (nameLower.match(/studio|musik|band|sound|rekaman|latihan/i)) {
+      setForm((current) => current.niche === "STUDIO_MUSIK" ? current : { ...current, niche: "STUDIO_MUSIK" });
+    } else if (nameLower.match(/tato|tattoo|ink/i)) {
+      setForm((current) => current.niche === "TATTOO" ? current : { ...current, niche: "TATTOO" });
+    } else if (nameLower.match(/sewa|rental|rent|car|motor|kamera/i)) {
+      setForm((current) => current.niche === "RENTAL" ? current : { ...current, niche: "RENTAL" });
+    } else if (nameLower.match(/tour|travel|trip|wisata|piknik|liburan/i)) {
+      setForm((current) => current.niche === "TOUR" ? current : { ...current, niche: "TOUR" });
+    } else if (nameLower.match(/laundry|cuci|setrika|kiloan/i)) {
+      setForm((current) => current.niche === "LAUNDRY" ? current : { ...current, niche: "LAUNDRY" });
+    } else if (nameLower.match(/katering|catering|makanan|warung|resto|cafe|kopi|coffee|nasi|bakso|mie|dapur|kitchen/i)) {
+      setForm((current) => current.niche === "MAKANAN" ? current : { ...current, niche: "MAKANAN" });
+    } else if (nameLower.match(/craft|handmade|art|bunga|florist|souvenir|rajut|gift/i)) {
+      setForm((current) => current.niche === "HANDMADE" ? current : { ...current, niche: "HANDMADE" });
+    }
+  }, [form.name]);
+
   const progress = useMemo(() => {
     if (form.mode !== "BOOKING_SERVICE") {
       const mappedStep = step === 5 ? 3 : step;
