@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, Building2, ShieldAlert, Store } from "lucide-react";
+import { Building2, ShieldAlert, Store, Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -14,7 +14,35 @@ import { useAppData } from "@/components/providers/app-data-provider";
 
 export function SuperAdminBusinessesPage() {
   const toast = useToast();
-  const { businessDirectory, extendTrial, reactivateBusiness, suspendBusiness } = useAppData();
+  const {
+    businessDirectory,
+    extendTrial,
+    reactivateBusiness,
+    suspendBusiness,
+    customers,
+    orders,
+    invoices,
+    messageTemplates,
+    publicSubmissions,
+    restoreBackup,
+  } = useAppData();
+
+  function triggerJsonDownload(data: object, filename: string) {
+    try {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("File backup berhasil diunduh");
+    } catch {
+      toast.error("Gagal mengunduh file backup");
+    }
+  }
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -37,10 +65,37 @@ export function SuperAdminBusinessesPage() {
                 Review trial, backup, limit customer, dan aksi manual approval dari satu panel terpusat.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <div className="rounded-2xl bg-white/10 border border-white/[0.12] px-5 py-3 flex flex-col">
+            <div className="flex flex-wrap gap-2.5 xl:shrink-0 items-center">
+              <label className="cursor-pointer">
+                <span className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/[0.15] px-5 py-3 text-xs font-bold text-white transition-all">
+                  <Upload className="h-4 w-4 text-emerald-400" />
+                  Restore Database (JSON)
+                </span>
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const content = event.target?.result as string;
+                      const ok = restoreBackup(content);
+                      if (ok) {
+                        toast.success("Restore database sukses!", "Database lokal sistem diperbarui.");
+                      } else {
+                        toast.error("Restore gagal", "Format JSON file backup tidak valid.");
+                      }
+                    };
+                    reader.readAsText(file);
+                  }}
+                />
+              </label>
+
+              <div className="rounded-2xl bg-white/10 border border-white/[0.12] px-5 py-3 flex flex-col h-12 justify-center">
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/50">Total Bisnis</p>
-                <p className="text-2xl font-black text-white mt-0.5">{businessDirectory.length}</p>
+                <p className="text-xl font-black text-white mt-0.5">{businessDirectory.length}</p>
               </div>
             </div>
           </div>
@@ -91,6 +146,25 @@ export function SuperAdminBusinessesPage() {
                       <Store className="h-4 w-4" />
                       Detail
                     </Link>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-10 rounded-xl text-xs font-bold border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)]"
+                      onClick={() => {
+                        const payload = {
+                          business: entry.business,
+                          customers,
+                          orders,
+                          invoices,
+                          messageTemplates,
+                          publicSubmissions,
+                        };
+                        triggerJsonDownload(payload, `rapiin-backup-${entry.business.slug}-${new Date().toISOString().slice(0, 10)}.json`);
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      Unduh Backup
+                    </Button>
                     <Button
                       type="button"
                       variant="secondary"

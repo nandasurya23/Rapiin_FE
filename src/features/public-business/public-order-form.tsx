@@ -473,12 +473,31 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                 </div>
               </div>
 
+              {/* Instruksi Lanjutan Penting */}
+              <div className="bg-amber-50/80 border border-amber-200/60 rounded-2xl p-4 text-xs text-left text-amber-800 space-y-2 leading-relaxed">
+                <p className="font-extrabold uppercase tracking-wider text-[10px] text-amber-700 flex items-center gap-1">
+                  💡 Langkah Penting Selanjutnya:
+                </p>
+                <ul className="list-decimal list-inside space-y-1.5 text-slate-700 font-medium">
+                  <li>
+                    Klik tombol <span className="font-bold text-amber-900">&quot;Kirim Bukti via WhatsApp&quot;</span> untuk mengirim konfirmasi pemesanan otomatis ke kami.
+                  </li>
+                  {business.paymentInstructions ? (
+                    <li>
+                      Lakukan transfer sesuai rekening di atas, lalu <span className="font-bold text-amber-900">lampirkan bukti transfer</span> di chat agar pesanan Anda segera disetujui.
+                    </li>
+                  ) : (
+                    <li>Tunggu konfirmasi/balasan dari kami setelah pesan WhatsApp terkirim.</li>
+                  )}
+                </ul>
+              </div>
+
               <div className="grid gap-2.5 sm:grid-cols-2 pt-2">
                 <LinkButton href={ROUTES.publicBusiness(business.slug)} variant="secondary" className="w-full justify-center rounded-xl font-bold py-3">
                   Kembali ke Toko
                 </LinkButton>
                 <LinkButton href={waLink} className="w-full justify-center rounded-xl font-bold py-3">
-                  Chat WhatsApp Sekarang
+                  Kirim Bukti via WhatsApp
                 </LinkButton>
               </div>
             </CardBody>

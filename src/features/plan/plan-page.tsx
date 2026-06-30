@@ -12,7 +12,8 @@ import {
   History,
   Database,
   Server,
-  ShieldAlert
+  ShieldAlert,
+  Download
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export function PlanPage() {
     upgradeRequests,
     createBackup,
     requestUpgrade,
+    customers,
+    orders,
   } = useAppData();
   const [selectedPlan, setSelectedPlan] = useState<PlanCode>("PRO");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -58,6 +61,28 @@ export function PlanPage() {
       toast.success("Backup berhasil dibuat", "Snapshot lokal sudah disimpan.");
     } finally {
       setLoadingAction(null);
+    }
+  }
+
+  function exportToCsv(headers: string[], rows: string[][], filename: string) {
+    try {
+      const csvContent = "\uFEFF" + [
+        headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
+        ...rows.map(row => row.map(val => `"${(val || "").replace(/"/g, '""')}"`).join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("File laporan Excel (CSV) berhasil diunduh");
+    } catch {
+      toast.error("Gagal mengunduh file laporan");
     }
   }
 
@@ -354,7 +379,7 @@ export function PlanPage() {
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-4">
                 <Button
                   type="button"
                   variant="secondary"
@@ -365,6 +390,72 @@ export function PlanPage() {
                   <ShieldCheck className="h-4.5 w-4.5" />
                   Cadangkan Database Sekarang
                 </Button>
+
+                <div className="border-t border-[var(--color-border)]/60 pt-4 space-y-3">
+                  <span className="block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Ekspor Laporan ke Excel</span>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all"
+                      onClick={() => {
+                        const headers = ["ID Pelanggan", "Nama", "Nomor WhatsApp", "Status", "Catatan", "Tanggal Terdaftar"];
+                        const rows = customers.map((c) => [
+                          c.id,
+                          c.name,
+                          c.whatsappNumber,
+                          c.status,
+                          c.notes || "",
+                          formatDateTime(c.createdAt),
+                        ]);
+                        exportToCsv(headers, rows, `laporan-pelanggan-${new Date().toISOString().slice(0, 10)}.csv`);
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      Ekspor Kontak Pelanggan (Excel)
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all"
+                      onClick={() => {
+                        const headers = [
+                          "ID Order",
+                          "Nama Pelanggan",
+                          "Nomor WhatsApp",
+                          "Layanan / Produk",
+                          "Tanggal Jadwal",
+                          "Jam Jadwal",
+                          "Durasi (Menit)",
+                          "Total Harga",
+                          "DP Masuk",
+                          "Status Pembayaran",
+                          "Status Pesanan",
+                          "Catatan",
+                        ];
+                        const rows = orders.map((o) => [
+                          o.id,
+                          o.customerName,
+                          o.whatsappNumber,
+                          o.title,
+                          o.scheduledDate || "-",
+                          o.scheduledTime || "-",
+                          String(o.bookingDurationMinutes || 0),
+                          String(o.totalAmount || 0),
+                          String(o.dpAmount || 0),
+                          o.paymentStatus,
+                          o.status,
+                          o.notes || "",
+                        ]);
+                        exportToCsv(headers, rows, `laporan-pemesanan-${new Date().toISOString().slice(0, 10)}.csv`);
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      Ekspor Riwayat Pemesanan (Excel)
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardBody>
           </Card>
