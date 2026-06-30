@@ -19,7 +19,7 @@ import {
 } from "@/lib/storage-service";
 import { createBusinessResources, doesOperationalModelUseResources } from "@/lib/constants/business";
 import { PREMIUM_CUSTOMER_LIMIT, PRO_CUSTOMER_LIMIT } from "@/lib/constants/subscription";
-import { canCreateCustomer as canCreateCustomerByState, canCreateInvoice, canCreateOrder as canCreateOrderByState, canAccessWriteMode as canWriteMode, getCustomerUsage, getReadOnlyReason, getSubscriptionForBusiness, getSubscriptionStatus } from "@/lib/subscription";
+import { canCreateCustomer as canCreateCustomerByState, canCreateInvoice, canCreateOrder as canCreateOrderByState, canAccessWriteMode as canWriteMode, getCustomerUsage, getReadOnlyReason, getSubscriptionForBusiness, getSubscriptionStatus, getOrderUsage } from "@/lib/subscription";
 import type { AppStorageState, AuthUser, MessageComposerDraft } from "@/types/app-state";
 import type { Business, BusinessMode, BusinessResource, NicheTemplate, OperationalModel } from "@/types/business";
 import type { Customer, CustomerStatus } from "@/types/customer";
@@ -52,6 +52,7 @@ type BusinessSettingsInput = Pick<
   | "resourceCount"
   | "resources"
   | "defaultBookingDurationMinutes"
+  | "bookingCapacity"
   | "niche"
   | "description"
   | "openingHours"
@@ -116,6 +117,7 @@ type AppDataContextValue = AppStorageState & {
   isSuperAdmin: boolean;
   subscriptionForCurrentBusiness: BusinessSubscription | null;
   currentBusinessUsage: ReturnType<typeof getCustomerUsage>;
+  currentOrderUsage: ReturnType<typeof getOrderUsage>;
   canCreateCustomer: boolean;
   canCreateOrder: boolean;
   canCreateInvoice: boolean;
@@ -224,6 +226,7 @@ function normalizeBusinessPayload(current: Business, payload: Partial<BusinessSe
     resourceLabel,
     resourceCount,
     resources,
+    bookingCapacity: payload.bookingCapacity !== undefined ? payload.bookingCapacity : current.bookingCapacity,
     defaultBookingDurationMinutes:
       payload.defaultBookingDurationMinutes ?? current.defaultBookingDurationMinutes,
     updatedAt: new Date().toISOString(),
@@ -271,8 +274,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     () => getCustomerUsage({ business: state.business, customers: state.customers, subscriptions: state.subscriptions }),
     [state.business, state.customers, state.subscriptions]
   );
+  const currentOrderUsage = useMemo(
+    () => getOrderUsage({ business: state.business, subscriptions: state.subscriptions, orders: state.orders }),
+    [state.business, state.subscriptions, state.orders]
+  );
   const canCreateCustomer = canCreateCustomerByState({ business: state.business, customers: state.customers, subscriptions: state.subscriptions });
-  const canCreateOrder = canCreateOrderByState({ business: state.business, subscriptions: state.subscriptions });
+  const canCreateOrder = canCreateOrderByState({ business: state.business, subscriptions: state.subscriptions, orders: state.orders });
   const canCreateInvoiceValue = canCreateInvoice({ business: state.business, subscriptions: state.subscriptions });
   const canAccessWriteMode = canWriteMode(subscriptionForCurrentBusiness);
   const readOnlyReason = getReadOnlyReason(subscriptionForCurrentBusiness);
@@ -1082,6 +1089,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     isSuperAdmin,
     subscriptionForCurrentBusiness,
     currentBusinessUsage,
+    currentOrderUsage,
     canCreateCustomer,
     canCreateOrder,
     canCreateInvoice: canCreateInvoiceValue,

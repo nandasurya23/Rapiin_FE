@@ -408,9 +408,10 @@ export function isBookingSlotFull(
   time?: string | null,
   durationMinutesOrExcludeOrderId?: number | string | null,
   excludeOrderId?: string | null,
-  now = new Date()
+  now = new Date(),
+  capacity = BOOKING_SLOT_CAPACITY
 ) {
-  return getBookingSlotCount(orders, date, time, durationMinutesOrExcludeOrderId, excludeOrderId, now) >= BOOKING_SLOT_CAPACITY;
+  return getBookingSlotCount(orders, date, time, durationMinutesOrExcludeOrderId, excludeOrderId, now) >= capacity;
 }
 
 export function getBookingAvailability(
@@ -419,7 +420,8 @@ export function getBookingAvailability(
   time?: string | null,
   durationMinutesOrExcludeOrderId?: number | string | null,
   excludeOrderId?: string | null,
-  now = new Date()
+  now = new Date(),
+  capacity = BOOKING_SLOT_CAPACITY
 ): BookingAvailability {
   let durationMinutes: number | undefined;
   let orderIdToExclude = excludeOrderId ?? null;
@@ -438,8 +440,8 @@ export function getBookingAvailability(
     count,
     holdCount: holdOrders.length,
     paidCount: overlappingOrders.length - holdOrders.length,
-    remaining: Math.max(BOOKING_SLOT_CAPACITY - count, 0),
-    isFull: count >= BOOKING_SLOT_CAPACITY,
+    remaining: Math.max(capacity - count, 0),
+    isFull: count >= capacity,
     hasHold: holdOrders.length > 0,
     overlappingOrders,
     earliestHoldExpiresAt: holdOrders.reduce<Date | null>((earliest, order) => {
@@ -621,31 +623,31 @@ export function getResourceBookingDetailsForDate(
   });
 }
 
-export function getBookingSlotTone(count: number) {
+export function getBookingSlotTone(count: number, capacity = BOOKING_SLOT_CAPACITY) {
   if (count <= 0) {
     return "neutral" as const;
   }
 
-  if (count >= BOOKING_SLOT_CAPACITY) {
+  if (count >= capacity) {
     return "danger" as const;
   }
 
   return "success" as const;
 }
 
-export function getBookingSlotLabel(count: number) {
+export function getBookingSlotLabel(count: number, capacity = BOOKING_SLOT_CAPACITY) {
   if (count <= 0) {
     return "Kosong";
   }
 
-  if (count >= BOOKING_SLOT_CAPACITY) {
+  if (count >= capacity) {
     return "Full";
   }
 
   return `${count} booking`;
 }
 
-export function getBookingSlotsForDate(orders: Order[], date?: string | null, excludeOrderId?: string | null, now = new Date()) {
+export function getBookingSlotsForDate(orders: Order[], date?: string | null, excludeOrderId?: string | null, now = new Date(), capacity = BOOKING_SLOT_CAPACITY) {
   const slotMap = new Map<
     string,
     {
@@ -699,7 +701,7 @@ export function getBookingSlotsForDate(orders: Order[], date?: string | null, ex
   return Array.from(slotMap.values())
     .map<BookingSlotSummary>((slot) => ({
       ...slot,
-      isFull: slot.count >= BOOKING_SLOT_CAPACITY,
+      isFull: slot.count >= capacity,
     }))
     .sort((left, right) => left.time.localeCompare(right.time));
 }

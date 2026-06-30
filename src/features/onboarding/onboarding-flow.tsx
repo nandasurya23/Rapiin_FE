@@ -43,7 +43,7 @@ export function OnboardingFlow() {
     mode: business.mode,
     operationalModel: business.operationalModel,
     usesResources: business.usesResources,
-    resourceLabel: business.resourceLabel ?? "Slot",
+    resourceLabel: business.resourceLabel ?? "Staf",
     resourceCount: String(business.resourceCount ?? 1),
     resources: business.resources ?? [],
     defaultBookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? 60),
@@ -62,7 +62,7 @@ export function OnboardingFlow() {
       mode: business.mode,
       operationalModel: business.operationalModel,
       usesResources: business.usesResources,
-      resourceLabel: business.resourceLabel ?? "Slot",
+      resourceLabel: business.resourceLabel ?? "Staf",
       resourceCount: String(business.resourceCount ?? 1),
       resources: business.resources ?? [],
       defaultBookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? 60),
@@ -216,7 +216,7 @@ export function OnboardingFlow() {
             {/* Progress indicator */}
             <div className="flex items-center gap-3 sm:shrink-0">
               <div className="flex gap-1.5">
-                {[1, 2, 3, 4, 5].map((s) => (
+                {(form.mode === "BOOKING_SERVICE" ? [1, 2, 3, 4, 5] : [1, 2, 5]).map((s) => (
                   <div
                     key={s}
                     className={`h-1.5 w-6 rounded-full transition-all duration-300 ${
@@ -264,13 +264,16 @@ export function OnboardingFlow() {
               <div className="grid gap-3 sm:grid-cols-3">
                 {BUSINESS_MODE_OPTIONS.map((option) => {
                   const active = form.mode === option.value;
+                  const hasExamples = option.helperText.includes("Contoh:");
+                  const mainText = hasExamples ? option.helperText.split("Contoh:")[0].trim() : option.helperText;
+                  const examplesText = hasExamples ? option.helperText.split("Contoh:")[1].trim() : "";
 
                   return (
                     <button
                       key={option.value}
                       type="button"
                       onClick={() => handleModeChange(option.value)}
-                      className={`rounded-2xl border p-4 text-left transition-all duration-200 relative ${
+                      className={`rounded-2xl border p-4 text-left transition-all duration-200 relative flex flex-col justify-between ${
                         active
                           ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 shadow-sm"
                           : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
@@ -279,8 +282,15 @@ export function OnboardingFlow() {
                       {active && (
                         <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
                       )}
-                      <div className="text-sm font-extrabold text-[var(--color-text)]">{option.label}</div>
-                      <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">{option.helperText}</p>
+                      <div>
+                        <div className="text-sm font-extrabold text-[var(--color-text)]">{option.label}</div>
+                        <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">{mainText}</p>
+                      </div>
+                      {hasExamples && (
+                        <div className="mt-3 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)]/40 px-2.5 py-2 text-[10px] text-[var(--color-text-muted)] font-bold leading-normal">
+                          <span className="text-[var(--color-primary)] font-extrabold">Contoh:</span> {examplesText}
+                        </div>
+                      )}
                     </button>
                   );
                 })}
@@ -296,13 +306,16 @@ export function OnboardingFlow() {
                   <div className="grid gap-3">
                     {OPERATIONAL_MODEL_OPTIONS.filter((option) => option.value !== "ORDER_REQUEST").map((option) => {
                       const active = form.operationalModel === option.value;
+                      const hasExamples = option.helperText.includes("Contoh:");
+                      const mainText = hasExamples ? option.helperText.split("Contoh:")[0].trim() : option.helperText;
+                      const examplesText = hasExamples ? option.helperText.split("Contoh:")[1].trim() : "";
 
                       return (
                         <button
                           key={option.value}
                           type="button"
                           onClick={() => handleOperationalModelChange(option.value)}
-                          className={`rounded-2xl border p-4 text-left transition-all duration-200 relative ${
+                          className={`rounded-2xl border p-4 text-left transition-all duration-200 relative flex flex-col justify-between ${
                             active
                               ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 shadow-sm"
                               : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
@@ -311,8 +324,15 @@ export function OnboardingFlow() {
                           {active && (
                             <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
                           )}
-                          <div className="text-sm font-extrabold text-[var(--color-text)]">{option.label}</div>
-                          <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">{option.helperText}</p>
+                          <div>
+                            <div className="text-sm font-extrabold text-[var(--color-text)]">{option.label}</div>
+                            <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">{mainText}</p>
+                          </div>
+                          {hasExamples && (
+                            <div className="mt-3 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)]/40 px-2.5 py-2 text-[10px] text-[var(--color-text-muted)] font-bold leading-normal">
+                              <span className="text-[var(--color-primary)] font-extrabold">Contoh:</span> {examplesText}
+                            </div>
+                          )}
                         </button>
                       );
                     })}
@@ -333,22 +353,80 @@ export function OnboardingFlow() {
             <div className="grid gap-5">
               {form.mode === "BOOKING_SERVICE" ? (
                 <>
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Durasi Default Booking (menit)</span>
-                    <Input
-                      type="number"
-                      min={15}
-                      step={15}
-                      value={form.defaultBookingDurationMinutes}
-                      onChange={(event) => setForm((current) => ({ ...current, defaultBookingDurationMinutes: event.target.value }))}
-                      placeholder="60"
-                    />
-                  </label>
+                  <div className="block space-y-2">
+                    <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Durasi Default Pertemuan</span>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { label: "15 Menit", value: "15" },
+                        { label: "30 Menit", value: "30" },
+                        { label: "45 Menit", value: "45" },
+                        { label: "1 Jam", value: "60" },
+                        { label: "90 Menit", value: "90" },
+                        { label: "2 Jam", value: "120" },
+                      ].map((opt) => {
+                        const active = form.defaultBookingDurationMinutes === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, defaultBookingDurationMinutes: opt.value }))}
+                            className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                              active
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)]"
+                                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)]"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = form.defaultBookingDurationMinutes;
+                          if (val === "15" || val === "30" || val === "45" || val === "60" || val === "90" || val === "120") {
+                            setForm((current) => ({ ...current, defaultBookingDurationMinutes: "40" }));
+                          }
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                          form.defaultBookingDurationMinutes !== "15" &&
+                          form.defaultBookingDurationMinutes !== "30" &&
+                          form.defaultBookingDurationMinutes !== "45" &&
+                          form.defaultBookingDurationMinutes !== "60" &&
+                          form.defaultBookingDurationMinutes !== "90" &&
+                          form.defaultBookingDurationMinutes !== "120"
+                            ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)]"
+                            : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)]"
+                        }`}
+                      >
+                        Kustom
+                      </button>
+                    </div>
 
-                  {form.usesResources ? (
+                    {form.defaultBookingDurationMinutes !== "15" &&
+                      form.defaultBookingDurationMinutes !== "30" &&
+                      form.defaultBookingDurationMinutes !== "45" &&
+                      form.defaultBookingDurationMinutes !== "60" &&
+                      form.defaultBookingDurationMinutes !== "90" &&
+                      form.defaultBookingDurationMinutes !== "120" && (
+                        <div className="mt-2.5 animate-fade-in max-w-[220px] space-y-1">
+                          <Input
+                            type="number"
+                            min={15}
+                            step={15}
+                            value={form.defaultBookingDurationMinutes}
+                            onChange={(event) => setForm((current) => ({ ...current, defaultBookingDurationMinutes: event.target.value }))}
+                            placeholder="Menit (contoh: 40)"
+                          />
+                          <span className="block text-[10px] text-[var(--color-text-secondary)]">Masukkan durasi dalam satuan menit.</span>
+                        </div>
+                      )}
+                  </div>
+
+                   {form.usesResources ? (
                     <>
                       <label className="block">
-                        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Unit</span>
+                        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Penyebutan Tim / Staf / Aset</span>
                         <Input
                           value={form.resourceLabel}
                           onChange={(event) => {
@@ -359,7 +437,7 @@ export function OnboardingFlow() {
                               resources: updateResources(nextLabel, current.resourceCount),
                             }));
                           }}
-                          placeholder="Contoh: Lapangan, Meja, PS, Room"
+                          placeholder="Contoh: Staf, Kapster, Terapis, Ruangan, Meja"
                         />
                         {errors.resourceLabel ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceLabel}</p> : null}
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -382,7 +460,7 @@ export function OnboardingFlow() {
                         </div>
                       </label>
                       <label className="block">
-                        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Jumlah Unit</span>
+                        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Jumlah Staf / Unit</span>
                         <Input
                           type="number"
                           min={1}
@@ -400,10 +478,10 @@ export function OnboardingFlow() {
                         {errors.resourceCount ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceCount}</p> : null}
                       </label>
                       <div className="grid gap-3">
-                        <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Tiap Unit</p>
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Beri Nama Tiap Staf / Unit</p>
                         {form.resources.map((resource, index) => (
                           <label key={resource.id} className="block">
-                            <span className="mb-1.5 block text-xs text-[var(--color-text-secondary)] font-semibold">Unit {index + 1}</span>
+                            <span className="mb-1.5 block text-xs text-[var(--color-text-secondary)] font-semibold">{form.resourceLabel || "Tim/Staf"} {index + 1}</span>
                             <Input
                               value={resource.name}
                               onChange={(event) =>
@@ -439,6 +517,9 @@ export function OnboardingFlow() {
                   onValueChange={(value) => setForm((current) => ({ ...current, niche: value as typeof form.niche }))}
                   options={NICHE_TEMPLATE_OPTIONS}
                 />
+                <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                  💡 Kategori ini akan otomatis memuat contoh menu/layanan yang siap pakai di halaman booking Anda. Anda tidak perlu membuat daftar layanan dari nol!
+                </p>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Deskripsi Singkat Bisnis</span>
