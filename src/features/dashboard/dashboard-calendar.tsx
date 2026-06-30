@@ -18,7 +18,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { PaymentStatusBadge } from "@/components/shared/status-badge";
+import { PaymentStatusBadge, OrderStatusBadge } from "@/components/shared/status-badge";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import {
   BOOKING_SLOT_CAPACITY,
@@ -128,6 +128,8 @@ type DetailContentProps = {
   onOpenInvoice: (invoiceCode: string) => void;
   savingOrderId: string | null;
   onToggleClosedDate: (date: string, reason?: string, endDate?: string) => void;
+  viewMode: "MONTH" | "DAY_TIMELINE";
+  onSwitchToDayView: () => void;
 };
 
 function getDatesInRange(startDateStr: string, endDateStr: string): string[] {
@@ -328,6 +330,8 @@ function CalendarDetailContent({
   onOpenInvoice,
   savingOrderId,
   onToggleClosedDate,
+  viewMode,
+  onSwitchToDayView,
 }: DetailContentProps) {
   return (
     <div className="space-y-4">
@@ -343,7 +347,7 @@ function CalendarDetailContent({
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           {selectedDateCount ? `${selectedDateCount} order / booking ditemukan` : "Belum ada order / booking pada tanggal ini."}
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 items-center">
           <Badge tone={selectedDateCount <= 0 ? "neutral" : isResourceMode ? selectedResourceAvailability.isFull ? "danger" : selectedResourceAvailability.hasHold ? "warning" : "success" : hasFullSlot ? "danger" : hasHoldSlot ? "warning" : "success"}>
             {selectedDateCount <= 0
               ? "Kosong"
@@ -360,13 +364,23 @@ function CalendarDetailContent({
                     : `${selectedDateCount} booking`}
           </Badge>
           <Badge tone="neutral">{selectedDate} </Badge>
+
+          {viewMode === "MONTH" && selectedDateCount > 0 ? (
+            <button
+              type="button"
+              onClick={onSwitchToDayView}
+              className="ml-auto inline-flex items-center gap-1 text-[11px] font-extrabold text-[var(--color-primary)] hover:underline"
+            >
+              Lihat Timeline Hari Ini →
+            </button>
+          ) : null}
         </div>
         {business.mode === "BOOKING_SERVICE" && (isResourceMode ? selectedResourceAvailability.hasHold : hasHoldSlot) ? (
           <p className="mt-3 text-xs text-[var(--color-warning-text)]">Ada booking pending DP. Slot akan kembali terbuka setelah hold aktif berakhir.</p>
         ) : null}
       </div>
 
-      {business.mode === "BOOKING_SERVICE" && (
+      {viewMode === "DAY_TIMELINE" && business.mode === "BOOKING_SERVICE" && (
         <>
           {isResourceMode ? (
             <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
@@ -425,7 +439,7 @@ function CalendarDetailContent({
             <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">Slot jam</p>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Maksimal {BOOKING_SLOT_CAPACITY} booking untuk slot yang overlap.</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Maksimal {business.bookingCapacity ?? 2} booking untuk slot yang overlap.</p>
               </div>
               <div className="space-y-2">
                 {selectedSlotSummaries.map((slot) => (
@@ -436,8 +450,8 @@ function CalendarDetailContent({
                         {slot.count} booking overlap • {slot.holdCount} hold aktif
                       </p>
                     </div>
-                    <Badge tone={slot.isFull ? "danger" : slot.holdCount > 0 ? "warning" : getBookingSlotTone(slot.count)}>
-                      {slot.isFull ? "Full" : slot.holdCount > 0 ? `Hold ${slot.holdCount}` : getBookingSlotLabel(slot.count)}
+                    <Badge tone={slot.isFull ? "danger" : slot.holdCount > 0 ? "warning" : getBookingSlotTone(slot.count, business.bookingCapacity)}>
+                      {slot.isFull ? "Full" : slot.holdCount > 0 ? `Hold ${slot.holdCount}` : getBookingSlotLabel(slot.count, business.bookingCapacity)}
                     </Badge>
                   </div>
                 ))}
@@ -468,6 +482,62 @@ function CalendarDetailContent({
         <div className="space-y-3">
           {visibleSelectedOrders.map((order) => {
             const linkedInvoice = invoiceByOrderId[order.id];
+
+            if (viewMode === "MONTH") {
+              return (
+                <div key={order.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 shadow-sm hover:border-[var(--color-border-strong)] transition">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-[var(--color-primary)]">{order.scheduledTime ?? "Jadwal bebas"}</span>
+                        <span className="text-[10px] text-[var(--color-text-muted)]">• {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES}m</span>
+                      </div>
+                      <p className="font-extrabold text-sm text-[var(--color-text)] truncate">{order.customerName}</p>
+                      <p className="text-xs text-[var(--color-text-secondary)] font-medium truncate">{order.title}</p>
+                      {order.resourceNameSnapshot && (
+                        <Badge tone="info" className="text-[9px] py-0.5 px-1.5">{order.resourceNameSnapshot}</Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <OrderStatusBadge status={order.status} />
+                      <PaymentStatusBadge status={order.paymentStatus} />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 pt-3 border-t border-[var(--color-border)]/40">
+                    <WhatsAppButton
+                      phoneNumber={order.whatsappNumber}
+                      message={`Halo ${order.customerName}, saya follow-up untuk ${order.title}.`}
+                      label="Hubungi WA"
+                      className="text-[11px] h-8 px-3"
+                    />
+                    {linkedInvoice ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onOpenInvoice(linkedInvoice.invoiceCode)}
+                        className="text-[11px] h-8"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Nota
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        isLoading={creatingInvoiceOrderId === order.id}
+                        onClick={() => void onCreateInvoice(order)}
+                        className="text-[11px] h-8"
+                      >
+                        <ReceiptText className="h-3 w-3" />
+                        Buat Nota
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div key={order.id} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4">
@@ -677,7 +747,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
   );
 
   const selectedOrders = useMemo(() => orders.filter((order) => order.scheduledDate === selectedDate), [orders, selectedDate]);
-  const selectedSlotSummaries = useMemo(() => getBookingSlotsForDate(orders, selectedDate), [orders, selectedDate]);
+  const selectedSlotSummaries = useMemo(() => getBookingSlotsForDate(orders, selectedDate, null, new Date(), business.bookingCapacity), [orders, selectedDate, business.bookingCapacity]);
   const selectedResourceDetails = useMemo(
     () => getResourceBookingDetailsForDate(orders, business.resources ?? [], selectedDate),
     [business.resources, orders, selectedDate]
@@ -1025,7 +1095,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                   const isSelected = selectedDate === dateKey;
                   const isToday = dateKey === todayKey;
                   const count = orderCountByDate[dateKey] ?? 0;
-                  const dateSlotSummaries = getBookingSlotsForDate(orders, dateKey);
+                  const dateSlotSummaries = getBookingSlotsForDate(orders, dateKey, null, new Date(), business.bookingCapacity);
                   const dateResourceAvailability = getResourceBookingAvailability(orders, business.resources ?? [], dateKey, "00:00", 24 * 60);
                   const dateHasFullSlot = isResourceMode ? dateResourceAvailability.isFull : dateSlotSummaries.some((slot) => slot.isFull);
                   const dateHasHoldSlot = isResourceMode ? dateResourceAvailability.hasHold : dateSlotSummaries.some((slot) => slot.holdCount > 0);
@@ -1329,6 +1399,11 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                 onOpenInvoice={onOpenInvoice}
                 savingOrderId={savingOrderId}
                 onToggleClosedDate={handleToggleClosedDate}
+                viewMode={viewMode}
+                onSwitchToDayView={() => {
+                  setViewMode("DAY_TIMELINE");
+                  setIsDetailOpen(false);
+                }}
               />
             </div>
           </div>

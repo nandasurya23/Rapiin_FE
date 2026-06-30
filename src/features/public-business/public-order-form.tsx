@@ -151,6 +151,10 @@ function createPublicWhatsAppMessage(business: Business, form: FormState) {
     lines.push(`Catatan: ${form.notes}`);
   }
 
+  if (business.paymentInstructions) {
+    lines.push(`\nMetode Pembayaran / Transfer:\n${business.paymentInstructions}`);
+  }
+
   return lines.join("\n");
 }
 
@@ -226,8 +230,8 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     return parsedDuration;
   }, [form.bookingDurationMinutes]);
   const bookingAvailability = useMemo(
-    () => getBookingAvailability(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes),
-    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders]
+    () => getBookingAvailability(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, undefined, undefined, business.bookingCapacity),
+    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business.bookingCapacity]
   );
   const resourceBookingAvailability = useMemo(
     () =>
@@ -248,36 +252,32 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     }
 
     if (!form.scheduledDate || !form.scheduledTime) {
-      return business.operationalModel === "RESOURCE_BOOKING"
-        ? `Pilih tanggal, jam, dan durasi dulu. Admin akan cek unit yang masih kosong. Booking tanpa DP akan ditahan ${BOOKING_HOLD_MINUTES} menit.`
-        : `Pilih tanggal, jam, dan durasi dulu. Booking tanpa DP akan ditahan ${BOOKING_HOLD_MINUTES} menit.`;
+      return `Silakan tentukan tanggal dan jam. Pemesanan tanpa Uang Muka (DP) akan disimpan selama ${BOOKING_HOLD_MINUTES} menit sebelum otomatis dibatalkan.`;
     }
 
     if (activeAvailability.isFull) {
       if (activeAvailability.hasHold) {
         return activeAvailability.earliestHoldExpiresAt
-          ? `Slot sementara ditahan. Akan terbuka lagi pukul ${formatHoldReleaseTime(activeAvailability.earliestHoldExpiresAt.toISOString())}.`
-          : "Slot sementara ditahan. Akan terbuka lagi setelah hold selesai.";
+          ? `Jadwal sementara menunggu konfirmasi pembayaran DP. Akan terbuka kembali jika pembayaran belum selesai pada pukul ${formatHoldReleaseTime(activeAvailability.earliestHoldExpiresAt.toISOString())}.`
+          : "Jadwal sementara menunggu konfirmasi pembayaran DP.";
       }
 
       return business.operationalModel === "RESOURCE_BOOKING"
-        ? "Semua unit sedang penuh di jam ini. Silakan pilih jam lain."
-        : "Slot penuh. Silakan pilih jam lain.";
+        ? "Semua tim/staf kami penuh di jam ini. Silakan pilih jam atau hari lain."
+        : "Kapasitas penuh. Silakan pilih jam atau hari lain.";
     }
 
     if (activeAvailability.count <= 0) {
-      return business.operationalModel === "RESOURCE_BOOKING"
-        ? `Masih ada unit yang kosong. Booking tanpa DP akan ditahan ${BOOKING_HOLD_MINUTES} menit.`
-        : `Slot masih kosong. Booking tanpa DP akan ditahan ${BOOKING_HOLD_MINUTES} menit.`;
+      return `Jadwal ini tersedia! Pemesanan tanpa Uang Muka (DP) akan disimpan selama ${BOOKING_HOLD_MINUTES} menit.`;
     }
 
     if (activeAvailability.hasHold) {
       return activeAvailability.earliestHoldExpiresAt
-        ? `Slot sementara ditahan. Akan terbuka lagi pukul ${formatHoldReleaseTime(activeAvailability.earliestHoldExpiresAt.toISOString())}.`
-        : "Slot sementara ditahan.";
+        ? `Jadwal sementara menunggu konfirmasi pembayaran DP. Akan terbuka kembali jika pembayaran belum selesai pada pukul ${formatHoldReleaseTime(activeAvailability.earliestHoldExpiresAt.toISOString())}.`
+        : "Jadwal sementara menunggu konfirmasi pembayaran DP.";
     }
 
-    return activeAvailability.remaining === 1 ? "Slot tersisa 1" : `Slot tersisa ${activeAvailability.remaining}`;
+    return activeAvailability.remaining === 1 ? "Sisa 1 jadwal tersedia" : `Sisa ${activeAvailability.remaining} jadwal tersedia`;
   }, [activeAvailability.count, activeAvailability.earliestHoldExpiresAt, activeAvailability.hasHold, activeAvailability.isFull, activeAvailability.remaining, business.mode, business.operationalModel, form.scheduledDate, form.scheduledTime]);
 
   const waMessage = useMemo(() => createPublicWhatsAppMessage(business, form), [business, form]);
@@ -360,9 +360,9 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       business.mode === "BOOKING_SERVICE" &&
       (business.operationalModel === "RESOURCE_BOOKING"
         ? activeAvailability.isFull
-        : isBookingSlotFull(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes))
+        : isBookingSlotFull(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, undefined, undefined, business.bookingCapacity))
     ) {
-      setError("Slot tanggal dan jam ini sudah penuh. Pilih jam lain.");
+      setError("Jadwal di jam ini sudah terisi penuh, silakan pilih jam atau hari lain.");
       setSubmitted(false);
       return;
     }
@@ -405,7 +405,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
         bookingDurationMinutes
       );
     } else {
-      return getBookingAvailability(orders, form.scheduledDate, time, bookingDurationMinutes);
+      return getBookingAvailability(orders, form.scheduledDate, time, bookingDurationMinutes, undefined, undefined, business.bookingCapacity);
     }
   };
 
@@ -460,6 +460,14 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                     <div className="text-xs pt-1 border-t border-[var(--color-border)]/20">
                       <p className="text-[var(--color-text-secondary)]">Catatan:</p>
                       <p className="font-medium text-[var(--color-text)] mt-0.5">{form.notes}</p>
+                    </div>
+                  ) : null}
+                  {business.paymentInstructions ? (
+                    <div className="pt-2 border-t border-[var(--color-border)]/20 text-xs">
+                      <p className="text-[var(--color-text-secondary)] font-bold mb-1">Metode Pembayaran / Transfer:</p>
+                      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 font-mono font-bold text-[var(--color-text)] whitespace-pre-wrap leading-relaxed select-all">
+                        {business.paymentInstructions}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -661,10 +669,10 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                     <div className="space-y-4">
                       <div>
                         <h2 className="text-base font-bold text-[var(--color-text)]">Pilih Tanggal &amp; Jam</h2>
-                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Sistem mendeteksi slot unit yang kosong secara real-time.</p>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Jadwal kosong terdeteksi secara otomatis.</p>
                       </div>
                       <label className="block">
-                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Tanggal Booking <span className="text-red-500">*</span></span>
+                        <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Tanggal <span className="text-red-500">*</span></span>
                         <DatePicker
                           value={form.scheduledDate || ""}
                           onValueChange={(val) => {
@@ -905,6 +913,13 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                           <span className="text-[var(--color-text-secondary)]">Jumlah &amp; Kirim:</span>
                           <span className="font-bold">{form.quantity} unit ({form.deliveryMethod})</span>
                         </p>
+                      )}
+                      
+                      {business.paymentInstructions && (
+                        <div className="mt-3 pt-3 border-t border-[var(--color-border)]/40 space-y-1">
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Informasi Rekening / Pembayaran:</p>
+                          <p className="font-bold text-xs text-[var(--color-text)] whitespace-pre-wrap">{business.paymentInstructions}</p>
+                        </div>
                       )}
                     </div>
                   </div>

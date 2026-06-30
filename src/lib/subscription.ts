@@ -1,6 +1,7 @@
 import { PLAN_DEFINITIONS, TRIAL_WARNING_DAYS } from "@/lib/constants/subscription";
 import type { AppStorageState } from "@/types/app-state";
 import type { BusinessSubscription, PlanCode, SubscriptionStatus } from "@/types/subscription";
+import type { Order } from "@/types/order";
 
 export function getPlanDefinition(planCode: PlanCode) {
   return PLAN_DEFINITIONS.find((plan) => plan.code === planCode) ?? PLAN_DEFINITIONS[0];
@@ -63,9 +64,46 @@ export function canCreateCustomer(state: Pick<AppStorageState, "business" | "cus
   return state.customers.length < (subscription?.customerLimit ?? 0);
 }
 
-export function canCreateOrder(state: Pick<AppStorageState, "business" | "subscriptions">) {
+export function canCreateOrder(state: { business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
   const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
-  return canAccessWriteMode(subscription);
+  if (!canAccessWriteMode(subscription)) {
+    return false;
+  }
+
+  if (!subscription) {
+    return false;
+  }
+
+  const usage = getOrderUsage(state);
+  return usage.used < usage.limit;
+}
+
+export function getOrderUsage(state: { business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
+  const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
+  if (!subscription) {
+    return { used: 0, limit: 0, remaining: 0, expiresAt: "" };
+  }
+
+  const startedTime = new Date(subscription.startedAt).getTime();
+  const expiresTime = new Date(subscription.expiresAt).getTime();
+
+  const cycleOrders = (state.orders || []).filter((order) => {
+    if (order.status === "BATAL" || order.paymentStatus === "CANCELLED") {
+      return false;
+    }
+    const orderCreatedTime = new Date(order.createdAt).getTime();
+    return orderCreatedTime >= startedTime && orderCreatedTime <= expiresTime;
+  });
+
+  const limit = subscription.planCode === "FREE_TRIAL" ? 200 : subscription.planCode === "PRO" ? 2000 : 10000;
+  const used = cycleOrders.length;
+
+  return {
+    used,
+    limit,
+    remaining: Math.max(limit - used, 0),
+    expiresAt: subscription.expiresAt,
+  };
 }
 
 export function canCreateInvoice(state: Pick<AppStorageState, "business" | "subscriptions">) {

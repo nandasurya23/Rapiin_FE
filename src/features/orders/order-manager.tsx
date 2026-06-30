@@ -253,8 +253,8 @@ export function OrderManager() {
     return parsedDuration;
   }, [form.bookingDurationMinutes]);
   const bookingAvailability = useMemo(
-    () => getBookingAvailability(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, editingId),
-    [bookingDurationMinutes, editingId, form.scheduledDate, form.scheduledTime, orders]
+    () => getBookingAvailability(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, editingId, undefined, business.bookingCapacity),
+    [bookingDurationMinutes, editingId, form.scheduledDate, form.scheduledTime, orders, business.bookingCapacity]
   );
   const activeResources = useMemo(() => (business.resources ?? []).filter((resource) => resource.isActive), [business.resources]);
   const isResourceBookingMode =
@@ -328,7 +328,9 @@ export function OrderManager() {
           form.scheduledDate,
           time,
           bookingDurationMinutes,
-          editingId
+          editingId,
+          undefined,
+          business.bookingCapacity
         );
         return !avail.isFull;
       }
@@ -339,6 +341,7 @@ export function OrderManager() {
     form.resourceId,
     orders,
     business.resources,
+    business.bookingCapacity,
     bookingDurationMinutes,
     editingId,
     isResourceBookingMode
@@ -507,7 +510,7 @@ export function OrderManager() {
     }
 
     if (isResourceBookingMode && !form.resourceId) {
-      setError(`Pilih ${business.resourceLabel?.toLowerCase() ?? "unit"} dulu supaya slot bisa dicek.`);
+      setError(`Pilih ${business.resourceLabel?.toLowerCase() ?? "tim/staf"} dulu supaya jadwal bisa dicek.`);
       return;
     }
 
@@ -516,9 +519,9 @@ export function OrderManager() {
       form.scheduledTime &&
       (isResourceBookingMode
         ? slotAvailability.isFull
-        : isBookingSlotFull(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, editingId))
+        : isBookingSlotFull(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, editingId, undefined, business.bookingCapacity))
     ) {
-      setError("Slot tanggal dan jam ini sudah penuh. Pilih jam lain.");
+      setError("Jadwal tanggal dan jam ini sudah penuh. Pilih jam lain.");
       return;
     }
 
@@ -913,7 +916,7 @@ export function OrderManager() {
 
                     {isResourceBookingMode ? (
                       <label className="block pt-1">
-                        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Alokasi {business.resourceLabel ?? "Unit"}</span>
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Alokasi {business.resourceLabel ?? "Tim / Staf / Unit"}</span>
                         <Select
                           value={form.resourceId}
                           onValueChange={(value) => updateFormField("resourceId", value)}
@@ -921,10 +924,10 @@ export function OrderManager() {
                             value: resource.id,
                             label: resource.name,
                           }))}
-                          placeholder={`Pilih ${business.resourceLabel?.toLowerCase() ?? "unit"}`}
+                          placeholder={`Pilih ${business.resourceLabel?.toLowerCase() ?? "tim/staf"}`}
                         />
                         <p className="mt-1 text-[10px] text-[var(--color-text-muted)] leading-relaxed">
-                          Pelanggan di halaman publik hanya memilih slot kosong. Anda sebagai admin menetapkan unit meja/studio spesifik di sini.
+                          Pelanggan di halaman publik hanya memesan jadwal kosong. Anda sebagai admin menetapkan staf/unit spesifik di sini.
                         </p>
                       </label>
                     ) : null}

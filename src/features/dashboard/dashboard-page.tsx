@@ -38,7 +38,7 @@ const taskFilterOptions: Array<{ value: TaskFilter; label: string }> = [
 
 export function DashboardPage() {
   const toast = useToast();
-  const { business, orders, customers, currentUser, messageTemplates, updateOrder, updateCustomer } = useAppData();
+  const { business, orders, customers, currentUser, messageTemplates, updateOrder, updateCustomer, currentOrderUsage } = useAppData();
   const { todayOrders, unpaidOrders, revenue } = getDashboardSummary(orders, customers);
   const today = toDateKey(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
@@ -307,6 +307,22 @@ export function DashboardPage() {
               <p className="max-w-xl text-sm text-white/70">
                 Berikut adalah rangkuman aktivitas operasional, penagihan, dan tugas penting bisnis Anda hari ini.
               </p>
+              
+              <div className="mt-4 flex flex-col gap-2 rounded-2xl bg-white/[0.06] p-4.5 border border-white/[0.08] backdrop-blur-md max-w-sm">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-white/80">📈 Kuota Pemesanan Berjalan</span>
+                  <span className="text-[var(--color-gold-300)]">{currentOrderUsage.used} / {currentOrderUsage.limit} Booking</span>
+                </div>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/10">
+                  <div 
+                    className="absolute bottom-0 left-0 top-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-300"
+                    style={{ width: `${Math.min(100, (currentOrderUsage.used / currentOrderUsage.limit) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-white/50">
+                  Kuota diperbarui otomatis pada {formatDate(currentOrderUsage.expiresAt)}.
+                </p>
+              </div>
             </div>
 
             {/* Right: Actions */}

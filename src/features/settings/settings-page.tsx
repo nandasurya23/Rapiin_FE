@@ -70,6 +70,7 @@ type SettingsFormState = {
   operationalModel: OperationalModel;
   resourceLabel: string;
   resourceCount: string;
+  bookingCapacity: string;
   defaultBookingDurationMinutes: string;
   openingHours: string;
   address: string;
@@ -90,8 +91,9 @@ function createFormStateFromBusiness(business: ReturnType<typeof useAppData>["bu
     mode: business.mode,
     niche: business.niche,
     operationalModel: business.operationalModel,
-    resourceLabel: business.resourceLabel ?? "Slot",
+    resourceLabel: business.resourceLabel ?? "Staf",
     resourceCount: String(business.resourceCount ?? business.resources?.length ?? 1),
+    bookingCapacity: String(business.bookingCapacity ?? 2),
     defaultBookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? 60),
     openingHours: business.openingHours ?? "",
     address: business.address ?? "",
@@ -172,6 +174,13 @@ export function SettingsPage() {
       }
     }
 
+    if (form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT") {
+      const parsedCapacity = Number(form.bookingCapacity);
+      if (!Number.isFinite(parsedCapacity) || parsedCapacity < 1) {
+        nextErrors.bookingCapacity = "Kapasitas booking minimal 1.";
+      }
+    }
+
     if (usesResources) {
       if (!form.resourceLabel.trim()) {
         nextErrors.resourceLabel = "Nama unit wajib diisi.";
@@ -214,6 +223,9 @@ export function SettingsPage() {
         resourceLabel: usesResources ? form.resourceLabel.trim() : undefined,
         resourceCount: usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
         resources: usesResources ? form.resources : [],
+        bookingCapacity: (form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT")
+          ? Math.max(1, Number(form.bookingCapacity) || 2)
+          : undefined,
         defaultBookingDurationMinutes:
           form.mode === "BOOKING_SERVICE" ? Math.max(15, Number(form.defaultBookingDurationMinutes) || 60) : undefined,
         openingHours: form.openingHours.trim() || undefined,
@@ -462,14 +474,29 @@ export function SettingsPage() {
             )}
 
             {form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT" ? (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed shadow-sm">
-                📌 <strong>Model Appointment:</strong> Sangat cocok untuk salon, barber, klinik, studio tattoo, dan jasa yang memerlukan reservasi waktu global tanpa alokasi unit tertentu.
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed shadow-sm">
+                  📌 <strong>Model Janji Temu (Appointment):</strong> Sangat cocok untuk salon, barber, terapis, klinik, studio foto, dan jasa yang memerlukan reservasi waktu global tanpa alokasi unit tertentu.
+                </div>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Kapasitas Booking Bersamaan</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.bookingCapacity}
+                    onChange={(event) => updateForm("bookingCapacity", event.target.value)}
+                  />
+                  <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">Jumlah pelanggan maksimal yang bisa dilayani di jam yang sama (misal jumlah kursi barber/staf terapis aktif).</p>
+                  {errors.bookingCapacity ? (
+                    <p className="mt-1 text-[10px] font-bold text-[var(--color-danger)]">{errors.bookingCapacity}</p>
+                  ) : null}
+                </label>
               </div>
             ) : null}
 
             {usesResources ? (
               <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-4 text-xs text-[var(--color-warning-text)] leading-relaxed shadow-sm">
-                ⚠️ <strong>Model Resource Booking:</strong> Customer publik tidak memilih meja/lapangan secara langsung. Sistem hanya memastikan slot meja/lapangan global masih tersedia, lalu admin dapat mengalokasikan unit spesifik melalui panel pesanan.
+                ⚠️ <strong>Model Pilihan Tim & Unit:</strong> Customer publik memesan jadwal secara terpusat. Sistem otomatis memvalidasi sisa staf/unit yang tersedia, lalu admin dapat mengalokasikan unit spesifik melalui panel pesanan.
               </div>
             ) : null}
           </CardBody>
@@ -483,9 +510,9 @@ export function SettingsPage() {
             <CardBody className="space-y-5 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border)] pb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-[var(--color-text)]">Konfigurasi Unit / Slot</h2>
+                  <h2 className="text-lg font-bold text-[var(--color-text)]">Konfigurasi Tim & Aset</h2>
                   <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                    Dipakai untuk studio musik/foto, rental PS, billiard, lapangan futsal/bulutangkis, sewa ruang, dsb.
+                    Dipakai untuk mengelola daftar staf/karyawan, meja restoran, lapangan olahraga, kamar sewa, atau ruangan studio.
                   </p>
                 </div>
                 <Badge tone="info" className="w-fit">{form.resources.filter((resource) => resource.isActive).length} Unit Aktif</Badge>
@@ -493,7 +520,7 @@ export function SettingsPage() {
 
               <div className="grid gap-4 md:grid-cols-[minmax(0,0.7fr)_minmax(0,0.3fr)]">
                 <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Label Unit (Nama Jenis Unit)</span>
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Label Penamaan (Staf, Ruangan, Meja, Lapangan)</span>
                   <Input
                     value={form.resourceLabel}
                     onChange={(event) => {
@@ -530,7 +557,7 @@ export function SettingsPage() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Jumlah Unit Target</span>
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Jumlah Unit / Karyawan</span>
                   <Input
                     type="number"
                     min={1}

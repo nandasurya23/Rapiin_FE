@@ -1,8 +1,8 @@
 export const mockReportSummary = {
-  totalOrders: 18,
-  completedOrders: 12,
-  cancelledOrders: 2,
-  newCustomers: 6,
-  revenue: 8460000,
-  unpaidCount: 3,
+  totalOrders: 0,
+  completedOrders: 0,
+  cancelledOrders: 0,
+  newCustomers: 0,
+  revenue: 0,
+  unpaidCount: 0,
 };

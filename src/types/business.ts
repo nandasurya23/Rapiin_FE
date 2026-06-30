@@ -33,6 +33,7 @@ export type Business = Timestamped & {
   resourceLabel?: string;
   resourceCount?: number;
   resources?: BusinessResource[];
+  bookingCapacity?: number;
   defaultBookingDurationMinutes?: number;
   niche: NicheTemplate;
   description: string;
