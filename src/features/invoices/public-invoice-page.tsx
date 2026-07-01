@@ -1,14 +1,13 @@
 "use client";
 
-import { Download, ReceiptText, Send, Share2 } from "lucide-react";
+import { Download, Send, Share2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import * as htmlToImage from "html-to-image";
 import Image from "next/image";
 import { Button, LinkButton } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { getEntityById } from "@/lib/domain";
