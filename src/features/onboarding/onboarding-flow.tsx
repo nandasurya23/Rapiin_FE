@@ -149,7 +149,7 @@ export function OnboardingFlow() {
   const stepTitles: Record<number, { title: string; subtitle: string }> = {
     1: { title: "Info Dasar Bisnis", subtitle: "Nama dan nomor WhatsApp aktif bisnis kamu." },
     2: { title: "Mode Operasi", subtitle: "Cara jualan yang paling sesuai dengan model bisnismu." },
-    3: { title: "Template & Finalisasi", subtitle: "Pilih niche dan deskripsi untuk landing page publikmu." },
+    3: { title: "Kategori & Finalisasi", subtitle: "Pilih kategori dan deskripsi untuk landing page publikmu." },
   };
   const currentStepInfo = stepTitles[step] ?? stepTitles[1];
 
@@ -326,7 +326,7 @@ export function OnboardingFlow() {
           {step === 3 ? (
             <div className="grid gap-5">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Template Niche Bisnis</span>
+                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Kategori Bisnis</span>
                 <Select
                   value={form.niche}
                   onValueChange={(value) => setForm((current) => ({ ...current, niche: value as typeof form.niche }))}

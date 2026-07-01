@@ -223,7 +223,7 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 uppercase tracking-wider animate-pulse">
                 <span className="h-1 w-1 rounded-full bg-emerald-500" />
-                Auto-Parse Active
+                Deteksi Otomatis Aktif
               </span>
             </div>
             <Textarea

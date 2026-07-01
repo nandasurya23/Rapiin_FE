@@ -132,6 +132,40 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     return customers.find((c) => normalizePhoneNumber(c.whatsappNumber) === normalized);
   }, [customers, form.whatsappNumber]);
 
+  // --- RADAR REPUTASI PELANGGAN ---
+  const customerReputation = useMemo(() => {
+    const normalized = normalizePhoneNumber(form.whatsappNumber);
+    if (!normalized || normalized.length < 9) return null;
+    
+    // Cari semua order masa lalu dari nomor ini
+    const pastOrders = orders.filter(o => o.id !== editingId && normalizePhoneNumber(o.whatsappNumber) === normalized);
+    
+    if (pastOrders.length === 0) return { type: "NEW", message: "Pelanggan Baru! Berikan impresi terbaik." };
+    
+    const cancelledOrders = pastOrders.filter(o => o.status === "BATAL");
+    if (cancelledOrders.length > 0) {
+      return { 
+        type: "BLACKLIST", 
+        message: `Hati-hati! Nomor ini pernah BATAL (${cancelledOrders.length} kali). Disarankan minta DP.` 
+      };
+    }
+    
+    const completedOrders = pastOrders.filter(o => o.status === "SELESAI");
+    if (completedOrders.length >= 3) {
+      const totalSpent = completedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      return {
+        type: "VIP",
+        message: `Pelanggan Setia! (Selesai ${completedOrders.length}x, total Rp ${formatCurrency(totalSpent)}).`
+      };
+    }
+    
+    return {
+      type: "REGULAR",
+      message: `Pelanggan reguler (Pernah order ${pastOrders.length}x).`
+    };
+  }, [form.whatsappNumber, orders, editingId]);
+  // ---------------------------------
+
   function handleChatPasteChange(text: string) {
     setChatPasteText(text);
     const parsed = parseWhatsAppChatText(text);
@@ -435,6 +469,26 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
                       Gunakan Nama
                     </button>
                   )}
+                </div>
+              )}
+              {customerReputation && customerReputation.type !== "REGULAR" && (
+                <div className={cn(
+                  "mt-2 rounded-lg border px-3 py-2 text-[11px] animate-fade-in shadow-sm",
+                  customerReputation.type === "VIP" ? "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-300" :
+                  customerReputation.type === "BLACKLIST" ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-300" :
+                  "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-300"
+                )}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm">
+                      {customerReputation.type === "VIP" ? "👑" : customerReputation.type === "BLACKLIST" ? "⚠️" : "👋"}
+                    </span>
+                    <div>
+                      <strong className="block uppercase tracking-wider text-[10px] opacity-80 mb-0.5">
+                        {customerReputation.type === "VIP" ? "VIP / Sultan" : customerReputation.type === "BLACKLIST" ? "Red Flag" : "Pelanggan Baru"}
+                      </strong>
+                      <span className="block leading-tight">{customerReputation.message}</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

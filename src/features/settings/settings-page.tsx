@@ -490,7 +490,7 @@ export function SettingsPage() {
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Model Operasional</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Tipe Usaha</span>
               <Select
                 value={form.operationalModel}
                 onValueChange={(value) => {
@@ -566,7 +566,7 @@ export function SettingsPage() {
             <CardBody className="space-y-5 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border)] pb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-[var(--color-text)]">Konfigurasi Tim & Aset</h2>
+                  <h2 className="text-lg font-bold text-[var(--color-text)]">Pengaturan Staf & Fasilitas</h2>
                   <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
                     Dipakai untuk mengelola daftar staf/karyawan, meja restoran, lapangan olahraga, kamar sewa, atau ruangan studio.
                   </p>

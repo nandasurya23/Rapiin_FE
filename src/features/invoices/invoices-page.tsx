@@ -42,7 +42,7 @@ export function InvoicesPage() {
   const [filter, setFilter] = useState<InvoiceFilter>("ALL");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(invoices[0]?.id ?? "");
   const [selectedOrderId, setSelectedOrderId] = useState(
-    orders.find((order) => order.status === "SELESAI")?.id ?? orders[0]?.id ?? ""
+    orders.find((order) => order.status !== "BATAL")?.id ?? orders[0]?.id ?? ""
   );
   const [notes, setNotes] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -311,7 +311,7 @@ export function InvoicesPage() {
         <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-5 p-5">
             <div className="border-b border-[var(--color-border)] pb-3">
-              <h2 className="text-lg font-bold text-[var(--color-text)]">Preview Lembar Invoice</h2>
+              <h2 className="text-lg font-bold text-[var(--color-text)]">Preview Lembar Nota</h2>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Tampilan struk digital interaktif yang akan dikirim ke WhatsApp customer.</p>
             </div>
 
@@ -359,7 +359,7 @@ export function InvoicesPage() {
               </>
             ) : (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-text-secondary)] text-center">
-                Belum ada invoice yang bisa dipreview. Silakan buat nota baru terlebih dahulu.
+                Belum ada nota yang bisa dipreview. Silakan buat nota baru terlebih dahulu.
               </div>
             )}
 
@@ -368,10 +368,10 @@ export function InvoicesPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)]/60 pb-3">
                 <div>
                   <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">Buat Nota Baru dari Order</h3>
-                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">Pilih status order yang sudah selesai untuk diubah menjadi invoice resmi.</p>
+                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">Pilih order untuk dibuatkan nota tagihan atau tanda terima.</p>
                 </div>
                 <Badge tone="success" className="font-extrabold uppercase text-[9px] tracking-wider shrink-0">
-                  {orders.filter((order) => order.status === "SELESAI").length} Order Selesai
+                  {orders.filter((order) => order.status !== "BATAL").length} Order Aktif
                 </Badge>
               </div>
               
@@ -380,7 +380,7 @@ export function InvoicesPage() {
                 <Select
                   value={selectedOrderId}
                   onValueChange={setSelectedOrderId}
-                  options={orders.map((order) => ({
+                  options={orders.filter(order => order.status !== "BATAL").map((order) => ({
                     value: order.id,
                     label: `${order.customerName} - ${order.title}`,
                   }))}
