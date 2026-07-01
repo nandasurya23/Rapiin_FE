@@ -203,7 +203,7 @@ export function OrderManager() {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Filter Alur Kerja (Lanes)</span>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pesanan</span>
                     <FilterChipGroup
                       options={[
                         { value: "ALL", label: "Semua Status" },

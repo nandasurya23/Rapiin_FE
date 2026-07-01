@@ -1,4 +1,4 @@
-import { LayoutDashboard, MessageSquareText, NotebookPen, PhoneCall, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles } from "lucide-react";
+import { LayoutDashboard, MessageSquareText, NotebookPen, PhoneCall, Receipt, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles } from "lucide-react";
 import type { ComponentType } from "react";
 import { ROUTES } from "@/lib/routes";
 
@@ -10,11 +10,11 @@ export type NavItem = {
 
 export const APP_NAV_ITEMS: NavItem[] = [
   { label: "Hari Ini", href: ROUTES.dashboard, icon: LayoutDashboard },
-  { label: "Konsol Pembantu", href: ROUTES.assistant, icon: Sparkles },
+  { label: "Asisten Pintar", href: ROUTES.assistant, icon: Sparkles },
   { label: "Customer", href: ROUTES.customers, icon: UsersRound },
   { label: "Order / Booking", href: ROUTES.orders, icon: NotebookPen },
   { label: "Pesan Cepat", href: ROUTES.messages, icon: MessageSquareText },
-  { label: "Nota", href: ROUTES.invoices, icon: PhoneCall },
+  { label: "Nota", href: ROUTES.invoices, icon: Receipt },
   { label: "Laporan", href: ROUTES.reports, icon: ChartColumn },
   { label: "Link Bisnis", href: ROUTES.businessLink, icon: Link2 },
   { label: "Plan", href: ROUTES.plan, icon: WalletCards },
@@ -23,7 +23,7 @@ export const APP_NAV_ITEMS: NavItem[] = [
 
 export const MOBILE_NAV_ITEMS: NavItem[] = [
   { label: "Hari Ini", href: ROUTES.dashboard, icon: LayoutDashboard },
-  { label: "Konsol Pembantu", href: ROUTES.assistant, icon: Sparkles },
+  { label: "Asisten Pintar", href: ROUTES.assistant, icon: Sparkles },
   { label: "Order", href: ROUTES.orders, icon: NotebookPen },
   { label: "Customer", href: ROUTES.customers, icon: UsersRound },
   { label: "Pesan", href: ROUTES.messages, icon: MessageSquareText },

@@ -446,7 +446,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
             <div className="space-y-5 py-2">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
                 <div>
-                  <h4 className="text-sm font-bold text-white">Pengaturan Konsol Pembantu</h4>
+                  <h4 className="text-sm font-bold text-white">Pengaturan Asisten Pintar</h4>
                   <p className="text-[11px] text-white/40">Sesuaikan perilaku input cepat Anda</p>
                 </div>
                 <Button 
@@ -569,7 +569,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
                       Contoh Perintah yang Bisa Anda Ketik
                     </h4>
                     <p className="text-[11px] text-white/50 mt-1">
-                      Konsol Pembantu mencocokkan kata kunci secara lokal (100% offline & bukan AI chatbot) untuk mempercepat entri data Anda.
+                      Asisten Pintar mencocokkan kata kunci secara lokal (100% offline & bukan AI chatbot) untuk mempercepat entri data Anda.
                     </p>
                   </div>
 

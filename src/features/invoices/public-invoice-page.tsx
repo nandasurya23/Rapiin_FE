@@ -35,6 +35,31 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
     }
   }, [invoice]);
 
+  // --- LIVE TRACKER LOGIC ---
+  const [queueAhead, setQueueAhead] = useState(0);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
+
+  useEffect(() => {
+    if (!order) return;
+    
+    function calculateQueue() {
+      // Hitung order aktif (PROSES, MENUNGGU, WAITING_DP) yang masuk sebelum order ini
+      const activeStatuses = ["MENUNGGU", "WAITING_DP", "PROSES"];
+      const ahead = orders.filter((o) => 
+        activeStatuses.includes(o.status) && 
+        new Date(o.createdAt).getTime() < new Date(order.createdAt).getTime()
+      );
+      setQueueAhead(ahead.length);
+      setLastRefreshed(new Date());
+    }
+
+    calculateQueue();
+    // Auto refresh setiap 30 detik (polling lokal)
+    const interval = setInterval(calculateQueue, 30000); 
+    return () => clearInterval(interval);
+  }, [order, orders]);
+  // ---------------------------
+
   if (!invoice) {
     return null;
   }
@@ -117,6 +142,48 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
           </Badge>
           <p className="text-sm text-[var(--color-text-secondary)]">Nota ini sah dan otomatis diterbitkan oleh sistem.</p>
         </div>
+
+        {/* Queue Tracker Banner */}
+        {order && !["SELESAI", "BATAL"].includes(order.status) && (
+          <div className="mx-auto w-full max-w-[400px]">
+            <div className="rounded-2xl border border-[var(--color-primary-border)] bg-[var(--color-primary-surface)] p-5 shadow-[var(--shadow-md)] text-center relative overflow-hidden">
+              <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-[var(--color-primary)] opacity-10 blur-xl"></div>
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-black shadow-sm text-[var(--color-primary)] mb-3 border border-[var(--color-primary-border)]">
+                <span className="text-xl font-black">{queueAhead}</span>
+              </div>
+              <h3 className="text-sm font-bold text-[var(--color-text)]">
+                {business.mode === "BOOKING_SERVICE" 
+                  ? "Orang antre di depan Anda" 
+                  : "Pesanan sebelum milik Anda"}
+              </h3>
+              <p className="mt-1 text-[11px] text-[var(--color-text-secondary)] font-medium">
+                Terakhir diperbarui: {lastRefreshed.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-1.5 border-t border-[var(--color-primary-border)]/50 pt-3">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-primary)] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-primary)]"></span>
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-[var(--color-primary)]">
+                  Live Tracker Aktif
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {order?.status === "SELESAI" && (
+          <div className="mx-auto w-full max-w-[400px]">
+            <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-5 shadow-sm text-center">
+              <h3 className="text-sm font-bold text-[var(--color-success-text)] uppercase tracking-wider">
+                Pesanan Selesai / Siap!
+              </h3>
+              <p className="mt-1.5 text-xs text-[var(--color-success-text)]/80 font-medium">
+                Terima kasih telah menggunakan layanan kami.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Invoice Sheet */}
         <div id="invoice-sheet-container" className="mx-auto w-full max-w-[400px]">

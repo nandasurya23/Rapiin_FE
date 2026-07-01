@@ -100,7 +100,7 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
               type="button"
               disabled={!canAccessWriteMode}
               onClick={onOpenAssistant}
-              title="Konsol Pembantu — Input Cepat (⌘K)"
+              title="Asisten Pintar — Input Cepat (⌘K)"
               className={cn(
                 "hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold",
                 "bg-gradient-to-r from-[#122a57] to-[#0c1d3b] text-amber-300",
@@ -112,7 +112,7 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
               )}
             >
               <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-              <span>Konsol Pembantu</span>
+              <span>Asisten Pintar</span>
               <kbd className="hidden lg:inline-flex items-center rounded border border-amber-400/20 bg-amber-400/10 px-1 text-[9px] font-mono text-amber-400/80">⌘K</kbd>
             </button>
           ) : null}

@@ -383,7 +383,7 @@ export default function AssistantPage() {
             <div className="space-y-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
                 <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-                Konsol Pembantu Perintah
+                Asisten Pintar Perintah
               </span>
               <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
                 Rapiin Input Helper Console
@@ -428,7 +428,7 @@ export default function AssistantPage() {
                 </div>
               </div>
               <p className="text-[10px] text-[var(--color-text-muted)] italic leading-relaxed pt-1.5 flex items-center gap-1.5 border-t border-[var(--color-border)]/40">
-                💡 Panggil Konsol Pembantu dari halaman mana saja di Rapiin dengan menekan shortcut <kbd className="bg-[var(--color-border)] px-1.5 py-0.5 rounded font-mono text-[9px]">⌘K</kbd> / <kbd className="bg-[var(--color-border)] px-1.5 py-0.5 rounded font-mono text-[9px]">Ctrl+K</kbd>.
+                💡 Panggil Asisten Pintar dari halaman mana saja di Rapiin dengan menekan shortcut <kbd className="bg-[var(--color-border)] px-1.5 py-0.5 rounded font-mono text-[9px]">⌘K</kbd> / <kbd className="bg-[var(--color-border)] px-1.5 py-0.5 rounded font-mono text-[9px]">Ctrl+K</kbd>.
               </p>
             </CardBody>
           </Card>
