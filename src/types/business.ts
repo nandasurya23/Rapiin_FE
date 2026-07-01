@@ -21,6 +21,14 @@ export type BusinessResource = {
   isActive: boolean;
 };
 
+export type PublicCatalogItem = {
+  id: string;
+  name: string;
+  description: string;
+  priceLabel?: string;
+  durationMinutes?: number;
+};
+
 export type Business = Timestamped & {
   id: ID;
   ownerName: string;
@@ -33,6 +41,7 @@ export type Business = Timestamped & {
   resourceLabel?: string;
   resourceCount?: number;
   resources?: BusinessResource[];
+  services?: PublicCatalogItem[];
   bookingCapacity?: number;
   defaultBookingDurationMinutes?: number;
   niche: NicheTemplate;

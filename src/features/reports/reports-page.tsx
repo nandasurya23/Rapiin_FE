@@ -3,8 +3,14 @@
 import { useMemo, useState } from "react";
 import {
   Download,
-  FileSpreadsheet,
-  Sparkles
+  Sparkles,
+  TrendingUp,
+  Wallet,
+  Users,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Package
 } from "lucide-react";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { Badge } from "@/components/ui/badge";
@@ -14,22 +20,17 @@ import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { LinkButton } from "@/components/ui/button";
-import { getReportSummary } from "@/lib/domain";
+import { getReportSummary, getOrderReferenceDate, isWithinPeriod } from "@/lib/domain";
+import type { ReportPeriod } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { cn } from "@/lib/cn";
 
-type PeriodFilter = "TODAY" | "WEEK" | "MONTH";
+type PeriodFilter = ReportPeriod;
 
 const periodOptions: Array<{ value: PeriodFilter; label: string }> = [
   { value: "TODAY", label: "Hari ini" },
   { value: "WEEK", label: "Minggu ini" },
   { value: "MONTH", label: "Bulan ini" },
-];
-
-const topItems = [
-  { name: "Booking Studio 2 Jam", count: 9 },
-  { name: "Booking group 4 orang", count: 5 },
-  { name: "Sewa motor 1 hari", count: 4 },
 ];
 
 async function copyToClipboard(text: string) {
@@ -46,6 +47,17 @@ export function ReportsPage() {
     return getReportSummary(orders, customers, period);
   }, [customers, orders, period]);
 
+  const topItems = useMemo(() => {
+    const periodOrders = orders.filter((order) => isWithinPeriod(getOrderReferenceDate(order), period, new Date()));
+    const counts: Record<string, number> = {};
+    periodOrders.forEach(o => {
+      if (o.title) {
+        counts[o.title] = (counts[o.title] || 0) + 1;
+      }
+    });
+    return Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 3).map(([name, count]) => ({name, count}));
+  }, [orders, period]);
+
   const exportCsv = [
     "periode,total_order,selesai,batal,customer_baru,omzet,belum_bayar",
     `${period},${summary.totalOrders},${summary.completedOrders},${summary.cancelledOrders},${summary.newCustomers},${summary.revenue},${summary.unpaidCount}`,
@@ -55,199 +67,161 @@ export function ReportsPage() {
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      {/* SECTION 1: HERO HEADER */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          {/* Background decorative glows */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            {/* Left */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <Sparkles className="h-3 w-3 animate-pulse" />
-                Laporan & Statistik
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Rangkuman Kinerja Bisnis
-              </h1>
-              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Analisis perkembangan omzet, status order, dan penambahan pelanggan baru dalam satu halaman ringkas tanpa chart yang rumit.
-              </p>
-            </div>
+      {/* SECTION 1: HEADER & PERIOD FILTER */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-text)]">Laporan & Statistik</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">Ringkasan performa bisnis Anda.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <FilterChipGroup
+            options={periodOptions}
+            value={period}
+            onChange={(v) => setPeriod(v as PeriodFilter)}
+          />
+        </div>
+      </section>
 
-            {/* Right: Actions */}
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={ROUTES.dashboard} className="shadow-sm">
-                Kembali ke Hari Ini
-              </LinkButton>
-              <LinkButton href={ROUTES.orders} variant="secondary" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
-                Lihat Order
-              </LinkButton>
-            </div>
+      {/* SECTION 2: KEY METRICS */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-fade-up-delay-1">
+        {/* Omzet Card */}
+        <div className="rounded-3xl bg-gradient-to-br from-amber-500 to-amber-600 p-5 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+          <div className="flex items-center gap-2 text-amber-50">
+            <Wallet className="h-4 w-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Total Omzet</span>
+          </div>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight">{formatCurrency(summary.revenue)}</h2>
+            <p className="text-xs text-amber-100/80 mt-1 font-medium">{periodLabel}</p>
+          </div>
+        </div>
+
+        {/* Total Orders Card */}
+        <div className="rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+          <div className="flex items-center gap-2 text-blue-100">
+            <TrendingUp className="h-4 w-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Total Order</span>
+          </div>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight">{summary.totalOrders}</h2>
+            <p className="text-xs text-blue-100/80 mt-1 font-medium">Order masuk {periodLabel.toLowerCase()}</p>
+          </div>
+        </div>
+
+        {/* Customer Baru Card */}
+        <div className="rounded-3xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] p-5 shadow-sm flex flex-col justify-between h-32">
+          <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+            <Users className="h-4 w-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Customer Baru</span>
+          </div>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">{summary.newCustomers}</h2>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1 font-medium">Orang daftar {periodLabel.toLowerCase()}</p>
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: PERIOD FILTER + COMPACT SUMMARY STATS */}
-      <section className="animate-fade-up-delay-1">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-5 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Period filter */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)] shrink-0">Periode</p>
-            <FilterChipGroup
-              options={periodOptions}
-              value={period}
-              onChange={(v) => setPeriod(v as PeriodFilter)}
-              size="sm"
-            />
-          </div>
-
-          {/* Divider (only visible on sm+) */}
-          <div className="hidden sm:block self-stretch w-px bg-[var(--color-border)]" />
-
-          {/* Inline stats row */}
-          <div className="flex flex-wrap gap-x-6 gap-y-3 sm:shrink-0">
-            <StatPill label="Total Order" value={String(summary.totalOrders)} />
-            <StatPill label="Selesai" value={String(summary.completedOrders)} accent="emerald" />
-            <StatPill label="Batal" value={String(summary.cancelledOrders)} accent="rose" />
-            <StatPill label="Customer Baru" value={String(summary.newCustomers)} accent="blue" />
-            <StatPill label="Omzet" value={formatCurrency(summary.revenue)} accent="amber" />
-            <StatPill label="Belum Bayar" value={String(summary.unpaidCount)} />
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 4: LEADERBOARD & EXPORT */}
-      <section className="grid gap-6 xl:grid-cols-[1fr_0.96fr] animate-fade-up-delay-2">
-        {/* Top Product Leaderboard */}
+      {/* SECTION 3: ORDER PERFORMANCE & PRODUCTS */}
+      <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr] animate-fade-up-delay-2">
+        {/* Left: Order Breakdown */}
         <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-4 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--color-text)]">Produk / Layanan Terlaris</h2>
-                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Top item sederhana tanpa visualisasi chart yang rumit.</p>
-              </div>
-              <Badge tone="info">Top 3</Badge>
+          <CardBody className="p-5 space-y-5">
+            <div>
+              <h2 className="text-lg font-bold text-[var(--color-text)]">Status Booking</h2>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Rincian penyelesaian layanan pada {periodLabel.toLowerCase()}.</p>
             </div>
             
-            <div className="space-y-3">
-              {topItems.map((item, index) => (
-                <div
-                  key={item.name}
-                  className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black uppercase tracking-wider text-white",
-                      index === 0 && "bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm border border-amber-300/35",
-                      index === 1 && "bg-gradient-to-br from-slate-400 to-slate-500 shadow-sm border border-slate-300/35",
-                      index === 2 && "bg-gradient-to-br from-[#b0743b] to-[#804f21] shadow-sm border border-amber-800/35"
-                    )}>
-                      {index + 1}
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-[var(--color-text)]">{item.name}</p>
-                      <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">{item.count} kali dipesan</p>
-                    </div>
-                  </div>
-                  <Badge tone="neutral" className="font-extrabold">{item.count}</Badge>
-                </div>
-              ))}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl bg-[var(--color-success-surface)] border border-[var(--color-success)]/30 p-4">
+                <CheckCircle2 className="h-5 w-5 text-[var(--color-success)] mb-3" />
+                <p className="text-[10px] font-extrabold uppercase text-[var(--color-text-muted)]">Selesai</p>
+                <p className="text-2xl font-black text-[var(--color-text)] mt-1">{summary.completedOrders}</p>
+              </div>
+              
+              <div className="rounded-2xl bg-[var(--color-danger-surface)] border border-[var(--color-danger)]/30 p-4">
+                <XCircle className="h-5 w-5 text-[var(--color-danger)] mb-3" />
+                <p className="text-[10px] font-extrabold uppercase text-[var(--color-text-muted)]">Batal</p>
+                <p className="text-2xl font-black text-[var(--color-text)] mt-1">{summary.cancelledOrders}</p>
+              </div>
+              
+              <div className="rounded-2xl bg-[var(--color-warning-surface)] border border-[var(--color-warning)]/30 p-4">
+                <Clock className="h-5 w-5 text-[var(--color-warning)] mb-3" />
+                <p className="text-[10px] font-extrabold uppercase text-[var(--color-text-muted)]">Belum Lunas</p>
+                <p className="text-2xl font-black text-[var(--color-text)] mt-1">{summary.unpaidCount}</p>
+              </div>
             </div>
           </CardBody>
         </Card>
 
-        {/* CSV Export Preview & Actions */}
+        {/* Right: Top Products */}
         <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-4 p-5">
+          <CardBody className="p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--color-text)]">Layanan Terlaris</h2>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Top 3 {periodLabel.toLowerCase()}.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              {topItems.length > 0 ? topItems.map((item, index) => (
+                <div key={item.name} className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-inset)]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white",
+                      index === 0 ? "bg-amber-500" : index === 1 ? "bg-slate-400" : "bg-[#b0743b]"
+                    )}>
+                      {index + 1}
+                    </span>
+                    <div className="truncate">
+                      <p className="text-xs font-bold text-[var(--color-text)] truncate">{item.name}</p>
+                      <p className="text-[10px] font-medium text-[var(--color-text-secondary)]">{item.count} order</p>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center py-6 text-xs text-[var(--color-text-secondary)] bg-[var(--color-surface-inset)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                  Belum ada data untuk periode ini.
+                </div>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+      </section>
+
+      {/* SECTION 4: ACTIONS */}
+      <section className="animate-fade-up-delay-3">
+        <Card className="border-[var(--color-border)] bg-gradient-to-r from-[var(--color-surface)] to-[var(--color-primary-surface)]/20 shadow-none">
+          <CardBody className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-[var(--color-text)]">Export Data CSV</h2>
-              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Salin draf teks CSV untuk diimpor ke aplikasi spreadsheet eksternal.</p>
+              <h2 className="text-base font-bold text-[var(--color-text)]">Export Data Laporan</h2>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-1 max-w-lg">Unduh rangkuman statistik {periodLabel.toLowerCase()} dalam format CSV untuk diolah lebih lanjut di Microsoft Excel atau Google Sheets.</p>
             </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[var(--color-surface-elevated)] border-b border-[var(--color-border)]">
-                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Periode</th>
-                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Total Order</th>
-                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Selesai</th>
-                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Batal</th>
-                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Cust. Baru</th>
-                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Omzet</th>
-                    <th className="px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)] whitespace-nowrap">Belum Bayar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="divide-x divide-[var(--color-border)]/40 hover:bg-[var(--color-surface-elevated)]/40 transition">
-                    <td className="px-4 py-3 text-xs font-semibold text-[var(--color-text)] whitespace-nowrap">{periodLabel}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.totalOrders}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.completedOrders}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.cancelledOrders}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.newCustomers}</td>
-                    <td className="px-4 py-3 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{formatCurrency(summary.revenue)}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text)] whitespace-nowrap">{summary.unpaidCount}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex flex-wrap gap-2 pt-2">
+            
+            <div className="flex flex-wrap gap-2 shrink-0">
               <Button
                 type="button"
-                className="rounded-xl font-bold py-2 px-4 text-xs flex items-center gap-1.5 shadow-sm"
+                className="rounded-xl font-bold py-2.5 px-5 text-sm shadow-sm"
                 isLoading={loadingAction === "copy-csv"}
                 onClick={async () => {
                   setLoadingAction("copy-csv");
                   try {
                     await copyToClipboard(exportCsv);
-                    toast.success("CSV laporan disalin");
+                    toast.success("CSV berhasil disalin", "Silakan paste (Ctrl+V) di Excel/Spreadsheet.");
                   } finally {
                     setLoadingAction(null);
                   }
                 }}
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Salin CSV
               </Button>
-              <LinkButton href={ROUTES.businessLink} variant="secondary" className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold">
-                <FileSpreadsheet className="h-4 w-4" />
-                Cek Link Bisnis
-              </LinkButton>
             </div>
           </CardBody>
         </Card>
       </section>
     </main>
-  );
-}
-
-function StatPill({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: "emerald" | "rose" | "blue" | "amber";
-}) {
-  const valueColor =
-    accent === "emerald"
-      ? "text-emerald-600 dark:text-emerald-400"
-      : accent === "rose"
-      ? "text-rose-600 dark:text-rose-400"
-      : accent === "blue"
-      ? "text-blue-600 dark:text-blue-400"
-      : accent === "amber"
-      ? "text-amber-600 dark:text-amber-400"
-      : "text-[var(--color-text)]";
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">{label}</p>
-      <p className={`text-sm font-extrabold whitespace-nowrap ${valueColor}`}>{value}</p>
-    </div>
   );
 }

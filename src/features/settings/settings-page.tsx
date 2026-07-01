@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import NextImage from "next/image";
-import { AlertTriangle, PlusCircle, Upload, X, Sparkles, Settings } from "lucide-react";
+import { AlertTriangle, PlusCircle, Upload, X, Sparkles, Settings, Trash2 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -22,7 +22,17 @@ import {
   RESOURCE_LABEL_SUGGESTIONS,
 } from "@/lib/constants/business";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
-import type { BusinessResource, OperationalModel } from "@/types/business";
+import { getPublicCatalog } from "@/lib/public-business";
+import type { BusinessResource, OperationalModel, PublicCatalogItem } from "@/types/business";
+
+function formatRupiahInput(value: string) {
+  const numericValue = value.replace(/[^\d]/g, "");
+  if (/^\d+$/.test(numericValue) || value === "") {
+    if (!numericValue) return "";
+    return `Rp ${new Intl.NumberFormat("id-ID").format(parseInt(numericValue, 10))}`;
+  }
+  return value;
+}
 
 function compressLogoImage(file: File, maxW = 180, maxH = 180): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -77,17 +87,22 @@ type SettingsFormState = {
   description: string;
   paymentInstructions: string;
   resources: BusinessResource[];
+  services: PublicCatalogItem[];
   logoUrl: string;
 };
 
 type FormErrors = Partial<Record<keyof SettingsFormState, string>> & {
   resources?: string;
+  services?: string;
 };
 
-function createFormStateFromBusiness(business: ReturnType<typeof useAppData>["business"]): SettingsFormState {
+function createFormStateFromBusiness(
+  business: ReturnType<typeof useAppData>["business"],
+  currentUser: ReturnType<typeof useAppData>["currentUser"]
+): SettingsFormState {
   return {
     name: business.name,
-    whatsappNumber: business.whatsappNumber,
+    whatsappNumber: business.whatsappNumber || currentUser?.phoneNumber || "",
     mode: business.mode,
     niche: business.niche,
     operationalModel: business.operationalModel,
@@ -100,6 +115,7 @@ function createFormStateFromBusiness(business: ReturnType<typeof useAppData>["bu
     description: business.description,
     paymentInstructions: business.paymentInstructions ?? "",
     resources: business.resources ?? [],
+    services: business.services ?? getPublicCatalog(business),
     logoUrl: business.logoUrl ?? "",
   };
 }
@@ -127,14 +143,14 @@ function buildResources(resourceLabel: string, resourceCount: string, currentRes
 
 export function SettingsPage() {
   const toast = useToast();
-  const { business, orders, saveBusinessSettings } = useAppData();
-  const [form, setForm] = useState<SettingsFormState>(createFormStateFromBusiness(business));
+  const { business, orders, saveBusinessSettings, currentUser } = useAppData();
+  const [form, setForm] = useState<SettingsFormState>(createFormStateFromBusiness(business, currentUser));
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setForm(createFormStateFromBusiness(business));
-  }, [business]);
+    setForm(createFormStateFromBusiness(business, currentUser));
+  }, [business, currentUser]);
 
   const usesResources = form.operationalModel === "RESOURCE_BOOKING";
   const modeOptions = useMemo(
@@ -200,12 +216,23 @@ export function SettingsPage() {
       }
     }
 
+    if (form.services.length === 0) {
+      nextErrors.services = "Minimal harus ada 1 layanan/produk.";
+    } else if (form.services.some((service) => !service.name.trim())) {
+      nextErrors.services = "Nama layanan/produk tidak boleh kosong.";
+    }
+
     setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return nextErrors;
   }
 
   async function handleSave() {
-    if (!validateForm()) {
+    const nextErrors = validateForm();
+    const errorKeys = Object.keys(nextErrors);
+
+    if (errorKeys.length > 0) {
+      const errorMessages = Object.values(nextErrors).join(" • ");
+      toast.error("Gagal menyimpan", errorMessages);
       return;
     }
 
@@ -223,6 +250,7 @@ export function SettingsPage() {
         resourceLabel: usesResources ? form.resourceLabel.trim() : undefined,
         resourceCount: usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
         resources: usesResources ? form.resources : [],
+        services: form.services,
         bookingCapacity: (form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT")
           ? Math.max(1, Number(form.bookingCapacity) || 2)
           : undefined,
@@ -361,7 +389,11 @@ export function SettingsPage() {
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nomor WhatsApp</span>
                 <Input value={form.whatsappNumber} onChange={(event) => updateForm("whatsappNumber", event.target.value)} />
-                {errors.whatsappNumber ? <p className="mt-1 text-[10px] font-bold text-[var(--color-danger)]">{errors.whatsappNumber}</p> : null}
+                {errors.whatsappNumber ? (
+                  <p className="mt-1 text-[10px] font-bold text-[var(--color-danger)]">{errors.whatsappNumber}</p>
+                ) : (
+                  <p className="mt-1.5 text-[11px] text-[var(--color-text-secondary)]">Nomor bawaan dari saat pendaftaran. Bisa diubah jika nomor operasional bisnis berbeda.</p>
+                )}
               </label>
             </div>
 
@@ -406,7 +438,32 @@ export function SettingsPage() {
               </label>
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Jam Operasional</span>
-                <Input value={form.openingHours} onChange={(event) => updateForm("openingHours", event.target.value)} />
+                <div className="flex items-center gap-2">
+                  <datalist id="time-options">
+                    {Array.from({ length: 25 }, (_, i) => <option key={i} value={`${String(i).padStart(2, '0')}:00`} />)}
+                  </datalist>
+                  <Input
+                    type="text"
+                    list="time-options"
+                    placeholder="09:00"
+                    value={form.openingHours.split(" - ")[0] || "09:00"}
+                    onChange={(event) => {
+                      const end = form.openingHours.split(" - ")[1] || "21:00";
+                      updateForm("openingHours", `${event.target.value} - ${end}`);
+                    }}
+                  />
+                  <span className="text-[var(--color-text-secondary)] font-bold">-</span>
+                  <Input
+                    type="text"
+                    list="time-options"
+                    placeholder="24:00"
+                    value={form.openingHours.split(" - ")[1] || "24:00"}
+                    onChange={(event) => {
+                      const start = form.openingHours.split(" - ")[0] || "09:00";
+                      updateForm("openingHours", `${start} - ${event.target.value}`);
+                    }}
+                  />
+                </div>
               </label>
             </div>
 
@@ -455,13 +512,13 @@ export function SettingsPage() {
 
             {form.mode === "BOOKING_SERVICE" ? (
               <label className="block">
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi Default Booking (Menit)</span>
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi Default Booking (Jam)</span>
                 <Input
                   type="number"
-                  min={15}
-                  step={15}
-                  value={form.defaultBookingDurationMinutes}
-                  onChange={(event) => updateForm("defaultBookingDurationMinutes", event.target.value)}
+                  min={1}
+                  step={1}
+                  value={form.defaultBookingDurationMinutes ? Number(form.defaultBookingDurationMinutes) / 60 : ""}
+                  onChange={(event) => updateForm("defaultBookingDurationMinutes", String((parseInt(event.target.value, 10) || 0) * 60))}
                 />
                 {errors.defaultBookingDurationMinutes ? (
                   <p className="mt-1 text-[10px] font-bold text-[var(--color-danger)]">{errors.defaultBookingDurationMinutes}</p>
@@ -634,20 +691,21 @@ export function SettingsPage() {
 
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   setForm((current) => ({
                     ...current,
                     resourceCount: String(current.resources.length + 1),
                     resources: [
                       ...current.resources,
                       {
-                        id: `res_${current.resources.length + 1}`,
+                        id: `res_${Date.now()}_${current.resources.length + 1}`,
                         name: `${current.resourceLabel.trim() || "Slot"} ${current.resources.length + 1}`,
                         isActive: true,
                       },
                     ],
-                  }))
-                }
+                  }));
+                  toast.success("Unit baru ditambahkan", "Jangan lupa Simpan Pengaturan agar permanen.");
+                }}
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:underline active:scale-95 mt-2"
               >
                 <PlusCircle className="h-4 w-4" />
@@ -658,7 +716,139 @@ export function SettingsPage() {
         </section>
       ) : null}
 
-      {/* SECTION 5: SAVE ACTION PANEL */}
+      {/* SECTION 4.5: CATALOG CONFIG */}
+      <section className="animate-fade-up">
+        <Card className="border-[var(--color-border)] shadow-none">
+          <CardBody className="space-y-5 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border)] pb-4">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--color-text)]">
+                  Katalog {form.mode === "BOOKING_SERVICE" ? "Layanan" : form.mode === "PRODUCT_ORDER" ? "Produk" : "Request"}
+                </h2>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                  Tambahkan daftar {form.mode === "BOOKING_SERVICE" ? "layanan" : "produk"} yang Anda tawarkan ke pelanggan.
+                </p>
+              </div>
+              <Badge tone="info" className="w-fit">{form.services.length} Item</Badge>
+            </div>
+
+            <div className="space-y-4">
+              {form.services.map((service, index) => (
+                <div key={service.id} className="relative flex flex-col gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 hover:border-[var(--color-border-strong)] transition">
+                  <div className="absolute right-4 top-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((current) => ({
+                          ...current,
+                          services: current.services.filter((item) => item.id !== service.id),
+                        }))
+                      }
+                      className="text-[var(--color-danger)] hover:text-red-700 transition"
+                      title="Hapus item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 pr-8">
+                    <label className="block">
+                      <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">Nama</span>
+                      <Input
+                        value={service.name}
+                        placeholder={form.mode === "BOOKING_SERVICE" ? "Cukur Rambut" : "Nasi Goreng"}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            services: current.services.map((item) =>
+                              item.id === service.id ? { ...item, name: event.target.value } : item
+                            ),
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">Harga (Label)</span>
+                      <Input
+                        value={service.priceLabel || ""}
+                        placeholder="Contoh: Rp 50.000 atau Gratis"
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            services: current.services.map((item) =>
+                              item.id === service.id ? { ...item, priceLabel: formatRupiahInput(event.target.value) } : item
+                            ),
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                  <label className="block">
+                    <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">Deskripsi</span>
+                    <Textarea
+                      value={service.description}
+                      placeholder="Jelaskan detail dari layanan/produk ini"
+                      rows={2}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          services: current.services.map((item) =>
+                            item.id === service.id ? { ...item, description: event.target.value } : item
+                          ),
+                        }))
+                      }
+                    />
+                  </label>
+                  {form.mode === "BOOKING_SERVICE" && (
+                    <label className="block w-1/2">
+                      <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi (Jam)</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={service.durationMinutes ? service.durationMinutes / 60 : ""}
+                        placeholder="1"
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            services: current.services.map((item) =>
+                              item.id === service.id ? { ...item, durationMinutes: (parseInt(event.target.value, 10) || 0) * 60 || undefined } : item
+                            ),
+                          }))
+                        }
+                      />
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {errors.services ? <p className="text-xs font-bold text-[var(--color-danger)]">{errors.services}</p> : null}
+
+            <button
+              type="button"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  services: [
+                    ...current.services,
+                    {
+                      id: `svc_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                      name: "",
+                      description: "",
+                      priceLabel: "",
+                      durationMinutes: current.mode === "BOOKING_SERVICE" ? Number(current.defaultBookingDurationMinutes) : undefined,
+                    },
+                  ],
+                }))
+              }
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:underline active:scale-95 mt-2"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Tambah Item Baru
+            </button>
+          </CardBody>
+        </Card>
+      </section>
       <section className="animate-fade-up">
         <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-4 p-5">

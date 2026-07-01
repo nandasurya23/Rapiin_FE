@@ -10,6 +10,12 @@ const shortDateFormatter = new Intl.DateTimeFormat("id-ID", {
   year: "numeric",
 });
 
+const longDateFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
 const dateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
   day: "numeric",
   month: "short",
@@ -56,6 +62,19 @@ export function formatDate(value: string | Date | null | undefined) {
   }
 
   return shortDateFormatter.format(date);
+}
+
+export function formatLongDate(value: string | Date | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = parseDateValue(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return longDateFormatter.format(date);
 }
 
 export function formatDateTime(value: string | Date | null | undefined) {

@@ -356,72 +356,73 @@ export function InvoicesPage() {
                   </div>
                 </div>
 
-                {/* Create Invoice Form Block */}
-                <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)]/60 pb-3">
-                    <div>
-                      <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">Buat Nota Baru dari Order</h3>
-                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">Pilih status order yang sudah selesai untuk diubah menjadi invoice resmi.</p>
-                    </div>
-                    <Badge tone="success" className="font-extrabold uppercase text-[9px] tracking-wider shrink-0">
-                      {orders.filter((order) => order.status === "SELESAI").length} Order Selesai
-                    </Badge>
-                  </div>
-                  
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Order Pelanggan</span>
-                    <Select
-                      value={selectedOrderId}
-                      onValueChange={setSelectedOrderId}
-                      options={orders.map((order) => ({
-                        value: order.id,
-                        label: `${order.customerName} - ${order.title}`,
-                      }))}
-                    />
-                  </label>
-                  
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Catatan Tambahan Tagihan / Syarat</span>
-                    <Textarea
-                      value={notes}
-                      onChange={(event) => setNotes(event.target.value)}
-                      placeholder="Contoh: Pembayaran DP 50% sisanya lunas saat pengambilan barang..."
-                      rows={2}
-                    />
-                  </label>
-                  
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <Button
-                      type="button"
-                      isLoading={loadingAction === "create-invoice"}
-                      onClick={() => void createFromOrder()}
-                      disabled={!canCreateInvoice}
-                      className="shadow-sm font-bold text-sm px-5 py-2 rounded-xl flex items-center gap-1.5"
-                    >
-                      <FileSpreadsheet className="h-4 w-4" />
-                      Buat Nota
-                    </Button>
-                    {!canCreateInvoice ? (
-                      <p className="text-xs font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 rounded-xl">
-                        ⚠️ {readOnlyReason}
-                      </p>
-                    ) : null}
-                    <LinkButton
-                      href={selectedOrderLink}
-                      variant="secondary"
-                      className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Preview Route
-                    </LinkButton>
-                  </div>
-                </div>
               </>
             ) : (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-text-secondary)] text-center">
                 Belum ada invoice yang bisa dipreview. Silakan buat nota baru terlebih dahulu.
               </div>
             )}
+
+            {/* Create Invoice Form Block */}
+            <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)]/60 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">Buat Nota Baru dari Order</h3>
+                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">Pilih status order yang sudah selesai untuk diubah menjadi invoice resmi.</p>
+                </div>
+                <Badge tone="success" className="font-extrabold uppercase text-[9px] tracking-wider shrink-0">
+                  {orders.filter((order) => order.status === "SELESAI").length} Order Selesai
+                </Badge>
+              </div>
+              
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Order Pelanggan</span>
+                <Select
+                  value={selectedOrderId}
+                  onValueChange={setSelectedOrderId}
+                  options={orders.map((order) => ({
+                    value: order.id,
+                    label: `${order.customerName} - ${order.title}`,
+                  }))}
+                />
+              </label>
+              
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Catatan Tambahan Tagihan / Syarat</span>
+                <Textarea
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Contoh: Pembayaran DP 50% sisanya lunas saat pengambilan barang..."
+                  rows={2}
+                />
+              </label>
+              
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  type="button"
+                  isLoading={loadingAction === "create-invoice"}
+                  onClick={() => void createFromOrder()}
+                  disabled={!canCreateInvoice}
+                  className="shadow-sm font-bold text-sm px-5 py-2 rounded-xl flex items-center gap-1.5"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Buat Nota
+                </Button>
+                {!canCreateInvoice ? (
+                  <p className="text-xs font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 rounded-xl">
+                    ⚠️ {readOnlyReason}
+                  </p>
+                ) : null}
+                <LinkButton
+                  href={selectedOrderLink}
+                  variant="secondary"
+                  className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Preview Route
+                </LinkButton>
+              </div>
+            </div>
           </CardBody>
         </Card>
       </section>

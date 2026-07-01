@@ -18,8 +18,11 @@ import {
   DEFAULT_BOOKING_DURATION_MINUTES,
   getBookingAvailability,
   getResourceBookingAvailability,
+  getResourceBookingDetailsForDate,
+  getResourceAvailabilityForSelection,
   isBookingSlotFull,
 } from "@/lib/booking";
+import { formatLongDate } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import {
@@ -42,6 +45,7 @@ const initialStateByMode: Record<BusinessMode, FormState> = {
     scheduledDate: "",
     scheduledTime: "",
     bookingDurationMinutes: "60",
+    resourceId: "",
     notes: "",
   },
   PRODUCT_ORDER: {
@@ -120,11 +124,18 @@ function createPublicWhatsAppMessage(business: Business, form: FormState) {
   }
 
   if (form.scheduledDate) {
-    lines.push(`Tanggal: ${form.scheduledDate}`);
+    lines.push(`Tanggal: ${formatLongDate(form.scheduledDate)}`);
   }
 
   if (form.scheduledTime) {
     lines.push(`Jam: ${form.scheduledTime}`);
+  }
+
+  if (form.resourceId && business.resources) {
+    const resource = business.resources.find((r) => r.id === form.resourceId);
+    if (resource) {
+      lines.push(`${business.resourceLabel || "Unit"}: ${resource.name}`);
+    }
   }
 
   if (form.bookingDurationMinutes) {
@@ -136,7 +147,7 @@ function createPublicWhatsAppMessage(business: Business, form: FormState) {
   }
 
   if (form.deadline) {
-    lines.push(`Deadline: ${form.deadline}`);
+    lines.push(`Deadline: ${formatLongDate(form.deadline)}`);
   }
 
   if (form.budget) {
@@ -158,7 +169,7 @@ function createPublicWhatsAppMessage(business: Business, form: FormState) {
   return lines.join("\n");
 }
 
-function applyCatalogSelectionToForm(mode: BusinessMode, current: FormState, itemName: string, durationMinutes?: number | null) {
+function applyCatalogSelectionToForm(mode: BusinessMode, current: FormState, itemName: string, durationMinutes?: number | null, priceLabel?: string) {
   const next = {
     ...current,
     [getCatalogFieldName(mode)]: itemName,
@@ -166,6 +177,10 @@ function applyCatalogSelectionToForm(mode: BusinessMode, current: FormState, ite
 
   if (mode === "BOOKING_SERVICE" && durationMinutes && durationMinutes > 0) {
     next.bookingDurationMinutes = String(durationMinutes);
+  }
+
+  if (priceLabel) {
+    next.budget = priceLabel;
   }
 
   return next;
@@ -200,26 +215,36 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       return;
     }
 
-    setForm({
+    let initialForm: FormState = {
       ...initialStateByMode[business.mode],
       bookingDurationMinutes: String(defaultBookingDuration),
-    });
+    };
+
+    let step = 1;
+    const catalogList = getPublicCatalog(business);
+    const preSelectedItemId = searchParams.get("item");
+
+    if (preSelectedItemId) {
+      const item = catalogList.find((i) => i.id === preSelectedItemId);
+      if (item) {
+        initialForm = applyCatalogSelectionToForm(business.mode, initialForm, item.name, inferCatalogDurationMinutes(item), item.priceLabel);
+        step = 2;
+      }
+    } else if (catalogList.length === 1 && business.mode !== "CUSTOM_REQUEST") {
+      const item = catalogList[0];
+      initialForm = applyCatalogSelectionToForm(business.mode, initialForm, item.name, inferCatalogDurationMinutes(item), item.priceLabel);
+      step = 2;
+    }
+
+    setForm(initialForm);
     setSubmitted(false);
     setError("");
-    setCurrentStep(1);
+    setCurrentStep(step);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business.mode, defaultBookingDuration, hydrated]);
 
   const isMatch = isBusinessSlugMatch(business, slug);
   const catalog = getPublicCatalog(business);
-  const selectedCatalogItem = useMemo(() => {
-    const itemId = searchParams.get("item");
-
-    if (!itemId) {
-      return null;
-    }
-
-    return catalog.find((item) => item.id === itemId) ?? null;
-  }, [catalog, searchParams]);
   const bookingDurationMinutes = useMemo(() => {
     const parsedDuration = Number(form.bookingDurationMinutes);
 
@@ -244,7 +269,19 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       ),
     [bookingDurationMinutes, business.resources, form.scheduledDate, form.scheduledTime, orders]
   );
-  const activeAvailability = business.operationalModel === "RESOURCE_BOOKING" ? resourceBookingAvailability : bookingAvailability;
+  const specificResourceAvailability = useMemo(() => {
+    if (!form.resourceId || form.resourceId === "ANY") return null;
+    return getResourceAvailabilityForSelection(orders, form.resourceId, form.scheduledDate, form.scheduledTime, bookingDurationMinutes);
+  }, [form.resourceId, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, orders]);
+
+  const activeAvailability = form.resourceId && form.resourceId !== "ANY"
+    ? specificResourceAvailability!
+    : business.operationalModel === "RESOURCE_BOOKING" ? resourceBookingAvailability : bookingAvailability;
+
+  const resourceDetailsForDate = useMemo(() => {
+    if (business.operationalModel !== "RESOURCE_BOOKING" || !form.scheduledDate) return [];
+    return getResourceBookingDetailsForDate(orders, business.resources ?? [], form.scheduledDate);
+  }, [business.operationalModel, business.resources, form.scheduledDate, orders]);
 
   const slotHint = useMemo(() => {
     if (business.mode !== "BOOKING_SERVICE") {
@@ -286,49 +323,6 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     [business.whatsappNumber, waMessage]
   );
 
-  useEffect(() => {
-    if (!selectedCatalogItem) {
-      return;
-    }
-
-    const catalogField = getCatalogFieldName(business.mode);
-    const inferredDurationMinutes = inferCatalogDurationMinutes(selectedCatalogItem);
-
-    setForm((current) => {
-      if (
-        (current[catalogField] ?? "") === selectedCatalogItem.name &&
-        (business.mode !== "BOOKING_SERVICE" || !inferredDurationMinutes || current.bookingDurationMinutes === String(inferredDurationMinutes))
-      ) {
-        return current;
-      }
-
-      return applyCatalogSelectionToForm(business.mode, current, selectedCatalogItem.name, inferredDurationMinutes);
-    });
-  }, [business.mode, selectedCatalogItem]);
-
-  if (!isMatch) {
-    return (
-      <main className="page-enter mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10">
-        <Card className="w-full">
-          <CardBody className="space-y-4 p-6">
-            <Badge tone="danger">Link tidak ditemukan</Badge>
-            <div>
-              <h1 className="text-2xl font-semibold text-[var(--color-text)]">Form publik belum cocok</h1>
-              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                Slug yang dibuka tidak sesuai dengan bisnis aktif di mock data saat ini.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <LinkButton href={ROUTES.publicBusiness(business.slug)}>Buka Halaman Bisnis</LinkButton>
-              <LinkButton href={ROUTES.dashboard} variant="secondary">
-                Kembali ke App
-              </LinkButton>
-            </div>
-          </CardBody>
-        </Card>
-      </main>
-    );
-  }
 
   function updateField(name: string, value: string) {
     setError("");
@@ -352,6 +346,16 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
     if (!isValidPhoneNumber(form.whatsappNumber)) {
       setError("Nomor WhatsApp belum valid. Gunakan 9-15 digit angka.");
+      setSubmitted(false);
+      return;
+    }
+
+    if (
+      business.mode === "BOOKING_SERVICE" &&
+      business.operationalModel === "RESOURCE_BOOKING" &&
+      !form.resourceId
+    ) {
+      setError(`Silakan pilih ${business.resourceLabel || "Unit"} terlebih dahulu.`);
       setSubmitted(false);
       return;
     }
@@ -389,14 +393,75 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     }
   }
 
-  const timeCandidates = [
-    "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
-    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", 
-    "20:00", "21:00"
-  ];
+  const timeCandidates = useMemo(() => {
+    let startHour = 8;
+    let endHour = 21;
+
+    if (business.openingHours) {
+      const parts = business.openingHours.split("-").map(p => p.trim());
+      if (parts.length === 2) {
+        const sPart = parseInt(parts[0].split(":")[0], 10);
+        const ePart = parseInt(parts[1].split(":")[0], 10);
+        if (!isNaN(sPart)) startHour = sPart;
+        if (!isNaN(ePart)) endHour = ePart;
+      }
+    }
+
+    const candidates: string[] = [];
+    for (let i = startHour; i <= endHour; i++) {
+      candidates.push(`${String(i).padStart(2, "0")}:00`);
+    }
+    return candidates;
+  }, [business.openingHours]);
+
+  const fullyBookedDates = useMemo(() => {
+    if (business.mode !== "BOOKING_SERVICE") return [];
+    
+    const fullDates: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
+
+      if (business.closedDates?.[dateStr]) continue;
+
+      let isDateFull = true;
+      for (const time of timeCandidates) {
+        let isTimeFull = false;
+        if (business.operationalModel === "RESOURCE_BOOKING") {
+          const avail = getResourceBookingAvailability(orders, business.resources ?? [], dateStr, time, bookingDurationMinutes);
+          isTimeFull = avail.isFull;
+        } else {
+          const avail = getBookingAvailability(orders, dateStr, time, bookingDurationMinutes, undefined, undefined, business.bookingCapacity);
+          isTimeFull = avail.isFull;
+        }
+
+        if (!isTimeFull) {
+          isDateFull = false;
+          break;
+        }
+      }
+
+      if (isDateFull) {
+        fullDates.push(dateStr);
+      }
+    }
+    return fullDates;
+  }, [business.mode, business.closedDates, business.operationalModel, business.resources, business.bookingCapacity, orders, bookingDurationMinutes, timeCandidates]);
+
+  const disabledDates = useMemo(() => {
+    return [...Object.keys(business.closedDates || {}), ...fullyBookedDates];
+  }, [business.closedDates, fullyBookedDates]);
 
   const getCandidateAvailability = (time: string) => {
     if (business.operationalModel === "RESOURCE_BOOKING") {
+      if (form.resourceId && form.resourceId !== "ANY") {
+        return getResourceAvailabilityForSelection(orders, form.resourceId, form.scheduledDate, time, bookingDurationMinutes);
+      }
       return getResourceBookingAvailability(
         orders,
         business.resources ?? [],
@@ -409,11 +474,39 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     }
   };
 
-  const steps = [
+  let steps = [
     { num: 1, label: business.mode === "BOOKING_SERVICE" ? "Pilih Layanan" : business.mode === "PRODUCT_ORDER" ? "Pilih Produk" : "Detail Request" },
     { num: 2, label: business.mode === "BOOKING_SERVICE" ? "Tentukan Jadwal" : business.mode === "PRODUCT_ORDER" ? "Pengiriman" : "Data Kontak" },
     ...(business.mode !== "CUSTOM_REQUEST" ? [{ num: 3, label: "Data Kontak" }] : [])
   ];
+
+  if (catalog.length === 1 && business.mode !== "CUSTOM_REQUEST") {
+    steps = steps.filter((s) => s.num !== 1);
+  }
+
+  if (!isMatch) {
+    return (
+      <main className="page-enter mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10">
+        <Card className="w-full">
+          <CardBody className="space-y-4 p-6">
+            <Badge tone="danger">Link tidak ditemukan</Badge>
+            <div>
+              <h1 className="text-2xl font-semibold text-[var(--color-text)]">Form publik belum cocok</h1>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                Slug yang dibuka tidak sesuai dengan bisnis aktif di mock data saat ini.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <LinkButton href={ROUTES.publicBusiness(business.slug)}>Buka Halaman Bisnis</LinkButton>
+              <LinkButton href={ROUTES.dashboard} variant="secondary">
+                Kembali ke App
+              </LinkButton>
+            </div>
+          </CardBody>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="page-enter mx-auto min-h-screen max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
@@ -447,7 +540,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                   {form.scheduledDate ? (
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[var(--color-text-secondary)]">Tanggal &amp; Waktu:</span>
-                      <span className="font-extrabold text-[var(--color-text)]">{form.scheduledDate} {form.scheduledTime ? `pada ${form.scheduledTime}` : ""}</span>
+                      <span className="font-extrabold text-[var(--color-text)]">{formatLongDate(form.scheduledDate)} {form.scheduledTime ? `pada ${form.scheduledTime}` : ""}</span>
                     </div>
                   ) : null}
                   {form.name ? (
@@ -559,7 +652,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                           ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
                           : "bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]"
                     )}>
-                      {s.num}
+                      {idx + 1}
                     </div>
                     <span className={cn(
                       "text-xs font-bold transition",
@@ -635,7 +728,8 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                                       business.mode,
                                       form,
                                       item.name,
-                                      inferCatalogDurationMinutes(item)
+                                      inferCatalogDurationMinutes(item),
+                                      item.priceLabel
                                     );
                                 setError("");
                                 setForm(nextForm);
@@ -698,7 +792,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                             updateField("scheduledDate", val);
                             updateField("scheduledTime", "");
                           }}
-                          disabledDates={Object.keys(business.closedDates || {})}
+                          disabledDates={disabledDates}
                         />
                         {form.scheduledDate && business.closedDates?.[form.scheduledDate] && (
                           <p className="mt-2 text-xs font-semibold text-[var(--color-danger-text)] bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] rounded-xl px-3 py-2 animate-pulse">
@@ -708,8 +802,79 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                       </label>
 
                       {form.scheduledDate && !business.closedDates?.[form.scheduledDate] && (
-                        <div className="space-y-3 pt-2">
-                          <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Jam yang Tersedia <span className="text-red-500">*</span></span>
+                        <div className="space-y-4 pt-2">
+                          {business.operationalModel === "RESOURCE_BOOKING" && resourceDetailsForDate.length > 0 && (
+                            <div className="space-y-3">
+                              <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih {business.resourceLabel || "Unit"} <span className="text-red-500">*</span></span>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!resourceBookingAvailability.isFull) {
+                                      updateField("resourceId", "ANY");
+                                      updateField("scheduledTime", "");
+                                    }
+                                  }}
+                                  className={cn(
+                                    "p-3 rounded-xl border text-left transition-all flex justify-between items-center",
+                                    resourceBookingAvailability.isFull
+                                      ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
+                                      : form.resourceId === "ANY"
+                                        ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                        : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+                                  )}
+                                  disabled={resourceBookingAvailability.isFull}
+                                >
+                                  <div>
+                                    <div className="font-bold text-sm">Bebas / Pilihkan Untuk Saya</div>
+                                    <div className={cn("text-[10px] mt-0.5", form.resourceId === "ANY" ? "text-white/80" : "text-[var(--color-text-secondary)]")}>
+                                      Sistem akan memilih {business.resourceLabel || "unit"} yang kosong
+                                    </div>
+                                  </div>
+                                </button>
+                                {resourceDetailsForDate.map((res) => {
+                                  const isSelected = form.resourceId === res.resourceId;
+                                  const isFull = res.isFull;
+
+                                  return (
+                                    <button
+                                      key={res.resourceId}
+                                      type="button"
+                                      onClick={() => {
+                                        if (!isFull) {
+                                          updateField("resourceId", res.resourceId);
+                                          updateField("scheduledTime", "");
+                                        }
+                                      }}
+                                      className={cn(
+                                        "p-3 rounded-xl border text-left transition-all flex justify-between items-center",
+                                        isFull
+                                          ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
+                                          : isSelected
+                                            ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                            : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+                                      )}
+                                      disabled={isFull}
+                                    >
+                                      <div>
+                                        <span className="text-sm font-bold block">{res.resourceName}</span>
+                                        <span className={cn(
+                                          "text-[10px] tracking-wide uppercase font-extrabold mt-0.5 block",
+                                          isFull ? "text-red-500/60" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
+                                        )}>
+                                          {isFull ? "Semua Jadwal Penuh" : res.hasHold ? "Tersedia Sebagian" : "Tersedia"}
+                                        </span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {(business.operationalModel !== "RESOURCE_BOOKING" || form.resourceId) && (
+                            <div className="space-y-3 pt-2">
+                              <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Jam yang Tersedia <span className="text-red-500">*</span></span>
                           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                             {timeCandidates.map((time) => {
                               const avail = getCandidateAvailability(time);
@@ -755,6 +920,8 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                               </p>
                             </div>
                           )}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -769,7 +936,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                         </Button>
                         <Button
                           type="button"
-                          disabled={!form.scheduledDate || !form.scheduledTime || Boolean(business.closedDates?.[form.scheduledDate])}
+                          disabled={!form.scheduledDate || !form.scheduledTime || Boolean(business.closedDates?.[form.scheduledDate]) || (business.operationalModel === "RESOURCE_BOOKING" && !form.resourceId)}
                           onClick={() => setCurrentStep(3)}
                           className="font-bold rounded-xl"
                         >
@@ -925,7 +1092,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                       {business.mode === "BOOKING_SERVICE" ? (
                         <p className="flex justify-between">
                           <span className="text-[var(--color-text-secondary)]">Jadwal:</span>
-                          <span className="font-bold">{form.scheduledDate} jam {form.scheduledTime}</span>
+                          <span className="font-bold">{formatLongDate(form.scheduledDate)} jam {form.scheduledTime}</span>
                         </p>
                       ) : (
                         <p className="flex justify-between">
@@ -970,6 +1137,14 @@ export function PublicOrderForm({ slug }: { slug: string }) {
           </Card>
         </div>
       )}
+
+      {/* Powered By Rapiin Footer */}
+      <div className="relative z-0 mt-12 flex justify-center pb-8">
+        <a href="/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity">
+          <span className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-widest">Powered by</span>
+          <Image src="/images/rapiin.png" alt="Rapiin" width={80} height={24} className="h-5 w-auto object-contain grayscale hover:grayscale-0 transition-all" />
+        </a>
+      </div>
     </main>
   );
 }

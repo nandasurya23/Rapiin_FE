@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { useToast } from "@/components/ui/toast-provider";
+import { ROUTES } from "@/lib/routes";
 
 type SidebarProps = {
   collapsed: boolean;
@@ -28,7 +29,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     subscriptionForCurrentBusiness,
     logout,
   } = useAppData();
-  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : APP_NAV_ITEMS;
+  const navItems = isSuperAdmin 
+    ? SUPER_ADMIN_NAV_ITEMS 
+    : APP_NAV_ITEMS.filter(item => 
+        item.href !== ROUTES.assistant || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
+      );
 
   const planLabel = PLAN_LABELS[subscriptionForCurrentBusiness?.planCode ?? "FREE_TRIAL"];
 

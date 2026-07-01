@@ -27,14 +27,6 @@ import { renderTemplate } from "@/lib/messages";
 import { useToast } from "@/components/ui/toast-provider";
 import { cn } from "@/lib/cn";
 
-type TaskFilter = "ALL" | "BILLING" | "FOLLOW_UP" | "REVIEW";
-
-const taskFilterOptions: Array<{ value: TaskFilter; label: string }> = [
-  { value: "ALL", label: "Semua Tugas" },
-  { value: "BILLING", label: "Tagihan & DP" },
-  { value: "FOLLOW_UP", label: "Follow-Up" },
-  { value: "REVIEW", label: "Minta Ulasan" },
-];
 
 export function DashboardPage() {
   const toast = useToast();
@@ -42,7 +34,6 @@ export function DashboardPage() {
   const { todayOrders, unpaidOrders, revenue } = getDashboardSummary(orders, customers);
   const today = toDateKey(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
-  const [activeFilter, setActiveFilter] = useState<TaskFilter>("ALL");
   const actionSectionRef = useRef<HTMLElement | null>(null);
   const previousSelectedDateRef = useRef(selectedDate);
 
@@ -79,20 +70,9 @@ export function DashboardPage() {
     }
   }
 
-  async function handleShiftStatus(orderId: string) {
+  async function handleMarkOrderDone(orderId: string) {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
-
-    const statusOptions = ORDER_STATUS_BY_MODE[order.mode];
-    const currentIndex = statusOptions.findIndex((opt) => opt.value === order.status);
-
-    if (currentIndex === -1 || currentIndex === statusOptions.length - 1) {
-      toast.error("Order sudah berada di status akhir.");
-      return;
-    }
-
-    const nextStatusOption = statusOptions[currentIndex + 1];
-    const nextStatus = nextStatusOption.value;
 
     try {
       updateOrder(order.id, {
@@ -100,7 +80,7 @@ export function DashboardPage() {
         whatsappNumber: order.whatsappNumber,
         title: order.title,
         mode: order.mode,
-        status: nextStatus,
+        status: "SELESAI",
         paymentStatus: order.paymentStatus,
         scheduledDate: order.scheduledDate || undefined,
         scheduledTime: order.scheduledTime || undefined,
@@ -111,9 +91,9 @@ export function DashboardPage() {
         dpAmount: order.dpAmount || undefined,
         notes: order.notes || undefined,
       });
-      toast.success(`Status berhasil diubah ke ${nextStatusOption.label}`);
+      toast.success("Order ditandai selesai");
     } catch (err) {
-      toast.error("Gagal memindahkan status", err instanceof Error ? err.message : "");
+      toast.error("Gagal mengubah status", err instanceof Error ? err.message : "");
     }
   }
 
@@ -249,11 +229,11 @@ export function DashboardPage() {
       }));
 
     const items = [];
-    if (activeFilter === "ALL" || activeFilter === "BILLING") items.push(...unpaidItems);
-    if (activeFilter === "ALL" || activeFilter === "FOLLOW_UP") items.push(...staleItems);
-    if (activeFilter === "ALL" || activeFilter === "REVIEW") items.push(...reviewItems);
-    return items.slice(0, 4);
-  }, [orders, customers, selectedDate, business, messageTemplates, activeFilter]);
+    items.push(...unpaidItems);
+    items.push(...staleItems);
+    items.push(...reviewItems);
+    return items.slice(0, 6);
+  }, [orders, customers, selectedDate, business, messageTemplates]);
 
   useEffect(() => {
     if (previousSelectedDateRef.current !== selectedDate) {
@@ -408,13 +388,6 @@ export function DashboardPage() {
               )}
             </div>
 
-            {/* Filter chips */}
-            <FilterChipGroup
-              options={taskFilterOptions}
-              value={activeFilter}
-              onChange={setActiveFilter}
-              size="sm"
-            />
 
             {/* Items list */}
             <div className="space-y-3">
@@ -490,16 +463,18 @@ export function DashboardPage() {
                             >
                               {item.status === "WAITING_DP" ? "DP Lunas" : "Bayar Lunas"}
                             </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => void handleShiftStatus(item.id)}
-                              title="Pindahkan status ke tahap berikutnya"
-                              className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
-                            >
-                              Geser Status
-                            </Button>
+                            {item.status !== "SELESAI" && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => void handleMarkOrderDone(item.id)}
+                                title="Tandai order selesai"
+                                className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                              >
+                                Tandai Selesai
+                              </Button>
+                            )}
                           </>
                         )}
                         {item.type === "customer" && (
