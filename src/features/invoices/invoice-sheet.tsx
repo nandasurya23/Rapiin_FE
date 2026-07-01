@@ -15,180 +15,136 @@ type InvoiceSheetProps = {
   order?: Order;
   compact?: boolean;
 };
+
 export function InvoiceSheet({ business, invoice, order, compact = false }: InvoiceSheetProps) {
   const toast = useToast();
   const isValid = isInvoiceIntegrityValid(invoice);
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-md)]">
-      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-40 bg-[radial-gradient(circle_at_top,_rgba(20,83,45,0.08),_transparent_70%)] sm:block" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,_rgba(247,248,245,0.95),_rgba(255,255,255,0))]" />
+    <div className={`relative mx-auto w-full overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-md)] sm:rounded-2xl ${compact ? '' : 'max-w-md'}`}>
+      {/* Security Watermark Pattern */}
+      <div 
+        className="pointer-events-none absolute inset-0 opacity-[0.03]" 
+        style={{
+          backgroundImage: `repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%)`,
+          backgroundSize: '20px 20px'
+        }}
+      />
 
-      <div className="relative border-b border-[var(--color-border)] px-5 py-5 sm:px-7">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-4">
-            {business.logoUrl && (
-              <Image
-                src={business.logoUrl}
-                alt={business.name}
-                width={56}
-                height={56}
-                className="h-14 w-14 shrink-0 rounded-xl object-contain border border-[var(--color-border)] bg-white p-1"
-                unoptimized
-              />
-            )}
+      {/* Invalid Watermark Overlay */}
+      {!isValid && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden z-10">
+          <span className="text-[80px] font-black uppercase tracking-widest text-red-600 opacity-20 -rotate-45 select-none text-center leading-none">
+            INVALID
+          </span>
+        </div>
+      )}
+
+      <div className="relative px-6 pt-8 pb-6 bg-[var(--color-surface)]/90 backdrop-blur-[2px]">
+        {/* Header */}
+        <div className="flex flex-col items-center text-center">
+          {business.logoUrl && (
+            <Image
+              src={business.logoUrl}
+              alt={business.name}
+              width={64}
+              height={64}
+              className="mb-4 h-16 w-16 rounded-full object-cover border border-[var(--color-border)] shadow-sm bg-white"
+              unoptimized
+            />
+          )}
+          <h3 className="text-xl font-bold tracking-tight text-[var(--color-text)]">{business.name}</h3>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)] uppercase tracking-widest font-semibold">Nota Resmi</p>
+        </div>
+
+        <div className="mt-6 border-t-2 border-dashed border-[var(--color-border)] pt-6">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm text-[var(--color-text-secondary)]">Status</span>
+            <PaymentStatusBadge status={invoice.paymentStatus} />
+          </div>
+          <InvoiceRow label="No. Nota" value={invoice.invoiceCode} valueClass="font-mono text-sm font-semibold text-[var(--color-text)]" />
+          <InvoiceRow label="Tanggal" value={formatDateTime(invoice.createdAt)} />
+          <InvoiceRow label="Customer" value={invoice.customerName} />
+          <InvoiceRow label="Jadwal" value={order?.scheduledDate ? `${formatDate(order.scheduledDate)}${order.scheduledTime ? `, ${order.scheduledTime}` : ""}` : "-"} />
+        </div>
+
+        <div className="mt-6 border-t-2 border-dashed border-[var(--color-border)] pt-6">
+          <h4 className="text-xs uppercase tracking-widest text-[var(--color-text-muted)] font-semibold mb-3">Pesanan</h4>
+          <div className="flex justify-between items-start mb-2">
+            <div className="pr-4">
+              <p className="text-sm font-medium text-[var(--color-text)]">{order?.title ?? "Layanan / order"}</p>
+              {invoice.notes && <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{invoice.notes}</p>}
+            </div>
+            <p className="text-sm font-semibold text-[var(--color-text)] shrink-0">{formatCurrency(invoice.totalAmount)}</p>
+          </div>
+          
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--color-border)]">
+            <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Total Tagihan</span>
+            <span className="text-lg font-bold tracking-tight text-[var(--color-text)]">{formatCurrency(invoice.totalAmount)}</span>
+          </div>
+        </div>
+
+        {invoice.paymentStatus !== "PAID" && business.paymentInstructions && (
+          <div className="mt-6 border-t-2 border-dashed border-[var(--color-border)] pt-6">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="text-xs uppercase tracking-widest text-[var(--color-text-muted)] font-semibold">Instruksi Pembayaran</h4>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && business.paymentInstructions) {
+                    void navigator.clipboard.writeText(business.paymentInstructions);
+                    toast.success("Info rekening disalin!");
+                  }
+                }}
+                className="text-xs font-bold text-[var(--color-primary)] hover:underline"
+              >
+                Salin
+              </button>
+            </div>
+            <p className="text-sm text-[var(--color-text-secondary)] whitespace-pre-line bg-[var(--color-surface-elevated)] p-3 rounded-lg border border-[var(--color-border)]">
+              {business.paymentInstructions}
+            </p>
+          </div>
+        )}
+
+        {/* Security Seal */}
+        <div className={`mt-6 border-t-2 border-dashed border-[var(--color-border)] pt-6 text-center`}>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            {isValid ? <ShieldCheck className="h-5 w-5 text-emerald-500" /> : <ShieldAlert className="h-5 w-5 text-red-500" />}
+            <span className={`text-xs font-bold uppercase tracking-widest ${isValid ? 'text-emerald-600' : 'text-red-600'}`}>
+              {isValid ? "Segel Digital Valid" : "Segel Rusak / Tidak Valid"}
+            </span>
+          </div>
+          
+          <div className="bg-[var(--color-surface-elevated)] p-3 rounded-lg border border-[var(--color-border)] text-left space-y-2 mt-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--color-text-muted)]">Nota Resmi</p>
-              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-text)]">{business.name}</h3>
-              <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--color-text-secondary)]">
-                Dokumen pembayaran sederhana untuk kebutuhan operasional harian UMKM.
-              </p>
+              <p className="text-[10px] uppercase text-[var(--color-text-muted)] font-semibold tracking-wider">Kode Verifikasi</p>
+              <p className="font-mono text-xs font-semibold text-[var(--color-text)] break-all">{invoice.verificationCode}</p>
             </div>
-          </div>
-          <div className="space-y-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 sm:min-w-[240px]">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Nomor Nota</span>
-              <Badge tone="neutral">{invoice.invoiceCode}</Badge>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-[var(--color-text-secondary)]">Tanggal dibuat</span>
-              <span className="text-sm font-medium text-[var(--color-text)]">{formatDate(invoice.createdAt)}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-[var(--color-text-secondary)]">Status bayar</span>
-              <PaymentStatusBadge status={invoice.paymentStatus} />
+            <div>
+              <p className="text-[10px] uppercase text-[var(--color-text-muted)] font-semibold tracking-wider">Segel Integritas</p>
+              <p className="font-mono text-[10px] text-[var(--color-text-secondary)] break-all">{invoice.integritySeal}</p>
             </div>
           </div>
         </div>
+
       </div>
 
-      <div className="relative px-5 py-5 sm:px-7 sm:py-6">
-        <div className="grid gap-4 xl:grid-cols-[1.22fr_0.78fr]">
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <InvoiceField label="Customer" value={invoice.customerName} />
-              <InvoiceField label="Order" value={order?.title ?? "Nota layanan / order"} />
-              <InvoiceField
-                label="Jadwal"
-                value={order?.scheduledDate ? `${formatDate(order.scheduledDate)}${order.scheduledTime ? `, ${order.scheduledTime}` : ""}` : "-"}
-              />
-              <InvoiceField label="Dibuat pada" value={formatDateTime(invoice.createdAt)} />
-            </div>
-
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4">
-              <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] pb-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Rincian pembayaran</p>
-                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Ringkasan item utama dari order yang sudah dicatat admin.</p>
-                </div>
-                <span className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--color-text-muted)]">1 item</span>
-              </div>
-
-              <div className="flex items-start justify-between gap-4 py-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-[var(--color-text)]">{order?.title ?? "Layanan / order"}</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
-                    {invoice.notes ?? "Tagihan ini dibuat dari order aktif yang sudah tercatat di Rapiin."}
-                  </p>
-                </div>
-                <p className="shrink-0 text-base font-semibold text-[var(--color-text)]">{formatCurrency(invoice.totalAmount)}</p>
-              </div>
-
-              <div className="border-t border-[var(--color-border)] pt-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm text-[var(--color-text-secondary)]">Total tagihan</span>
-                  <span className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">{formatCurrency(invoice.totalAmount)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {invoice.paymentStatus !== "PAID" && business.paymentInstructions && (
-              <div className="rounded-2xl border border-[var(--color-info-border)] bg-[var(--color-primary-surface)]/40 p-4">
-                <div className="flex items-center justify-between gap-2 border-b border-[var(--color-info-border)] pb-2 mb-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]">
-                    Instruksi Transfer
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof navigator !== "undefined" && business.paymentInstructions) {
-                        void navigator.clipboard.writeText(business.paymentInstructions);
-                        toast.success("Info rekening disalin!");
-                      }
-                    }}
-                    className="text-xs font-bold text-[var(--color-primary)] underline hover:text-[var(--color-primary)] active:text-[var(--color-primary-hover)]"
-                  >
-                    Salin Rekening
-                  </button>
-                </div>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {business.paymentInstructions}
-                </p>
-              </div>
-            )}
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Verifikasi dokumen</p>
-              <div className="mt-3 flex items-start gap-3">
-                {isValid ? (
-                  <ShieldCheck className="mt-0.5 h-5 w-5 text-[var(--color-success)]" />
-                ) : (
-                  <ShieldAlert className="mt-0.5 h-5 w-5 text-[var(--color-danger)]" />
-                )}
-                <div>
-                  <p className={`font-medium ${isValid ? "text-[var(--color-success-text)]" : "text-[var(--color-danger-text)]"}`}>
-                    {isValid ? "Segel nota valid" : "Segel nota tidak valid"}
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
-                    {isValid
-                      ? "Data inti nota cocok dengan segel integritas yang tersimpan."
-                      : "Ada data inti nota yang berubah setelah dokumen dibuat. Periksa ulang sebelum dibagikan."}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[var(--color-text-secondary)]">Kode verifikasi</span>
-                  <span className="font-semibold tracking-[0.18em] text-[var(--color-text)]">{invoice.verificationCode}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[var(--color-text-secondary)]">Segel integritas</span>
-                  <span className="font-semibold tracking-[0.12em] text-[var(--color-text)]">{invoice.integritySeal}</span>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-4 text-sm leading-6 text-[var(--color-warning)]">
-                <p className="font-medium">Catatan legal</p>
-                <p className="mt-1">{INVOICE_AUTH_COPY}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative border-t border-[var(--color-border)] bg-[var(--color-navy-900)] px-5 py-4 text-white sm:px-7">
-        <div className={`grid gap-3 ${compact ? "sm:grid-cols-1" : "sm:grid-cols-[1.2fr_0.8fr]"}`}>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">Hak cipta tampilan nota</p>
-            <p className="mt-1 text-sm leading-6 text-white/88">{INVOICE_LEGAL_COPY}</p>
-          </div>
-          <div className="sm:text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">Kode cek cepat</p>
-            <p className="mt-1 text-sm font-medium tracking-[0.18em] text-white">{invoice.verificationCode}</p>
-          </div>
-        </div>
+      <div className="bg-[var(--color-navy-900)] px-6 py-4 text-center text-white relative z-20">
+        <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 mb-1">Rapiin Secure Receipt</p>
+        <p className="text-[10px] text-white/40 leading-relaxed max-w-xs mx-auto">
+          {INVOICE_LEGAL_COPY}
+        </p>
       </div>
     </div>
   );
 }
 
-function InvoiceField({ label, value }: { label: string; value: string }) {
+function InvoiceRow({ label, value, valueClass = "text-sm font-medium text-[var(--color-text)] text-right" }: { label: string; value: string, valueClass?: string }) {
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
-      <p className="text-xs uppercase tracking-[0.16em] text-[var(--color-text-muted)]">{label}</p>
-      <p className="mt-2 text-sm font-medium leading-6 text-[var(--color-text)]">{value}</p>
+    <div className="flex justify-between items-start py-1.5">
+      <span className="text-sm text-[var(--color-text-secondary)] pr-4">{label}</span>
+      <span className={valueClass}>{value}</span>
     </div>
   );
 }

@@ -1,12 +1,4 @@
-import type { Business, BusinessMode, OperationalModel, NicheTemplate } from "@/types/business";
-
-export type PublicCatalogItem = {
-  id: string;
-  name: string;
-  description: string;
-  priceLabel?: string;
-  durationMinutes?: number;
-};
+import type { Business, BusinessMode, OperationalModel, NicheTemplate, PublicCatalogItem } from "@/types/business";
 
 export type PublicOrderField = {
   name: string;
@@ -33,9 +25,9 @@ const catalogByNiche: Record<NicheTemplate, PublicCatalogItem[]> = {
     { id: "tt_3", name: "Konsultasi Desain & Penempatan", description: "Ngobrol santai dengan artis tato untuk konsep dan estimasi harga.", priceLabel: "Gratis", durationMinutes: 30 },
   ],
   RENTAL: [
-    { id: "rt_1", name: "Sewa Kamera DSLR + Lensa Kit (Harian)", description: "Sewa kamera harian, termasuk tas, memori 64GB, dan 2 baterai.", priceLabel: "Rp 150.000", durationMinutes: 1440 },
-    { id: "rt_2", name: "Sewa Mobil City Car (24 Jam)", description: "Sewa mobil harian lepas kunci (kondisi bersih & bensin aman).", priceLabel: "Rp 300.000", durationMinutes: 1440 },
-    { id: "rt_3", name: "Sewa Motor Matic (Harian)", description: "Sewa motor matic untuk keliling kota, gratis 2 helm & jas hujan.", priceLabel: "Rp 75.000", durationMinutes: 1440 },
+    { id: "rt_1", name: "Sewa Paket 1 (Per Jam)", description: "Paket sewa per jam untuk unit/barang (misal: Sewa PS, Studio, Lapangan).", priceLabel: "Rp 10.000", durationMinutes: 60 },
+    { id: "rt_2", name: "Sewa Paket 2 (Setengah Hari)", description: "Paket sewa durasi menengah untuk unit/barang tertentu.", priceLabel: "Rp 50.000", durationMinutes: 720 },
+    { id: "rt_3", name: "Sewa Paket 3 (Harian)", description: "Paket sewa harian (misal: Alat berat, kendaraan, peralatan kemah).", priceLabel: "Rp 100.000", durationMinutes: 1440 },
   ],
   TOUR: [
     { id: "tr_1", name: "Paket Open Trip Kepulauan (1 Hari)", description: "Trip keliling pulau termasuk perahu penyeberangan, makan siang, & dokumentasi.", priceLabel: "Rp 250.000", durationMinutes: 720 },
@@ -117,8 +109,13 @@ function getOperationalModel(input: Business | BusinessMode) {
 }
 
 export function getPublicCatalog(input: Business | BusinessMode) {
-  if (typeof input === "object" && input.niche && catalogByNiche[input.niche]) {
-    return catalogByNiche[input.niche];
+  if (typeof input === "object") {
+    if (input.services && input.services.length > 0) {
+      return input.services;
+    }
+    if (input.niche && catalogByNiche[input.niche]) {
+      return catalogByNiche[input.niche];
+    }
   }
   return catalogByMode[getModeFromBusinessOrMode(input)];
 }

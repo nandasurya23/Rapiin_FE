@@ -15,7 +15,7 @@ type TopbarProps = {
 
 export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
   const pathname = usePathname();
-  const { business, currentUser, isSuperAdmin, canAccessWriteMode } = useAppData();
+  const { business, currentUser, isSuperAdmin, canAccessWriteMode, subscriptionForCurrentBusiness } = useAppData();
 
   // Derive current page label from nav items
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : APP_NAV_ITEMS;
@@ -96,7 +96,7 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
           </button>
 
           {/* ⚡ Asisten Pintar Rapiin — standalone prominent CTA (non-superadmin only) */}
-          {!isSuperAdmin ? (
+          {!isSuperAdmin && subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL" ? (
             <button
               type="button"
               disabled={!canAccessWriteMode}

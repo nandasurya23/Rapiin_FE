@@ -22,9 +22,9 @@ export function getHelperConsoleLimits(planCode: PlanCode): HelperConsoleLimits 
     case "FREE_TRIAL":
       return {
         planLabel: "Free Trial",
-        maxDailyCommands: 5,
-        maxHistoryLogs: 3,
-        allowedActions: ["CREATE_CUSTOMER", "SEARCH", "UNKNOWN"],
+        maxDailyCommands: 0,
+        maxHistoryLogs: 0,
+        allowedActions: [],
         macrosEnabled: false,
         autoExecuteInvoiceEnabled: false,
       };
@@ -49,9 +49,9 @@ export function getHelperConsoleLimits(planCode: PlanCode): HelperConsoleLimits 
     default:
       return {
         planLabel: "Free Trial",
-        maxDailyCommands: 5,
-        maxHistoryLogs: 3,
-        allowedActions: ["CREATE_CUSTOMER", "SEARCH", "UNKNOWN"],
+        maxDailyCommands: 0,
+        maxHistoryLogs: 0,
+        allowedActions: [],
         macrosEnabled: false,
         autoExecuteInvoiceEnabled: false,
       };

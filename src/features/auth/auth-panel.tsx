@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { CheckCircle2 } from "lucide-react";
+import Image from "next/image";
 import { ROUTES } from "@/lib/routes";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,14 +106,8 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         <div className="absolute right-8 bottom-16 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
 
         {/* Logo */}
-        <div className="relative flex items-center gap-3">
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl
-              bg-gradient-to-br from-amber-400 to-yellow-500 text-slate-900 font-black text-base select-none shadow-lg shadow-amber-500/30"
-          >
-            R
-          </div>
-          <span className="text-xl font-black text-white tracking-tight">Rapiin</span>
+        <div className="relative flex items-center mb-2">
+          <Image src="/images/rapiin.png" alt="Rapiin" width={140} height={40} className="h-10 w-auto object-contain brightness-0 invert" priority />
         </div>
 
         {/* Hero copy */}
@@ -142,14 +137,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
             ))}
           </ul>
 
-          {/* Demo hint */}
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-4 backdrop-blur-md space-y-2">
-            <p className="text-[10px] text-white/40 font-extrabold uppercase tracking-[0.15em]">Demo Local</p>
-            <div className="space-y-1">
-              <p className="text-xs text-white/60 font-mono bg-white/[0.04] rounded-lg px-3 py-1.5">superadmin@rapiin.local</p>
-              <p className="text-xs text-white/60 font-mono bg-white/[0.04] rounded-lg px-3 py-1.5">superadmin123</p>
-            </div>
-          </div>
+
         </div>
 
         {/* Footer */}
@@ -161,14 +149,8 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         <div className="w-full max-w-md">
 
           {/* Mobile logo */}
-          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl
-                bg-gradient-to-br from-[#0c1d3b] to-[#122a57] text-white font-black text-sm select-none shadow-md"
-            >
-              R
-            </div>
-            <span className="text-lg font-black text-[var(--color-text)] tracking-tight">Rapiin</span>
+          <div className="flex items-center mb-8 lg:hidden">
+            <Image src="/images/rapiin.png" alt="Rapiin" width={140} height={40} className="h-10 w-auto object-contain dark:brightness-0 dark:invert" priority />
           </div>
 
           {/* Heading */}

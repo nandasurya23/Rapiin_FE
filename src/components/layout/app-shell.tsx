@@ -13,7 +13,7 @@ import { useAppData } from "@/components/providers/app-data-provider";
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { hydrated, currentUser, currentUserRole } = useAppData();
+  const { hydrated, currentUser, currentUserRole, subscriptionForCurrentBusiness } = useAppData();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
@@ -32,6 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (currentUserRole === "SUPER_ADMIN") return;
+      if (subscriptionForCurrentBusiness?.planCode === "FREE_TRIAL") return;
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -40,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentUserRole]);
+  }, [currentUserRole, subscriptionForCurrentBusiness?.planCode]);
 
   useEffect(() => {
     if (!hydrated) return;

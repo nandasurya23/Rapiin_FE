@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, PencilLine, RotateCcw, Users, Sparkles, UserPlus, MessageSquare, Phone, MapPin, Calendar } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, PencilLine, RotateCcw, Users, Sparkles, Phone, Calendar, MessageSquare, Plus } from "lucide-react";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import type { Customer, CustomerStatus } from "@/types/customer";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
 import { Pagination } from "@/components/ui/pagination";
+import { Sheet } from "@/components/ui/sheet";
 import { cn } from "@/lib/cn";
 
 type FilterValue = "ALL" | CustomerStatus;
@@ -44,8 +45,7 @@ export function CustomerManager() {
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [chatPasteText, setChatPasteText] = useState("");
-
-  const formRef = useRef<HTMLDivElement>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const isDuplicatePhone = useMemo(() => {
     const normalized = normalizePhoneNumber(form.whatsappNumber);
@@ -102,6 +102,11 @@ export function CustomerManager() {
     setChatPasteText("");
   }
 
+  function handleCreateNew() {
+    resetForm();
+    setIsFormOpen(true);
+  }
+
   function startEdit(customer: Customer) {
     setEditingId(customer.id);
     setForm({
@@ -111,9 +116,8 @@ export function CustomerManager() {
       source: customer.source ?? "",
       notes: customer.notes ?? "",
     });
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
+    setError("");
+    setIsFormOpen(true);
   }
 
   async function handleSubmit() {
@@ -142,6 +146,7 @@ export function CustomerManager() {
         });
         toast.success("Customer diperbarui");
         resetForm();
+        setIsFormOpen(false);
         return;
       }
 
@@ -153,17 +158,18 @@ export function CustomerManager() {
           source: form.source.trim() || undefined,
           notes: form.notes.trim() || undefined,
         });
-        toast.success("Customer berhasil ditambahkan");
+        toast.success("Customer berhasil ditambahkan!");
         resetForm();
-      } catch (submitError) {
-        setError(submitError instanceof Error ? submitError.message : "Customer belum bisa ditambahkan.");
+        setIsFormOpen(false);
+      } catch (createErr) {
+        toast.error("Gagal menambah customer", createErr instanceof Error ? createErr.message : (readOnlyReason ?? undefined));
       }
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Helpers for CRM Initials Avatar and gradients
+  // Helpers for Avatar
   function getInitials(name: string) {
     const parts = name.trim().split(/\s+/);
     if (parts.length === 0 || !parts[0]) return "?";
@@ -184,7 +190,6 @@ export function CustomerManager() {
       {/* SECTION 1: HERO HEADER */}
       <section className="animate-fade-up">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          {/* Background decorative glows */}
           <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
           <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
           
@@ -192,35 +197,45 @@ export function CustomerManager() {
             {/* Left */}
             <div className="space-y-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <Users className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-                Manajemen Pelanggan
+                <Users className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
+                Database Pelanggan
               </span>
               <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Database Pelanggan CRM
+                CRM &amp; Manajemen Pelanggan
               </h1>
               <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Kelola data pelanggan, pantau status interaksi follow-up, serta gunakan pintasan pesan WhatsApp secara terorganisir.
+                Kelola kontak, rekam riwayat interaksi, dan identifikasi pelanggan loyal (CRM). Semua pelanggan yang tersimpan bisa ditelepon atau dikirimi template WhatsApp dalam 1 klik.
               </p>
             </div>
 
-            {/* Right: Summary Badge */}
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold">
-                {filteredCustomers.length} Pelanggan Terdaftar
+            {/* Right: Actions */}
+            <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
+              <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold h-12 flex items-center">
+                {customers.length} Terdaftar
               </Badge>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleCreateNew}
+                disabled={!canCreateCustomer}
+                className="h-12 px-6 rounded-2xl font-bold shadow-sm"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Tambah Pelanggan
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: SEARCH & QUICK CONTROLS */}
+      {/* SECTION 2: SEARCH & STATS */}
       <section className="animate-fade-up-delay-1">
         <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-5 p-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
-              {/* Left search */}
+            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              {/* Search & Filters */}
               <div className="space-y-4">
-                <label className="relative block">
+                <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
                   <Input
                     value={query}
@@ -228,25 +243,29 @@ export function CustomerManager() {
                     placeholder="Cari nama pelanggan, nomor WA, atau sumber..."
                     className="pl-9"
                   />
-                </label>
-
-                <FilterChipGroup
-                  options={CUSTOMER_FILTER_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
-                  value={filter}
-                  onChange={(v) => setFilter(v as FilterValue)}
-                  size="sm"
-                />
+                </div>
+                <div>
+                  <p className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Filter Status Pelanggan</p>
+                  <FilterChipGroup
+                    options={CUSTOMER_FILTER_OPTIONS}
+                    value={filter}
+                    onChange={(v) => setFilter(v as FilterValue)}
+                    size="sm"
+                  />
+                </div>
               </div>
 
-              {/* Right stats cards */}
-              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              {/* Status Summary Stats */}
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 flex flex-col justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Total</p>
-                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{customers.length}</p>
-                  <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Pelanggan tercatat</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Baru</p>
+                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">
+                    {customers.filter((customer) => customer.status === "NEW").length}
+                  </p>
+                  <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Customer baru</p>
                 </div>
                 <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 flex flex-col justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)]">Perlu Follow-Up</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)]">Follow-Up</p>
                   <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">
                     {customers.filter((customer) => customer.status === "NEED_FOLLOW_UP").length}
                   </p>
@@ -259,126 +278,6 @@ export function CustomerManager() {
                   </p>
                   <p className="text-[9px] text-[var(--color-success-text)] font-semibold">Order beres</p>
                 </div>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
-
-      {/* SECTION 3: FORM TAMBAH / EDIT CUSTOMER */}
-      <section ref={formRef} className="animate-fade-up-delay-2">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-4 p-5 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border)] pb-3">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--color-text)]">
-                  {editingId ? "Edit Profil Pelanggan" : "Tambah Pelanggan Baru"}
-                </h2>
-                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Input data pelanggan atau gunakan pintasan isi otomatis di bawah.</p>
-                {!editingId && !canCreateCustomer ? (
-                  <p className="mt-2 text-xs font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 rounded-xl">
-                    ⚠️ {readOnlyReason ?? `Batas kuota pelanggan penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`}
-                  </p>
-                ) : null}
-              </div>
-              {editingId ? (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] active:scale-95 transition"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Batal Edit
-                </button>
-              ) : null}
-            </div>
-
-            <div className="grid gap-4">
-              {/* WhatsApp Auto-Parser box (Only when creating) */}
-              {!editingId && (
-                <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/10 dark:border-indigo-900/60 dark:bg-indigo-950/20 p-4 space-y-2 relative overflow-hidden">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/60 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-                      <Sparkles className="h-2.5 w-2.5 animate-pulse" />
-                      Pintasan Pengisi Otomatis
-                    </span>
-                    <p className="text-[10px] text-[var(--color-text-muted)] font-semibold">Salin & Tempel Chat WhatsApp</p>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                    Tempel format rekapan pemesanan WhatsApp di bawah. Sistem Rapiin akan membaca Nama, Nomor WA, dan Alamat otomatis.
-                  </p>
-                  <Textarea
-                    value={chatPasteText}
-                    onChange={(event) => handleChatPasteChange(event.target.value)}
-                    placeholder="Contoh format tempel:&#10;Nama: Budi Luhur&#10;No HP: 08123456789&#10;Alamat: Jl. Sudirman No 12, Jakarta"
-                    rows={3}
-                    className="bg-[var(--color-surface)] border-[var(--color-border)] rounded-xl"
-                  />
-                  <div className="absolute -right-6 -bottom-6 h-12 w-12 rounded-full bg-indigo-500/[0.01] pointer-events-none" />
-                </div>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nama Pelanggan</span>
-                  <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nomor WhatsApp</span>
-                  <Input
-                    value={form.whatsappNumber}
-                    onChange={(event) => setForm((current) => ({ ...current, whatsappNumber: event.target.value }))}
-                    placeholder="Contoh: 08123456789"
-                  />
-                  {isDuplicatePhone && (
-                    <p className="mt-2 text-xs font-medium text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] rounded-xl px-3 py-2 leading-relaxed">
-                      ⚠️ Nomor ini sudah terdaftar atas nama pelanggan <strong>{isDuplicatePhone.name}</strong>.
-                    </p>
-                  )}
-                </label>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pelanggan</span>
-                  <Select
-                    value={form.status}
-                    onValueChange={(value) => setForm((current) => ({ ...current, status: value as CustomerStatus }))}
-                    options={Object.entries(CUSTOMER_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Sumber Pendaftaran</span>
-                  <Input
-                    value={form.source}
-                    onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))}
-                    placeholder="Contoh: WhatsApp, Instagram, Link Bisnis"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Catatan Pelanggan / Alamat</span>
-                <Textarea
-                  value={form.notes}
-                  onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                  placeholder="Masukkan detail catatan singkat atau alamat pengiriman pelanggan..."
-                  rows={2}
-                />
-              </label>
-
-              {error ? <p className="text-xs font-bold text-[var(--color-danger)]">{error}</p> : null}
-              
-              <div className="pt-2">
-                <Button
-                  type="button"
-                  isLoading={isSubmitting}
-                  onClick={() => void handleSubmit()}
-                  disabled={!editingId && !canCreateCustomer}
-                  className="shadow-sm font-bold text-sm px-6 py-2.5 rounded-xl"
-                >
-                  {editingId ? "Simpan Perubahan" : "Simpan Pelanggan"}
-                </Button>
               </div>
             </div>
           </CardBody>
@@ -503,6 +402,124 @@ export function CustomerManager() {
           />
         </div>
       </section>
+
+      {/* FORM SHEET */}
+      <Sheet
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        title={editingId ? "Edit Profil Pelanggan" : "Tambah Pelanggan Baru"}
+        description="Input data pelanggan atau gunakan pintasan isi otomatis."
+        className="w-full sm:max-w-xl md:max-w-2xl"
+      >
+        <div className="space-y-6 pt-4 pb-12 overflow-y-auto">
+          {!editingId && !canCreateCustomer ? (
+            <p className="mt-2 text-xs font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 rounded-xl">
+              ⚠️ {readOnlyReason ?? `Batas kuota pelanggan penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`}
+            </p>
+          ) : null}
+
+          {/* WhatsApp Auto-Parser box (Only when creating) */}
+          {!editingId && (
+            <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/10 dark:border-indigo-900/60 dark:bg-indigo-950/20 p-4 space-y-2 relative overflow-hidden">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/60 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                  <Sparkles className="h-2.5 w-2.5 animate-pulse" />
+                  Pintasan Pengisi Otomatis
+                </span>
+                <p className="text-[10px] text-[var(--color-text-muted)] font-semibold">Salin & Tempel Chat WhatsApp</p>
+              </div>
+              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                Tempel format rekapan pemesanan WhatsApp di bawah. Sistem Rapiin akan membaca Nama, Nomor WA, dan Alamat otomatis.
+              </p>
+              <Textarea
+                value={chatPasteText}
+                onChange={(event) => handleChatPasteChange(event.target.value)}
+                placeholder="Contoh format tempel:&#10;Nama: Budi Luhur&#10;No HP: 08123456789&#10;Alamat: Jl. Sudirman No 12, Jakarta"
+                rows={3}
+                className="bg-[var(--color-surface)] border-[var(--color-border)] rounded-xl"
+              />
+              <div className="absolute -right-6 -bottom-6 h-12 w-12 rounded-full bg-indigo-500/[0.01] pointer-events-none" />
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nama Pelanggan</span>
+              <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nomor WhatsApp</span>
+              <Input
+                value={form.whatsappNumber}
+                onChange={(event) => setForm((current) => ({ ...current, whatsappNumber: event.target.value }))}
+                placeholder="Contoh: 08123456789"
+              />
+              {isDuplicatePhone && (
+                <p className="mt-2 text-xs font-medium text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] rounded-xl px-3 py-2 leading-relaxed">
+                  ⚠️ Nomor ini sudah terdaftar atas nama pelanggan <strong>{isDuplicatePhone.name}</strong>.
+                </p>
+              )}
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pelanggan</span>
+              <Select
+                value={form.status}
+                onValueChange={(value) => setForm((current) => ({ ...current, status: value as CustomerStatus }))}
+                options={Object.entries(CUSTOMER_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Sumber Pendaftaran</span>
+              <Input
+                value={form.source}
+                onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))}
+                placeholder="Contoh: WhatsApp, Instagram, Link Bisnis"
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Catatan Pelanggan / Alamat</span>
+            <Textarea
+              value={form.notes}
+              onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+              placeholder="Masukkan detail catatan singkat atau alamat pengiriman pelanggan..."
+              rows={2}
+            />
+          </label>
+
+          {error ? <p className="text-xs font-bold text-[var(--color-danger)]">{error}</p> : null}
+          
+          <div className="pt-2 flex flex-col gap-2">
+            <Button
+              type="button"
+              isLoading={isSubmitting}
+              onClick={() => void handleSubmit()}
+              disabled={!editingId && !canCreateCustomer}
+              className="w-full shadow-sm font-bold text-sm h-11 rounded-xl"
+            >
+              {editingId ? "Simpan Perubahan" : "Simpan Pelanggan"}
+            </Button>
+            {editingId && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  resetForm();
+                  setIsFormOpen(false);
+                }}
+                className="w-full h-11 rounded-xl font-bold text-xs"
+              >
+                <RotateCcw className="h-4 w-4 mr-1.5" />
+                Batal Edit
+              </Button>
+            )}
+          </div>
+        </div>
+      </Sheet>
     </main>
   );
 }

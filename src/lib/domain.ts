@@ -66,11 +66,11 @@ function endOfPeriod(period: ReportPeriod, referenceDate: Date) {
   return new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1);
 }
 
-function getOrderReferenceDate(order: Order) {
+export function getOrderReferenceDate(order: Order) {
   return order.scheduledDate ?? toDateKey(new Date(order.createdAt));
 }
 
-function isWithinPeriod(value: string, period: ReportPeriod, referenceDate: Date) {
+export function isWithinPeriod(value: string, period: ReportPeriod, referenceDate: Date) {
   const start = startOfPeriod(period, referenceDate);
   const end = endOfPeriod(period, referenceDate);
   const parsed = parseDateKey(value);

@@ -78,6 +78,7 @@ const SUGGESTED_COMMANDS = [
 ];
 
 export default function AssistantPage() {
+  const router = useRouter();
   const toast = useToast();
   const {
     business,
@@ -130,6 +131,12 @@ export default function AssistantPage() {
   useEffect(() => {
     setSettings(getHelperSettings(planCode));
   }, [planCode]);
+
+  useEffect(() => {
+    if (planCode === "FREE_TRIAL") {
+      router.replace(ROUTES.dashboard);
+    }
+  }, [planCode, router]);
 
   // Sync daily usage initially
   useEffect(() => {

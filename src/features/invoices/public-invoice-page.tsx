@@ -4,6 +4,7 @@ import { Download, ReceiptText, Send, Share2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import * as htmlToImage from "html-to-image";
+import Image from "next/image";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
@@ -108,135 +109,84 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
   }
 
   return (
-    <main className="page-enter mx-auto min-h-screen max-w-[1380px] px-4 py-6 sm:px-6 lg:px-8">
-      <section className="grid gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-md)] xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-3">
-          <Badge tone={isFallback ? "warning" : "success"}>{isFallback ? "Fallback nota" : "Nota publik"}</Badge>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-[var(--color-text)]">Nota {invoice.invoiceCode}</h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-              Customer bisa lihat ringkasan nota tanpa perlu login.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <LinkButton href={ROUTES.publicBusiness(business.slug)}>Lihat Bisnis</LinkButton>
+    <main className="page-enter mx-auto min-h-screen max-w-lg px-4 py-8 sm:px-6">
+      <div className="flex flex-col gap-6">
+        {/* Header Info */}
+        <div className="text-center">
+          <Badge tone={isFallback ? "warning" : "success"} className="mb-3">
+            {isFallback ? "Fallback nota" : "Nota Resmi Publik"}
+          </Badge>
+          <p className="text-sm text-[var(--color-text-secondary)]">Nota ini sah dan otomatis diterbitkan oleh sistem.</p>
+        </div>
+
+        {/* Invoice Sheet */}
+        <div id="invoice-sheet-container" className="mx-auto w-full max-w-[400px]">
+          <InvoiceSheet business={business} invoice={invoice} order={order} />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid gap-3 pt-6 border-t border-[var(--color-border)]">
+          <WhatsAppButton
+            phoneNumber={order?.whatsappNumber ?? business.whatsappNumber}
+            message={shareMessage}
+            label="Kirim ke WhatsApp"
+          />
+          <Button
+            type="button"
+            isLoading={loadingAction === "share-image"}
+            onClick={handleShareImage}
+          >
+            <Share2 className="h-4 w-4" />
+            Bagikan Gambar Nota
+          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              isLoading={loadingAction === "download-image"}
+              onClick={handleDownloadImage}
+            >
+              <Download className="h-4 w-4" />
+              Unduh (.PNG)
+            </Button>
             <Button
               type="button"
               variant="secondary"
               isLoading={loadingAction === "copy-share-message"}
               onClick={async () => {
                 setLoadingAction("copy-share-message");
-                  try {
-                    await copyToClipboard(shareMessage);
-                    toast.success("Ringkasan nota disalin");
-                  } finally {
-                    setLoadingAction(null);
-                  }
+                try {
+                  await copyToClipboard(shareMessage);
+                  toast.success("Teks nota disalin");
+                } finally {
+                  setLoadingAction(null);
+                }
               }}
             >
               <Send className="h-4 w-4" />
-              Salin Ringkasan
+              Salin Teks
             </Button>
           </div>
+
+          <div className="flex items-center justify-center gap-4 pt-4 mt-2">
+            <LinkButton href={ROUTES.publicBusiness(business.slug)} variant="secondary" className="text-xs py-1.5 px-3 h-auto">
+              Profil Bisnis
+            </LinkButton>
+            <span className="text-[var(--color-border)]">|</span>
+            <LinkButton href={ROUTES.dashboard} variant="secondary" className="text-xs py-1.5 px-3 h-auto">
+              Buat Nota Sendiri
+            </LinkButton>
+          </div>
         </div>
+      </div>
 
-        <Card className="bg-[var(--color-primary-surface)]">
-          <CardBody className="space-y-4 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">{business.name}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Nota siap dibaca di HP.</p>
-              </div>
-              <ReceiptText className="h-5 w-5 text-[var(--color-primary)]" />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-                <p className="text-xs text-[var(--color-text-muted)]">Tanggal</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{formatDate(invoice.createdAt)}</p>
-              </div>
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-                <p className="text-xs text-[var(--color-text-muted)]">Status</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">{invoice.paymentStatus}</p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
-
-      <section className="mt-6 grid gap-6 2xl:grid-cols-[1.14fr_0.86fr]">
-        <Card>
-          <CardBody className="space-y-4 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--color-text)]">Detail nota</h2>
-                <p className="text-sm text-[var(--color-text-secondary)]">Tampilan nota resmi dengan kode verifikasi dan segel integritas.</p>
-              </div>
-            </div>
-            <div id="invoice-sheet-container">
-              <InvoiceSheet business={business} invoice={invoice} order={order} />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <WhatsAppButton
-                phoneNumber={order?.whatsappNumber ?? business.whatsappNumber}
-                message={shareMessage}
-                label="Kirim Nota WA"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                isLoading={loadingAction === "copy-invoice-code"}
-                onClick={async () => {
-                  setLoadingAction("copy-invoice-code");
-                  try {
-                    await copyToClipboard(invoice.invoiceCode);
-                    toast.success("Kode invoice disalin");
-                  } finally {
-                    setLoadingAction(null);
-                  }
-                }}
-              >
-                <Download className="h-4 w-4" />
-                Salin Kode
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="space-y-4 p-5">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Download / share gambar</h2>
-              <p className="text-sm text-[var(--color-text-secondary)]">Simpan nota sebagai file gambar untuk langsung dikirim via WhatsApp.</p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                isLoading={loadingAction === "share-image"}
-                onClick={handleShareImage}
-              >
-                <Share2 className="h-4 w-4" />
-                Bagikan Gambar Nota
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                isLoading={loadingAction === "download-image"}
-                onClick={handleDownloadImage}
-              >
-                <Download className="h-4 w-4" />
-                Unduh Gambar (.PNG)
-              </Button>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 pt-4 border-t border-[var(--color-border)]">
-              <LinkButton href={ROUTES.businessLink}>Link Bisnis</LinkButton>
-              <LinkButton href={ROUTES.dashboard} variant="secondary">
-                Kembali ke App
-              </LinkButton>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
+      {/* Powered By Rapiin Footer */}
+      <div className="mt-8 flex justify-center pb-8">
+        <a href="/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity">
+          <span className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-widest">Powered by</span>
+          <Image src="/images/rapiin.png" alt="Rapiin" width={80} height={24} className="h-5 w-auto object-contain grayscale hover:grayscale-0 transition-all" />
+        </a>
+      </div>
     </main>
   );
 }

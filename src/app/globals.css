@@ -59,7 +59,7 @@
   --color-accent-hover:    #AF752E;
   --color-accent-active:   #8A5A1E;
   --color-accent-surface:  rgba(218, 159, 78, 0.1);
-  --color-accent-text:     #FFFFFF;
+  --color-accent-text:     #0B1F47;
 
   /* === STATUS (Brand-derived, no Tailwind defaults) === */
   --color-success:         #1E7A52;

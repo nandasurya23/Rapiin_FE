@@ -59,6 +59,7 @@ type BusinessSettingsInput = Pick<
   | "address"
   | "paymentInstructions"
   | "logoUrl"
+  | "services"
 >;
 
 type CustomerInput = {
@@ -227,6 +228,7 @@ function normalizeBusinessPayload(current: Business, payload: Partial<BusinessSe
     resourceLabel,
     resourceCount,
     resources,
+    services: payload.services !== undefined ? payload.services : current.services,
     bookingCapacity: payload.bookingCapacity !== undefined ? payload.bookingCapacity : current.bookingCapacity,
     defaultBookingDurationMinutes:
       payload.defaultBookingDurationMinutes ?? current.defaultBookingDurationMinutes,
@@ -776,8 +778,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       scheduledDate: input.payload.scheduledDate || input.payload.deadline || undefined,
       scheduledTime: input.payload.scheduledTime || undefined,
       bookingDurationMinutes: input.payload.bookingDurationMinutes ? Number(input.payload.bookingDurationMinutes) : undefined,
-      resourceId: undefined,
-      resourceNameSnapshot: undefined,
+      resourceId: input.payload.resourceId || undefined,
+      resourceNameSnapshot: state.business.resources?.find((r) => r.id === input.payload.resourceId)?.name || undefined,
       totalAmount: input.payload.budget ? Number(input.payload.budget.replace(/[^\d]/g, "")) : undefined,
       notes: input.payload.notes?.trim() || undefined,
       customerStatusSnapshot: "NEW",

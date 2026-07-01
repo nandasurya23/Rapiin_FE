@@ -66,7 +66,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   ].join(" "),
 
   accent: [
-    "bg-[var(--color-accent)] text-[var(--color-text-inverse)]",
+    "bg-[var(--color-accent)] text-[var(--color-accent-text)]",
     "border border-[var(--color-accent)]",
     "hover:bg-[var(--color-accent-hover)] hover:border-[var(--color-accent-hover)]",
     "active:bg-[var(--color-accent-active)]",

@@ -247,7 +247,7 @@ function ClosedDaySection({
             <div className="grid gap-3 md:grid-cols-2 animate-fade-in">
               <label className="block opacity-60">
                 <span className="mb-2 block text-xs font-semibold text-[var(--color-text)]">Mulai Tanggal</span>
-                <DatePicker value={selectedDate} onValueChange={() => {}} disabled={true} />
+                <DatePicker value={selectedDate} onValueChange={() => { }} disabled={true} />
               </label>
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold text-[var(--color-text)]">Sampai Tanggal</span>
@@ -591,7 +591,7 @@ function CalendarDetailContent({
                       Buat Nota
                     </Button>
                   )}
-                  
+
                   <button
                     type="button"
                     onClick={() => setExpandedOrderId(isEditing ? null : order.id)}
@@ -704,18 +704,18 @@ function CalendarDetailContent({
 
 function getTimelineCardClasses(status: OrderStatus, paymentStatus: PaymentStatus) {
   if (status === "BATAL") {
-    return "bg-red-500/10 border-red-500/20 text-red-500 line-through";
+    return "bg-[var(--color-danger-surface)] border-[var(--color-danger)] border text-[var(--color-danger)] line-through opacity-70";
   }
   if (status === "SELESAI") {
-    return "bg-slate-500/10 border-slate-500/20 text-slate-500";
+    return "bg-[var(--color-surface-inset)] border-[var(--color-border-strong)] border text-[var(--color-text-secondary)] opacity-90";
   }
   if (status === "CONFIRMED" || paymentStatus === "PAID") {
-    return "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300";
+    return "bg-[var(--color-success-surface)] border-[var(--color-success)] border-2 text-[var(--color-success-text)] shadow-sm font-extrabold";
   }
   if (status === "WAITING_DP" || paymentStatus === "DP_PAID") {
-    return "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300";
+    return "bg-[var(--color-warning-surface)] border-[var(--color-warning)] border-2 text-[var(--color-warning-text)] shadow-sm font-extrabold";
   }
-  return "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-300";
+  return "bg-[var(--color-primary-surface)] border-[var(--color-primary)] border-2 text-[var(--color-primary)] shadow-sm font-extrabold ring-2 ring-[var(--color-primary)]/20";
 }
 
 function getTimelineStatusLabel(status: OrderStatus): string {
@@ -804,8 +804,8 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
   const unassignedSelectedOrders = useMemo(
     () =>
       selectedOrders
-        .filter((order) => !order.resourceId)
-        .sort((left, right) => (left.scheduledTime ?? "").localeCompare(right.scheduledTime ?? "")),
+        .filter((order) => !order.resourceId && order.status !== "SELESAI")
+        .sort((left, right) => (left.scheduledTime ?? "23:59").localeCompare(right.scheduledTime ?? "23:59")),
     [selectedOrders]
   );
 
@@ -821,8 +821,14 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
   );
   const visibleResourceDetails = selectedResourceDetails.slice(0, 3);
   const hiddenResourceCount = Math.max(selectedResourceDetails.length - visibleResourceDetails.length, 0);
-  const visibleSelectedOrders = selectedOrders.slice(0, 3);
-  const hiddenSelectedOrderCount = Math.max(selectedOrders.length - visibleSelectedOrders.length, 0);
+  const activeSelectedOrdersForDetail = useMemo(() => {
+    return selectedOrders
+      .filter((o) => o.status !== "SELESAI")
+      .sort((a, b) => (a.scheduledTime || "23:59").localeCompare(b.scheduledTime || "23:59"));
+  }, [selectedOrders]);
+
+  const visibleSelectedOrders = activeSelectedOrdersForDetail.slice(0, 3);
+  const hiddenSelectedOrderCount = Math.max(activeSelectedOrdersForDetail.length - visibleSelectedOrders.length, 0);
 
   useEffect(() => {
     setDraftStatuses({});
@@ -1031,6 +1037,16 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
 
   const activeResources = useMemo(() => (business.resources ?? []).filter((resource) => resource.isActive), [business.resources]);
 
+  const [startHour, endHour] = useMemo(() => {
+    if (!business.openingHours) return [7, 21];
+    const [startStr, endStr] = business.openingHours.split(" - ");
+    const s = parseInt(startStr?.split(":")[0], 10);
+    const e = parseInt(endStr?.split(":")[0], 10);
+    return [Number.isNaN(s) ? 7 : s, Number.isNaN(e) ? 21 : e];
+  }, [business.openingHours]);
+
+  const startOffsetMinutes = startHour * 60;
+
   const positionedOrders = useMemo(() => {
     const sorted = [...selectedOrders].sort((a, b) => (a.scheduledTime || "").localeCompare(b.scheduledTime || ""));
     return sorted.map((order) => {
@@ -1051,14 +1067,15 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
 
       return {
         order,
-        top: ((start - 420) * 64) / 60,
+        top: ((start - startOffsetMinutes) * 64) / 60,
         height: ((order.bookingDurationMinutes || 60) * 64) / 60,
         leftClass: hasOverlap ? (positionIdx === 0 ? "left-1 w-[47%]" : "left-[51%] w-[47%]") : "left-1 right-1",
       };
     });
-  }, [selectedOrders]);
+  }, [selectedOrders, startOffsetMinutes]);
 
-  const hours = Array.from({ length: 15 }, (_, i) => i + 7);
+  const hoursLength = Math.max(1, endHour - startHour + 1);
+  const hours = Array.from({ length: hoursLength }, (_, i) => i + startHour);
 
   return (
     <>
@@ -1165,7 +1182,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                             : (isCurrentMonth ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]" : "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]/40")
                         ),
                         isToday && !isSelected && "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-semibold",
-                        isSelected && "border-transparent bg-[var(--color-primary)] !text-white shadow-[var(--shadow-sm)]"
+                        isSelected && "border-transparent bg-[var(--color-primary)] text-white shadow-[var(--shadow-sm)]"
                       )}
                     >
                       <span className="text-[10px] font-medium sm:text-xs md:text-sm">{date.getDate()}</span>
@@ -1176,7 +1193,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                           badgeTone === "success" && !isSelected && "border-[var(--color-success-border)] bg-[var(--color-success-surface)] text-[var(--color-success)]",
                           badgeTone === "danger" && !isSelected && "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] text-[var(--color-danger)]",
                           badgeTone === "warning" && !isSelected && "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]",
-                          isSelected && "!border-white/20 !bg-white/20 !text-white"
+                          isSelected && "border-white/20 bg-white/20 text-white"
                         )}
                       >
                         <span className="sm:hidden">{compactBadgeLabel}</span>
@@ -1233,9 +1250,9 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                       {/* Hour rows and content grid */}
                       <div className="relative flex" style={{ height: "960px" }}>
                         {/* Time labels axis */}
-                        <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/40 flex flex-col z-10">
+                        <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/60 flex flex-col z-10">
                           {hours.map((h) => (
-                            <div key={h} className="h-16 text-[10px] text-[var(--color-text-muted)] border-b border-[var(--color-border)]/20 flex items-start justify-center pt-1 font-mono">
+                            <div key={h} className="h-16 text-[11px] font-bold text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/60 flex items-start justify-center pt-1.5 font-mono">
                               {String(h).padStart(2, "0")}:00
                             </div>
                           ))}
@@ -1254,9 +1271,11 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                                     onClick={() => {
                                       toast.info("Pembuatan Order", `Ketik "booking di ${res.name} jam ${h}" di Asisten Pintar (Cmd+K) untuk input cepat!`);
                                     }}
-                                    className="absolute left-0 right-0 border-b border-[var(--color-border)]/20 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
+                                    className="absolute left-0 right-0 border-b border-[var(--color-border)]/60 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
                                     style={{ top: `${idx * 64}px`, height: "64px" }}
-                                  />
+                                  >
+                                    <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--color-border)]/30" />
+                                  </div>
                                 ))}
 
                                 {/* Order block cards */}
@@ -1264,7 +1283,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                                   const [hStr, mStr] = (order.scheduledTime || "08:00").split(":");
                                   const h = Number(hStr || 8);
                                   const m = Number(mStr || 0);
-                                  const startOffset = h * 60 + m - 420; // 07:00 is 420
+                                  const startOffset = h * 60 + m - startOffsetMinutes;
                                   const top = (startOffset * 64) / 60;
                                   const height = ((order.bookingDurationMinutes || 60) * 64) / 60;
 
@@ -1319,9 +1338,9 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                       {/* Hour rows and content grid */}
                       <div className="relative flex" style={{ height: "960px" }}>
                         {/* Time labels axis */}
-                        <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/40 flex flex-col z-10">
+                        <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/60 flex flex-col z-10">
                           {hours.map((h) => (
-                            <div key={h} className="h-16 text-[10px] text-[var(--color-text-muted)] border-b border-[var(--color-border)]/20 flex items-start justify-center pt-1 font-mono">
+                            <div key={h} className="h-16 text-[11px] font-bold text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/60 flex items-start justify-center pt-1.5 font-mono">
                               {String(h).padStart(2, "0")}:00
                             </div>
                           ))}
@@ -1336,9 +1355,11 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
                               onClick={() => {
                                 toast.info("Pembuatan Order", `Ketik "booking jam ${h}" di Asisten Pintar (Cmd+K) untuk input cepat!`);
                               }}
-                              className="absolute left-0 right-0 border-b border-[var(--color-border)]/20 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
+                              className="absolute left-0 right-0 border-b border-[var(--color-border)]/60 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
                               style={{ top: `${idx * 64}px`, height: "64px" }}
-                            />
+                            >
+                              <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--color-border)]/30" />
+                            </div>
                           ))}
 
                           {/* Order blocks */}

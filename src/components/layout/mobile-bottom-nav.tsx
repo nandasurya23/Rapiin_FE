@@ -6,10 +6,16 @@ import { cn } from "@/lib/cn";
 import { MOBILE_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 import { useAppData } from "@/components/providers/app-data-provider";
 
+import { ROUTES } from "@/lib/routes";
+
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { isSuperAdmin } = useAppData();
-  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : MOBILE_NAV_ITEMS;
+  const { isSuperAdmin, subscriptionForCurrentBusiness } = useAppData();
+  const navItems = isSuperAdmin 
+    ? SUPER_ADMIN_NAV_ITEMS 
+    : MOBILE_NAV_ITEMS.filter(item => 
+        item.href !== ROUTES.assistant || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
+      );
 
   return (
     <nav
@@ -24,7 +30,7 @@ export function MobileBottomNav() {
       <div
         className={cn(
           "grid px-1 py-1",
-          isSuperAdmin ? "grid-cols-2" : "grid-cols-7"
+          isSuperAdmin ? "grid-cols-2" : navItems.length === 6 ? "grid-cols-6" : "grid-cols-7"
         )}
       >
         {navItems.map((item) => {
