@@ -43,6 +43,7 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
     if (!order) return;
     
     function calculateQueue() {
+      if (!order) return;
       // Hitung order aktif (PROSES, MENUNGGU, WAITING_DP) yang masuk sebelum order ini
       const activeStatuses = ["MENUNGGU", "WAITING_DP", "PROSES"];
       const ahead = orders.filter((o) => 
