@@ -1137,14 +1137,6 @@ export function PublicOrderForm({ slug }: { slug: string }) {
           </Card>
         </div>
       )}
-
-      {/* Powered By Rapiin Footer */}
-      <div className="relative z-0 mt-12 flex justify-center pb-8">
-        <a href="/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity">
-          <span className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-widest">Powered by</span>
-          <Image src="/images/rapiin.png" alt="Rapiin" width={80} height={24} className="h-5 w-auto object-contain grayscale hover:grayscale-0 transition-all" />
-        </a>
-      </div>
     </main>
   );
 }

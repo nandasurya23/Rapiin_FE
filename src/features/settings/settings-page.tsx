@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { cn } from "@/lib/cn";
 import {
   BUSINESS_MODE_OPTIONS,
   createBusinessResources,
@@ -733,7 +732,7 @@ export function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              {form.services.map((service, index) => (
+              {form.services.map((service) => (
                 <div key={service.id} className="relative flex flex-col gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 hover:border-[var(--color-border-strong)] transition">
                   <div className="absolute right-4 top-4">
                     <button
