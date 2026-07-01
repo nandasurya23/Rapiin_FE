@@ -463,7 +463,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between text-xs">
                   <div className="space-y-0.5">
-                    <p className="font-bold text-white font-semibold">Autofocus Input</p>
+                    <p className="font-semibold text-white">Autofocus Input</p>
                     <p className="text-[10px] text-white/40">Fokus otomatis saat konsol dibuka</p>
                   </div>
                   <Switch 
@@ -478,7 +478,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
 
                 <div className="flex items-center justify-between text-xs">
                   <div className="space-y-0.5">
-                    <p className="font-bold text-white font-semibold">Simpan Riwayat Sesi</p>
+                    <p className="font-semibold text-white">Simpan Riwayat Sesi</p>
                     <p className="text-[10px] text-white/40">Pertahankan riwayat perintah sukses</p>
                   </div>
                   <Switch 

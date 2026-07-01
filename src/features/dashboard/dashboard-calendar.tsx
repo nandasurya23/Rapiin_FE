@@ -21,7 +21,6 @@ import { Select } from "@/components/ui/select";
 import { PaymentStatusBadge, OrderStatusBadge } from "@/components/shared/status-badge";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import {
-  BOOKING_SLOT_CAPACITY,
   DEFAULT_BOOKING_DURATION_MINUTES,
   getBookingSlotLabel,
   getBookingSlotTone,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, ChevronLeft, ChevronRight } from "lucide-react";
-import { APP_NAV_ITEMS, MOBILE_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
+import { APP_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { useAppData } from "@/components/providers/app-data-provider";

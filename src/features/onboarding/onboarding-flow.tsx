@@ -16,12 +16,11 @@ import {
   getDefaultOperationalModel,
   NICHE_TEMPLATE_OPTIONS,
   OPERATIONAL_MODEL_OPTIONS,
-  RESOURCE_LABEL_SUGGESTIONS,
 } from "@/lib/constants/business";
 import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
-import type { BusinessResource, OperationalModel } from "@/types/business";
+import { normalizePhoneNumber } from "@/lib/validation";
+import type { OperationalModel } from "@/types/business";
 
 type Step = 1 | 2 | 3;
 
@@ -146,12 +145,6 @@ export function OnboardingFlow() {
     }));
   }
 
-  function updateResourceNames(updater: (current: BusinessResource[]) => BusinessResource[]) {
-    setForm((current) => ({
-      ...current,
-      resources: updater(current.resources),
-    }));
-  }
 
   const stepTitles: Record<number, { title: string; subtitle: string }> = {
     1: { title: "Info Dasar Bisnis", subtitle: "Nama dan nomor WhatsApp aktif bisnis kamu." },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ReceiptText, Send, FileSpreadsheet, Plus, ExternalLink, FileText, Sparkles, Phone, Calendar, MessageSquare } from "lucide-react";
+import { ReceiptText, Send, FileSpreadsheet, Plus, ExternalLink, FileText, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { QuickAddMenu } from "@/components/shared/quick-add-menu";

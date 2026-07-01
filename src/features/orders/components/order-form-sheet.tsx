@@ -6,7 +6,6 @@ import { Select } from "@/components/ui/select";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { useToast } from "@/components/ui/toast-provider";
@@ -23,7 +22,7 @@ import {
   isBookingSlotFull,
   getResourceBookingDetailsForDate,
 } from "@/lib/booking";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { parseIndonesianNumber } from "@/lib/number";
 import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
@@ -245,7 +244,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     return isResourceBookingMode
       ? `${slotAvailability.count} booking bentrok di ${business.resourceLabel?.toLowerCase() ?? "unit"} ini.`
       : `${slotAvailability.count}/2 booking overlap.`;
-  }, [bookingDurationMinutes, business.resourceLabel, form.scheduledDate, form.scheduledTime, isResourceBookingMode, slotAvailability]);
+  }, [business.resourceLabel, form.scheduledDate, form.scheduledTime, isResourceBookingMode, slotAvailability]);
 
   function updateFormField<Field extends OrderFormField>(field: Field, value: OrderFormState[Field]) {
     setError("");
