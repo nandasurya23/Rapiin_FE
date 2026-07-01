@@ -103,12 +103,6 @@ export function OrderManager() {
       (item) => item.category === category && item.businessId === business.id
     ) ?? messageTemplates.find((item) => item.category === category);
 
-    const defaultMsg = `Halo ${order.customerName}, saya follow-up untuk ${order.title}.`;
-
-    if (!template) {
-      return { label, message: defaultMsg };
-    }
-
     const values = {
       customer_name: order.customerName,
       business_name: business.name,
@@ -118,6 +112,27 @@ export function OrderManager() {
       total_amount: order.totalAmount ? formatCurrency(order.totalAmount) : "0",
       dp_amount: order.dpAmount ? formatCurrency(order.dpAmount) : "0",
     };
+
+    let defaultMsg = `Halo ${order.customerName}, saya follow-up untuk ${order.title}.`;
+    
+    // Smart Defaults (Killer Feature Free Plan)
+    if (category === "PEMBAYARAN") {
+      if (order.paymentStatus === "UNPAID") {
+         defaultMsg = `Halo Kak ${order.customerName},\n\nPesanan "${order.title}" sudah kami terima dengan total tagihan *${values.total_amount}*.\nMohon segera selesaikan pembayaran atau uang muka (DP) agar pesanan dapat segera diproses ya Kak.\n\nTerima kasih, ${business.name}.`;
+      } else if (order.paymentStatus === "DP_PAID") {
+         defaultMsg = `Halo Kak ${order.customerName},\n\nPembayaran DP sebesar *${values.dp_amount}* untuk pesanan "${order.title}" sudah kami terima.\nSisa tagihan yang perlu dilunasi adalah *${formatCurrency((order.totalAmount ?? 0) - (order.dpAmount ?? 0))}*.\n\nTerima kasih, ${business.name}.`;
+      }
+    } else if (category === "REVIEW") {
+       defaultMsg = `Halo Kak ${order.customerName},\n\nPesanan "${order.title}" sudah SELESAI!\nTerima kasih banyak telah mempercayakan layanan kami. 🙏\n\nJika Kakak berkenan, mohon berikan ulasan singkat mengenai layanan kami ya.\n\nSalam hangat, ${business.name}.`;
+    } else if (category === "BOOKING_ORDER") {
+       defaultMsg = `Halo Kak ${order.customerName},\n\nJadwal untuk "${order.title}" telah dikonfirmasi pada:\n📅 Tanggal: ${values.scheduled_date}\n⏰ Jam: ${values.scheduled_time}\n\nKami tunggu kedatangannya ya Kak!\n\nTerima kasih, ${business.name}.`;
+    } else if (order.status === "DIPROSES") {
+       defaultMsg = `Halo Kak ${order.customerName},\n\nSedikit info mengenai pesanan "${order.title}", saat ini sedang dalam status *DIPROSES*.\nKakak bisa melihat perkembangan pesanan (Live Tracker) pada link Nota yang telah kami berikan sebelumnya.\n\nTerima kasih, ${business.name}.`;
+    }
+
+    if (!template) {
+      return { label, message: defaultMsg };
+    }
 
     const rendered = renderTemplate(template.content, values);
     return { label, message: rendered || defaultMsg };
