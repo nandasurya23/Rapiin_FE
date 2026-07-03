@@ -57,6 +57,7 @@ type BusinessSettingsInput = Pick<
   | "description"
   | "openingHours"
   | "address"
+  | "timezone"
   | "paymentInstructions"
   | "logoUrl"
   | "services"

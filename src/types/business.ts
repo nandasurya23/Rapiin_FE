@@ -48,6 +48,7 @@ export type Business = Timestamped & {
   description: string;
   address?: string;
   openingHours?: string;
+  timezone?: string;
   logoUrl?: string;
   paymentInstructions?: string;
   closedDates?: Record<string, string>;

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useOrders } from "@/hooks/use-orders";
 
 import { ORDER_STATUS_BY_MODE, PAYMENT_FILTER_OPTIONS } from "@/lib/constants/orders";
 import { renderTemplate } from "@/lib/messages";
@@ -19,13 +20,15 @@ import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
 
 import { OrderBoard } from "./components/order-board";
 import { OrderFormSheet } from "./components/order-form-sheet";
+import { ConfirmFinishOrderDialog } from "./components/confirm-finish-order-dialog";
 
 type FilterValue = "ALL" | OrderStatus;
 type PaymentFilterValue = "ALL" | PaymentStatus;
 
 export function OrderManager() {
   const toast = useToast();
-  const { business, orders, updateOrder, canCreateOrder, messageTemplates } = useAppData();
+  const { business, canCreateOrder, messageTemplates } = useAppData();
+  const { orders, updateOrder } = useOrders();
   
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterValue>("ALL");
@@ -34,6 +37,7 @@ export function OrderManager() {
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [finishingOrder, setFinishingOrder] = useState<Order | null>(null);
 
   const statusOptions = ORDER_STATUS_BY_MODE[mode] ?? ORDER_STATUS_BY_MODE["BOOKING_SERVICE"];
 
@@ -56,6 +60,14 @@ export function OrderManager() {
   const unpaidOrderCount = filteredOrders.filter((order) => order.paymentStatus === "UNPAID" || order.paymentStatus === "DP_PAID").length;
   const activeBookingCount = filteredOrders.filter((order) => order.mode === "BOOKING_SERVICE" && order.status !== "BATAL" && order.status !== "SELESAI").length;
   const completedOrderCount = filteredOrders.filter((order) => order.status === "SELESAI").length;
+
+  function onStatusChangeRequest(order: Order, nextStatus: OrderStatus) {
+    if (nextStatus === "SELESAI" && order.status !== "SELESAI") {
+      setFinishingOrder(order);
+    } else {
+      void handleUpdateOrderStatus(order, nextStatus);
+    }
+  }
 
   async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus) {
     try {
@@ -103,12 +115,6 @@ export function OrderManager() {
       (item) => item.category === category && item.businessId === business.id
     ) ?? messageTemplates.find((item) => item.category === category);
 
-    const defaultMsg = `Halo ${order.customerName}, saya follow-up untuk ${order.title}.`;
-
-    if (!template) {
-      return { label, message: defaultMsg };
-    }
-
     const values = {
       customer_name: order.customerName,
       business_name: business.name,
@@ -118,6 +124,27 @@ export function OrderManager() {
       total_amount: order.totalAmount ? formatCurrency(order.totalAmount) : "0",
       dp_amount: order.dpAmount ? formatCurrency(order.dpAmount) : "0",
     };
+
+    let defaultMsg = `Halo ${order.customerName}, saya follow-up untuk ${order.title}.`;
+    
+    // Smart Defaults (Killer Feature Free Plan)
+    if (category === "PEMBAYARAN") {
+      if (order.paymentStatus === "UNPAID") {
+         defaultMsg = `Halo Kak ${order.customerName},\n\nPesanan "${order.title}" sudah kami terima dengan total tagihan *${values.total_amount}*.\nMohon segera selesaikan pembayaran atau uang muka (DP) agar pesanan dapat segera diproses ya Kak.\n\nTerima kasih, ${business.name}.`;
+      } else if (order.paymentStatus === "DP_PAID") {
+         defaultMsg = `Halo Kak ${order.customerName},\n\nPembayaran DP sebesar *${values.dp_amount}* untuk pesanan "${order.title}" sudah kami terima.\nSisa tagihan yang perlu dilunasi adalah *${formatCurrency((order.totalAmount ?? 0) - (order.dpAmount ?? 0))}*.\n\nTerima kasih, ${business.name}.`;
+      }
+    } else if (category === "REVIEW") {
+       defaultMsg = `Halo Kak ${order.customerName},\n\nPesanan "${order.title}" sudah SELESAI!\nTerima kasih banyak telah mempercayakan layanan kami. 🙏\n\nJika Kakak berkenan, mohon berikan ulasan singkat mengenai layanan kami ya.\n\nSalam hangat, ${business.name}.`;
+    } else if (category === "BOOKING_ORDER") {
+       defaultMsg = `Halo Kak ${order.customerName},\n\nJadwal untuk "${order.title}" telah dikonfirmasi pada:\n📅 Tanggal: ${values.scheduled_date}\n⏰ Jam: ${values.scheduled_time}\n\nKami tunggu kedatangannya ya Kak!\n\nTerima kasih, ${business.name}.`;
+    } else if (order.status === "DIPROSES") {
+       defaultMsg = `Halo Kak ${order.customerName},\n\nSedikit info mengenai pesanan "${order.title}", saat ini sedang dalam status *DIPROSES*.\nKakak bisa melihat perkembangan pesanan (Live Tracker) pada link Nota yang telah kami berikan sebelumnya.\n\nTerima kasih, ${business.name}.`;
+    }
+
+    if (!template) {
+      return { label, message: defaultMsg };
+    }
 
     const rendered = renderTemplate(template.content, values);
     return { label, message: rendered || defaultMsg };
@@ -245,7 +272,7 @@ export function OrderManager() {
         <OrderBoard
           orders={filteredOrders}
           statusOptions={statusOptions}
-          onUpdateStatus={handleUpdateOrderStatus}
+          onUpdateStatus={onStatusChangeRequest}
           onEdit={handleEditOrder}
           getWhatsAppConfig={getWhatsAppButtonConfig}
         />
@@ -256,6 +283,14 @@ export function OrderManager() {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         editingId={editingId}
+      />
+
+      {/* SECTION 5: CONFIRMATION DIALOG */}
+      <ConfirmFinishOrderDialog
+        isOpen={!!finishingOrder}
+        onClose={() => setFinishingOrder(null)}
+        order={finishingOrder}
+        onConfirm={handleUpdateOrderStatus}
       />
     </main>
   );

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useBusiness } from "@/hooks/use-business";
 import {
   BUSINESS_MODE_OPTIONS,
   createBusinessResources,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/constants/business";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 import { getPublicCatalog } from "@/lib/public-business";
+import { RoleGate } from "@/components/shared/role-gate";
 import type { BusinessResource, OperationalModel, PublicCatalogItem } from "@/types/business";
 
 function formatRupiahInput(value: string) {
@@ -82,6 +84,7 @@ type SettingsFormState = {
   bookingCapacity: string;
   defaultBookingDurationMinutes: string;
   openingHours: string;
+  timezone: string;
   address: string;
   description: string;
   paymentInstructions: string;
@@ -110,6 +113,7 @@ function createFormStateFromBusiness(
     bookingCapacity: String(business.bookingCapacity ?? 2),
     defaultBookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? 60),
     openingHours: business.openingHours ?? "",
+    timezone: business.timezone ?? "WIB",
     address: business.address ?? "",
     description: business.description,
     paymentInstructions: business.paymentInstructions ?? "",
@@ -142,7 +146,8 @@ function buildResources(resourceLabel: string, resourceCount: string, currentRes
 
 export function SettingsPage() {
   const toast = useToast();
-  const { business, orders, saveBusinessSettings, currentUser } = useAppData();
+  const { orders, currentUser } = useAppData();
+  const { business, saveBusinessSettings } = useBusiness();
   const [form, setForm] = useState<SettingsFormState>(createFormStateFromBusiness(business, currentUser));
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -239,7 +244,7 @@ export function SettingsPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 220));
 
-      saveBusinessSettings({
+      await saveBusinessSettings({
         name: form.name.trim(),
         whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
         mode: form.mode,
@@ -256,6 +261,7 @@ export function SettingsPage() {
         defaultBookingDurationMinutes:
           form.mode === "BOOKING_SERVICE" ? Math.max(15, Number(form.defaultBookingDurationMinutes) || 60) : undefined,
         openingHours: form.openingHours.trim() || undefined,
+        timezone: form.timezone,
         address: form.address.trim() || undefined,
         description: form.description.trim(),
         paymentInstructions: form.paymentInstructions.trim() || undefined,
@@ -269,7 +275,17 @@ export function SettingsPage() {
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      {/* SECTION 1: HERO HEADER */}
+      <RoleGate 
+        allowedRoles={["OWNER"]} 
+        fallback={
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <AlertTriangle className="h-12 w-12 text-[var(--color-warning-text)] mb-4" />
+            <h2 className="text-xl font-bold text-[var(--color-text)]">Akses Ditolak</h2>
+            <p className="mt-2 text-[var(--color-text-secondary)]">Anda tidak memiliki izin untuk melihat atau mengubah pengaturan bisnis. Halaman ini hanya untuk Pemilik (Owner).</p>
+          </div>
+        }
+      >
+        {/* SECTION 1: HERO HEADER */}
       <section className="animate-fade-up">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
           {/* Background decorative glows */}
@@ -349,6 +365,8 @@ export function SettingsPage() {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         try {
+                          // TODO(Backend): Replace this base64 compression with direct upload to Supabase Storage.
+                          // The uploader should return a public URL instead of a large base64 string to avoid DB bloat.
                           const base64 = await compressLogoImage(file);
                           updateForm("logoUrl", base64);
                           toast.success("Logo berhasil dimuat!");
@@ -463,6 +481,18 @@ export function SettingsPage() {
                     }}
                   />
                 </div>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Zona Waktu</span>
+                <Select
+                  value={form.timezone}
+                  onValueChange={(value) => updateForm("timezone", value)}
+                  options={[
+                    { value: "WIB", label: "WIB (Waktu Indonesia Barat)" },
+                    { value: "WITA", label: "WITA (Waktu Indonesia Tengah)" },
+                    { value: "WIT", label: "WIT (Waktu Indonesia Timur)" },
+                  ]}
+                />
               </label>
             </div>
 
@@ -880,6 +910,7 @@ export function SettingsPage() {
           </CardBody>
         </Card>
       </section>
+      </RoleGate>
     </main>
   );
 }

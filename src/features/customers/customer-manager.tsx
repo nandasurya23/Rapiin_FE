@@ -17,6 +17,7 @@ import { CustomerStatusBadge } from "@/components/shared/status-badge";
 import { ROUTES } from "@/lib/routes";
 import type { Customer, CustomerStatus } from "@/types/customer";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useCustomers } from "@/hooks/use-customers";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
 import { Pagination } from "@/components/ui/pagination";
 import { Sheet } from "@/components/ui/sheet";
@@ -36,7 +37,8 @@ const CUSTOMER_PAGE_SIZE = 6;
 
 export function CustomerManager() {
   const toast = useToast();
-  const { customers, createCustomer, updateCustomer, canCreateCustomer, currentBusinessUsage, readOnlyReason } = useAppData();
+  const { canCreateCustomer, currentBusinessUsage, readOnlyReason } = useAppData();
+  const { customers, createCustomer, updateCustomer } = useCustomers();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterValue>("ALL");
   const [editingId, setEditingId] = useState<string | null>(null);

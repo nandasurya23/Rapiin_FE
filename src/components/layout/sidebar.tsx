@@ -8,6 +8,7 @@ import { APP_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useAuth } from "@/hooks/use-auth";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { useToast } from "@/components/ui/toast-provider";
 import { ROUTES } from "@/lib/routes";
@@ -27,8 +28,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     currentUserRole,
     isSuperAdmin,
     subscriptionForCurrentBusiness,
-    logout,
   } = useAppData();
+  const { logout } = useAuth();
   const navItems = isSuperAdmin 
     ? SUPER_ADMIN_NAV_ITEMS 
     : APP_NAV_ITEMS.filter(item => 
@@ -47,7 +48,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     .toUpperCase();
 
   async function handleLogout() {
-    logout();
+    await logout();
     toast.info("Logout berhasil", "Kamu keluar dari sesi admin.");
     await new Promise((resolve) => setTimeout(resolve, 180));
     router.push("/auth/login");
