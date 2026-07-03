@@ -11,6 +11,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useAuth } from "@/hooks/use-auth";
 import { isValidEmail, isValidEmailOrPhone, isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 import { cn } from "@/lib/cn";
 
@@ -28,7 +29,8 @@ const benefits = [
 export function AuthPanel({ mode }: AuthPanelProps) {
   const router = useRouter();
   const toast = useToast();
-  const { auth, login, registerOwner, resetPassword } = useAppData();
+  const { auth } = useAppData();
+  const { login, registerOwner, resetPassword } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,7 +63,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
       await new Promise((resolve) => setTimeout(resolve, 250));
 
       if (mode === "login") {
-        const result = login({ identifier, password });
+        const result = await login(identifier, password);
         if (!result.ok) { setError(result.message); return; }
         toast.success("Berhasil masuk");
         await new Promise((resolve) => setTimeout(resolve, 180));
@@ -71,7 +73,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
       }
 
       if (mode === "register") {
-        const result = registerOwner({ name: name.trim(), email, phoneNumber, password });
+        const result = await registerOwner({ name: name.trim(), email, phoneNumber, password });
         if (!result.ok) { setError(result.message); return; }
         toast.success("Akun berhasil dibuat");
         await new Promise((resolve) => setTimeout(resolve, 180));
@@ -79,7 +81,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         return;
       }
 
-      const result = resetPassword({ identifier, password });
+      const result = await resetPassword(identifier, password);
       if (!result.ok) { setError(result.message); return; }
       toast.success("Password berhasil diperbarui");
       await new Promise((resolve) => setTimeout(resolve, 180));

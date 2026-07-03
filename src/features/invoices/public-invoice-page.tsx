@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Send, Share2, CheckCircle2, Clock, MapPin, Package, Loader2 } from "lucide-react";
+import { Download, Send, Share2, CheckCircle2, Clock, MapPin, Package, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import * as htmlToImage from "html-to-image";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { getEntityById } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useInvoices } from "@/hooks/use-invoices";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
 
 async function copyToClipboard(text: string) {
@@ -21,7 +22,8 @@ async function copyToClipboard(text: string) {
 
 export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
   const toast = useToast();
-  const { business, invoices, orders } = useAppData();
+  const { business, orders } = useAppData();
+  const { invoices } = useInvoices();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const invoice = useMemo(
     () => invoices.find((item) => item.invoiceCode === invoiceCode) ?? invoices[0],
@@ -38,7 +40,6 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
 
   // --- LIVE TRACKER LOGIC ---
   const [queueAhead, setQueueAhead] = useState(0);
-  const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
   useEffect(() => {
     if (!order) return;
@@ -52,7 +53,6 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
         new Date(o.createdAt).getTime() < new Date(order.createdAt).getTime()
       );
       setQueueAhead(ahead.length);
-      setLastRefreshed(new Date());
     }
 
     calculateQueue();
@@ -142,6 +142,14 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
           <Badge tone={isFallback ? "warning" : "success"} className="mb-3">
             {isFallback ? "Fallback nota" : "Nota Resmi Publik"}
           </Badge>
+          {invoice.integritySeal && (
+            <div className="flex items-center justify-center gap-1.5 mt-1 mb-2.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+                Dilindungi Integrity Seal
+              </span>
+            </div>
+          )}
           <p className="text-sm text-[var(--color-text-secondary)]">Nota ini sah dan otomatis diterbitkan oleh sistem.</p>
         </div>
 

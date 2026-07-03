@@ -34,6 +34,7 @@ import { cn } from "@/lib/cn";
 import { ROUTES } from "@/lib/routes";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useInvoices } from "@/hooks/use-invoices";
 import type { Business } from "@/types/business";
 import type { Invoice } from "@/types/invoice";
 import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
@@ -730,7 +731,8 @@ function getTimelineStatusLabel(status: OrderStatus): string {
 
 export function DashboardCalendar({ business, orders, selectedDate, onDateSelect }: DashboardCalendarProps) {
   const toast = useToast();
-  const { invoices, updateOrder, createInvoiceFromOrder, updateBusiness } = useAppData();
+  const { updateOrder, updateBusiness } = useAppData();
+  const { invoices, createInvoiceFromOrder } = useInvoices();
   const todayKey = toDateKey(new Date());
 
   function handleToggleClosedDate(date: string, reason?: string, endDate?: string) {
@@ -924,7 +926,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
       let invoice: typeof existingInvoice | null = existingInvoice ?? null;
       if (!invoice) {
         try {
-          invoice = createInvoiceFromOrder(order.id, "Nota dibuat cepat dari kalender dashboard.");
+          invoice = await createInvoiceFromOrder(order.id, "Nota dibuat cepat dari kalender dashboard.");
         } catch (createError) {
           toast.error("Nota belum bisa dibuat", createError instanceof Error ? createError.message : "Mode baca saja aktif.");
           return;

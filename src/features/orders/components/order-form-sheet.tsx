@@ -10,6 +10,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useOrders } from "@/hooks/use-orders";
 import { getPublicCatalog, inferCatalogDurationMinutes } from "@/lib/public-business";
 import { cn } from "@/lib/cn";
 
@@ -85,7 +86,8 @@ interface OrderFormSheetProps {
 
 export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetProps) {
   const toast = useToast();
-  const { business, orders, createOrder, updateOrder, canCreateOrder, readOnlyReason, customers } = useAppData();
+  const { business, canCreateOrder, readOnlyReason, customers } = useAppData();
+  const { orders, createOrder, updateOrder } = useOrders();
   
   const [form, setForm] = useState<OrderFormState>(createDefaultForm(business.mode));
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -15,6 +15,7 @@ import { ROUTES } from "@/lib/routes";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { getEntityById } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useInvoices } from "@/hooks/use-invoices";
 import { Pagination } from "@/components/ui/pagination";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
 import { cn } from "@/lib/cn";
@@ -38,7 +39,8 @@ async function copyToClipboard(text: string) {
 
 export function InvoicesPage() {
   const toast = useToast();
-  const { business, orders, invoices, createInvoiceFromOrder, canCreateInvoice, readOnlyReason } = useAppData();
+  const { business, orders, canCreateInvoice, readOnlyReason } = useAppData();
+  const { invoices, createInvoiceFromOrder } = useInvoices();
   const [filter, setFilter] = useState<InvoiceFilter>("ALL");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(invoices[0]?.id ?? "");
   const [selectedOrderId, setSelectedOrderId] = useState(
@@ -102,7 +104,7 @@ export function InvoicesPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
       try {
-        const nextInvoice = createInvoiceFromOrder(selectedOrder.id, notes);
+        const nextInvoice = await createInvoiceFromOrder(selectedOrder.id, notes);
         if (!nextInvoice) {
           return;
         }

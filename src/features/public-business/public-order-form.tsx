@@ -47,6 +47,7 @@ const initialStateByMode: Record<BusinessMode, FormState> = {
     bookingDurationMinutes: "60",
     resourceId: "",
     notes: "",
+    botField: "",
   },
   PRODUCT_ORDER: {
     name: "",
@@ -55,6 +56,7 @@ const initialStateByMode: Record<BusinessMode, FormState> = {
     quantity: "1",
     deliveryMethod: "",
     notes: "",
+    botField: "",
   },
   CUSTOM_REQUEST: {
     name: "",
@@ -63,6 +65,7 @@ const initialStateByMode: Record<BusinessMode, FormState> = {
     deadline: "",
     budget: "",
     notes: "",
+    botField: "",
   },
 };
 
@@ -330,6 +333,13 @@ export function PublicOrderForm({ slug }: { slug: string }) {
   }
 
   async function handleSubmit() {
+    if (form.botField) {
+      // Honeypot triggered, silently succeed
+      setSubmitted(true);
+      toast.success("Form berhasil dikirim", "Admin akan lanjut menghubungi lewat WhatsApp.");
+      return;
+    }
+
     const missing = requiredFieldsForBusiness(business).find((field) => !fieldValueFromState(form, field).trim());
 
     if (missing) {
@@ -692,6 +702,20 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                         />
                       </label>
                       
+                      {/* Honeypot field (hidden from real users) */}
+                      <div className="hidden" aria-hidden="true">
+                        <label htmlFor="botField">Leave this field empty</label>
+                        <input
+                          type="text"
+                          id="botField"
+                          name="botField"
+                          value={form.botField || ""}
+                          onChange={(e) => updateField("botField", e.target.value)}
+                          tabIndex={-1}
+                          autoComplete="off"
+                        />
+                      </div>
+
                       <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-end">
                         <Button
                           type="button"
@@ -782,7 +806,10 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                     <div className="space-y-4">
                       <div>
                         <h2 className="text-base font-bold text-[var(--color-text)]">Pilih Tanggal &amp; Jam</h2>
-                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Jadwal kosong terdeteksi secara otomatis.</p>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                          Jadwal kosong terdeteksi secara otomatis.
+                          {business.timezone && <span className="font-bold text-[var(--color-primary)] ml-1">Zona waktu: {business.timezone}</span>}
+                        </p>
                       </div>
                       <label className="block">
                         <span className="mb-2 block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Tanggal <span className="text-red-500">*</span></span>
@@ -1108,6 +1135,20 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Honeypot field (hidden from real users) */}
+                  <div className="hidden" aria-hidden="true">
+                    <label htmlFor="botField-main">Leave this field empty</label>
+                    <input
+                      type="text"
+                      id="botField-main"
+                      name="botField-main"
+                      value={form.botField || ""}
+                      onChange={(e) => updateField("botField", e.target.value)}
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
                   </div>
 
                   {error ? <p className="text-xs font-bold text-[var(--color-danger)]">{error}</p> : null}

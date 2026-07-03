@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useOrders } from "@/hooks/use-orders";
 
 import { ORDER_STATUS_BY_MODE, PAYMENT_FILTER_OPTIONS } from "@/lib/constants/orders";
 import { renderTemplate } from "@/lib/messages";
@@ -19,13 +20,15 @@ import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
 
 import { OrderBoard } from "./components/order-board";
 import { OrderFormSheet } from "./components/order-form-sheet";
+import { ConfirmFinishOrderDialog } from "./components/confirm-finish-order-dialog";
 
 type FilterValue = "ALL" | OrderStatus;
 type PaymentFilterValue = "ALL" | PaymentStatus;
 
 export function OrderManager() {
   const toast = useToast();
-  const { business, orders, updateOrder, canCreateOrder, messageTemplates } = useAppData();
+  const { business, canCreateOrder, messageTemplates } = useAppData();
+  const { orders, updateOrder } = useOrders();
   
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterValue>("ALL");
@@ -34,6 +37,7 @@ export function OrderManager() {
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [finishingOrder, setFinishingOrder] = useState<Order | null>(null);
 
   const statusOptions = ORDER_STATUS_BY_MODE[mode] ?? ORDER_STATUS_BY_MODE["BOOKING_SERVICE"];
 
@@ -56,6 +60,14 @@ export function OrderManager() {
   const unpaidOrderCount = filteredOrders.filter((order) => order.paymentStatus === "UNPAID" || order.paymentStatus === "DP_PAID").length;
   const activeBookingCount = filteredOrders.filter((order) => order.mode === "BOOKING_SERVICE" && order.status !== "BATAL" && order.status !== "SELESAI").length;
   const completedOrderCount = filteredOrders.filter((order) => order.status === "SELESAI").length;
+
+  function onStatusChangeRequest(order: Order, nextStatus: OrderStatus) {
+    if (nextStatus === "SELESAI" && order.status !== "SELESAI") {
+      setFinishingOrder(order);
+    } else {
+      void handleUpdateOrderStatus(order, nextStatus);
+    }
+  }
 
   async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus) {
     try {
@@ -260,7 +272,7 @@ export function OrderManager() {
         <OrderBoard
           orders={filteredOrders}
           statusOptions={statusOptions}
-          onUpdateStatus={handleUpdateOrderStatus}
+          onUpdateStatus={onStatusChangeRequest}
           onEdit={handleEditOrder}
           getWhatsAppConfig={getWhatsAppButtonConfig}
         />
@@ -271,6 +283,14 @@ export function OrderManager() {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         editingId={editingId}
+      />
+
+      {/* SECTION 5: CONFIRMATION DIALOG */}
+      <ConfirmFinishOrderDialog
+        isOpen={!!finishingOrder}
+        onClose={() => setFinishingOrder(null)}
+        order={finishingOrder}
+        onConfirm={handleUpdateOrderStatus}
       />
     </main>
   );
