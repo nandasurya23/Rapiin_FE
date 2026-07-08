@@ -134,9 +134,9 @@ export default function AssistantPage() {
 
   useEffect(() => {
     if (planCode === "FREE_TRIAL") {
-      router.replace(ROUTES.dashboard);
+      router.replace(ROUTES.dashboard(business.slug));
     }
-  }, [planCode, router]);
+  }, [planCode, router, business.slug]);
 
   // Sync daily usage initially
   useEffect(() => {
@@ -244,7 +244,7 @@ export default function AssistantPage() {
         if (!draftData.customerName || !draftData.title) {
           throw new Error("Lengkapi nama customer dan judul pesanan.");
         }
-        const newOrd = createOrder({
+        const newOrd = await createOrder({
           customerName: draftData.customerName,
           whatsappNumber: draftData.whatsappNumber || "",
           title: draftData.title,
@@ -260,7 +260,7 @@ export default function AssistantPage() {
 
         let invoiceText = "";
         if (settings.autoCreateInvoice && planCode === "PREMIUM") {
-          const inv = createInvoiceFromOrder(newOrd.id);
+          const inv = await createInvoiceFromOrder(newOrd.id);
           if (inv) {
             invoiceText = ` & Nota Tagihan ${inv.invoiceCode} diterbitkan secara otomatis.`;
           }
@@ -284,7 +284,7 @@ export default function AssistantPage() {
         const order = orders.find((o) => o.id === draftData.orderId);
         if (!order) throw new Error("Order tidak ditemukan.");
 
-        const updated = updateOrder(order.id, {
+        const updated = await updateOrder(order.id, {
           ...order,
           paymentStatus: draftData.paymentStatus,
           dpAmount: draftData.dpAmount !== undefined ? Number(draftData.dpAmount) : order.dpAmount,
@@ -300,7 +300,7 @@ export default function AssistantPage() {
         const order = orders.find((o) => o.id === draftData.orderId);
         if (!order) throw new Error("Order tidak ditemukan.");
 
-        updateOrder(order.id, {
+        await updateOrder(order.id, {
           ...order,
           status: draftData.status,
         });
@@ -310,7 +310,7 @@ export default function AssistantPage() {
       }
 
       else if (parsed.type === "CREATE_INVOICE") {
-        const inv = createInvoiceFromOrder(draftData.orderId);
+        const inv = await createInvoiceFromOrder(draftData.orderId);
         if (!inv) throw new Error("Gagal membuat invoice.");
 
         executedLogText = `Berhasil menerbitkan nota tagihan ${inv.invoiceCode} untuk ${draftData.customerName}`;
@@ -319,7 +319,7 @@ export default function AssistantPage() {
 
       else if (parsed.type === "CREATE_CUSTOMER") {
         if (!draftData.name) throw new Error("Nama customer tidak boleh kosong.");
-        const cust = createCustomer({
+        const cust = await createCustomer({
           name: draftData.name,
           whatsappNumber: draftData.whatsappNumber || "",
           status: draftData.status,
@@ -394,7 +394,7 @@ export default function AssistantPage() {
             </div>
 
             <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={ROUTES.dashboard} className="shadow-sm">
+              <LinkButton href={ROUTES.dashboard(business.slug)} className="shadow-sm">
                 Ke Dashboard
               </LinkButton>
             </div>
@@ -693,7 +693,7 @@ export default function AssistantPage() {
                         </div>
                       </div>
                       <div className="pt-0.5">
-                        <LinkButton href={ROUTES.plan} size="sm" variant="accent" className="border-none font-extrabold px-4">
+                        <LinkButton href={ROUTES.plan(business.slug)} size="sm" variant="accent" className="border-none font-extrabold px-4">
                           Upgrade Paket &rarr;
                         </LinkButton>
                       </div>
@@ -753,7 +753,7 @@ export default function AssistantPage() {
                                   <p className="font-bold text-[var(--color-text)]">{c.name}</p>
                                   <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">WA: {c.whatsappNumber}</p>
                                 </div>
-                                <LinkButton href={ROUTES.customers} size="sm" variant="secondary">
+                                <LinkButton href={ROUTES.customers(business.slug)} size="sm" variant="secondary">
                                   Buka Modul &rarr;
                                 </LinkButton>
                               </div>
@@ -775,7 +775,7 @@ export default function AssistantPage() {
                                   <p className="font-bold text-[var(--color-text)]">{o.title}</p>
                                   <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">Customer: {o.customerName} · Nilai: Rp {(o.totalAmount || 0).toLocaleString("id-ID")}</p>
                                 </div>
-                                <LinkButton href={`${ROUTES.orders}?id=${o.id}`} size="sm" variant="secondary">
+                                <LinkButton href={`${ROUTES.orders(business.slug)}?id=${o.id}`} size="sm" variant="secondary">
                                   Lihat Order &rarr;
                                 </LinkButton>
                               </div>

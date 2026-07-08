@@ -1,6 +1,5 @@
 "use client";
 
-import { mockBusiness, mockCustomers, mockInvoices, mockMessageTemplates, mockOrders } from "@/data/mock";
 import { PLAN_DEFINITIONS, PRO_CUSTOMER_LIMIT, TRIAL_CUSTOMER_LIMIT, TRIAL_DURATION_DAYS } from "@/lib/constants/subscription";
 import { buildInvoiceIntegritySeal, buildInvoiceVerificationCode, normalizeInvoiceVerification } from "@/lib/invoice";
 import { createBusinessResources, doesOperationalModelUseResources, getDefaultBusinessConfigForMode, getDefaultOperationalModel } from "@/lib/constants/business";
@@ -71,7 +70,6 @@ function createDefaultSuperAdmin(): AuthUser {
     name: "Super Admin",
     email: SUPER_ADMIN_EMAIL,
     phoneNumber: SUPER_ADMIN_PHONE,
-    password: SUPER_ADMIN_PASSWORD,
     role: "SUPER_ADMIN",
     businessId: undefined,
     trialUsed: false,
@@ -129,7 +127,6 @@ function normalizeAuthUsers(users: AppStorageState["auth"]["users"] | unknown, b
       name: legacyUser.name?.trim() || "Owner",
       email,
       phoneNumber,
-      password: legacyUser.password || "password123",
       role: legacyUser.role ?? (legacyUser.id === SUPER_ADMIN_ID ? "SUPER_ADMIN" : "OWNER"),
       businessId: legacyUser.role === "SUPER_ADMIN" ? undefined : legacyUser.businessId ?? businessId,
       trialUsed: typeof legacyUser.trialUsed === "boolean" ? legacyUser.trialUsed : true,
@@ -199,19 +196,41 @@ function normalizeBackupRecords(backupRecords: BackupRecord[] | unknown) {
   }));
 }
 
+const emptyBusiness: Business = {
+  id: "biz_default",
+  ownerName: "",
+  name: "",
+  slug: "",
+  whatsappNumber: "",
+  mode: "BOOKING_SERVICE",
+  operationalModel: "RESOURCE_BOOKING",
+  usesResources: true,
+  resourceLabel: "Staf",
+  resourceCount: 0,
+  resources: [],
+  defaultBookingDurationMinutes: 60,
+  niche: "LAINNYA",
+  description: "",
+  address: "",
+  openingHours: "09:00 - 17:00",
+  logoUrl: undefined,
+  createdAt: now(),
+  updatedAt: now(),
+};
+
 export function createInitialAppStorageState(): AppStorageState {
-  const business = clone(mockBusiness);
+  const business = clone(emptyBusiness);
   return {
     version: 1,
     business,
-    customers: clone(mockCustomers),
-    orders: clone(mockOrders),
-    invoices: normalizeInvoices(clone(mockInvoices)),
+    customers: [],
+    orders: [],
+    invoices: [],
     subscriptions: [createBusinessSubscriptionRecord({ businessId: business.id, planCode: "FREE_TRIAL", startedAt: now() })],
     upgradeRequests: [],
     backupRecords: [],
     superAdminLogs: [],
-    messageTemplates: clone(mockMessageTemplates),
+    messageTemplates: [],
     publicSubmissions: [],
     auth: {
       currentUserId: null,
@@ -223,7 +242,7 @@ export function createInitialAppStorageState(): AppStorageState {
       planCatalog: clone(PLAN_DEFINITIONS),
     },
     ui: {
-      messageComposer: createDefaultMessageComposer(mockMessageTemplates, mockCustomers, mockOrders),
+      messageComposer: createDefaultMessageComposer([], [], []),
     },
   };
 }
@@ -318,7 +337,6 @@ export function createAuthUser(input: {
   name: string;
   email: string;
   phoneNumber: string;
-  password: string;
   role?: UserRole;
   businessId?: string;
   trialUsed?: boolean;
@@ -331,7 +349,6 @@ export function createAuthUser(input: {
     name: input.name,
     email: input.email.trim().toLowerCase(),
     phoneNumber: input.phoneNumber.trim(),
-    password: input.password,
     role: input.role ?? "OWNER",
     businessId: input.businessId,
     trialUsed: input.trialUsed ?? true,

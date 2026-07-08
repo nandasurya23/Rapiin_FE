@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, ChevronLeft, ChevronRight } from "lucide-react";
-import { APP_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
+import { getAppNavItems, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { useAppData } from "@/components/providers/app-data-provider";
@@ -32,8 +32,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { logout } = useAuth();
   const navItems = isSuperAdmin 
     ? SUPER_ADMIN_NAV_ITEMS 
-    : APP_NAV_ITEMS.filter(item => 
-        item.href !== ROUTES.assistant || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
+    : getAppNavItems(business.slug).filter(item => 
+        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
       );
 
   const planLabel = PLAN_LABELS[subscriptionForCurrentBusiness?.planCode ?? "FREE_TRIAL"];

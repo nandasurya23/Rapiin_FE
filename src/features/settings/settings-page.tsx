@@ -17,7 +17,6 @@ import {
   createBusinessResources,
   doesOperationalModelUseResources,
   getDefaultOperationalModel,
-  NICHE_TEMPLATE_OPTIONS,
   OPERATIONAL_MODEL_OPTIONS,
   RESOURCE_LABEL_SUGGESTIONS,
 } from "@/lib/constants/business";
@@ -77,7 +76,7 @@ type SettingsFormState = {
   name: string;
   whatsappNumber: string;
   mode: (typeof BUSINESS_MODE_OPTIONS)[number]["value"];
-  niche: (typeof NICHE_TEMPLATE_OPTIONS)[number]["value"];
+  niche: string;
   operationalModel: OperationalModel;
   resourceLabel: string;
   resourceCount: string;
@@ -98,6 +97,14 @@ type FormErrors = Partial<Record<keyof SettingsFormState, string>> & {
   services?: string;
 };
 
+function mapTimezoneValue(tz: string | null | undefined): string {
+  if (!tz) return "Asia/Jakarta";
+  if (tz === "WIB") return "Asia/Jakarta";
+  if (tz === "WITA") return "Asia/Makassar";
+  if (tz === "WIT") return "Asia/Jayapura";
+  return tz;
+}
+
 function createFormStateFromBusiness(
   business: ReturnType<typeof useAppData>["business"],
   currentUser: ReturnType<typeof useAppData>["currentUser"]
@@ -113,7 +120,7 @@ function createFormStateFromBusiness(
     bookingCapacity: String(business.bookingCapacity ?? 2),
     defaultBookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? 60),
     openingHours: business.openingHours ?? "",
-    timezone: business.timezone ?? "WIB",
+    timezone: mapTimezoneValue(business.timezone),
     address: business.address ?? "",
     description: business.description,
     paymentInstructions: business.paymentInstructions ?? "",
@@ -405,7 +412,13 @@ export function SettingsPage() {
               </label>
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nomor WhatsApp</span>
-                <Input value={form.whatsappNumber} onChange={(event) => updateForm("whatsappNumber", event.target.value)} />
+                <Input
+                  value={form.whatsappNumber}
+                  onChange={(event) => {
+                    event.target.value = event.target.value.replace(/[^\d]/g, "");
+                    updateForm("whatsappNumber", event.target.value);
+                  }}
+                />
                 {errors.whatsappNumber ? (
                   <p className="mt-1 text-[10px] font-bold text-[var(--color-danger)]">{errors.whatsappNumber}</p>
                 ) : (
@@ -438,8 +451,8 @@ export function SettingsPage() {
                 />
               </label>
               <label className="block">
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Template Niche</span>
-                <Select value={form.niche} onValueChange={(value) => updateForm("niche", value as SettingsFormState["niche"])} options={NICHE_TEMPLATE_OPTIONS} />
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Kategori Bisnis</span>
+                <Input value={form.niche} onChange={(e) => updateForm("niche", e.target.value)} placeholder="Contoh: Warnet, Barbershop, Rental PS, Futsal..." />
               </label>
             </div>
 
@@ -488,9 +501,9 @@ export function SettingsPage() {
                   value={form.timezone}
                   onValueChange={(value) => updateForm("timezone", value)}
                   options={[
-                    { value: "WIB", label: "WIB (Waktu Indonesia Barat)" },
-                    { value: "WITA", label: "WITA (Waktu Indonesia Tengah)" },
-                    { value: "WIT", label: "WIT (Waktu Indonesia Timur)" },
+                    { value: "Asia/Jakarta", label: "WIB (Waktu Indonesia Barat)" },
+                    { value: "Asia/Makassar", label: "WITA (Waktu Indonesia Tengah)" },
+                    { value: "Asia/Jayapura", label: "WIT (Waktu Indonesia Timur)" },
                   ]}
                 />
               </label>

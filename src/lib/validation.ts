@@ -8,7 +8,7 @@ export function normalizePhoneNumber(value: string) {
 
 export function isValidPhoneNumber(value: string) {
   const normalized = normalizePhoneNumber(value);
-  return normalized.length >= 9 && normalized.length <= 15;
+  return /^08\d{8,12}$|^628\d{8,12}$/.test(normalized);
 }
 
 export function isValidEmailOrPhone(value: string) {

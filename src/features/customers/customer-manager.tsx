@@ -139,7 +139,7 @@ export function CustomerManager() {
       await new Promise((resolve) => setTimeout(resolve, 250));
 
       if (editingId) {
-        updateCustomer(editingId, {
+        await updateCustomer(editingId, {
           name: form.name.trim(),
           whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
           status: form.status,
@@ -152,20 +152,18 @@ export function CustomerManager() {
         return;
       }
 
-      try {
-        createCustomer({
-          name: form.name.trim(),
-          whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
-          status: form.status,
-          source: form.source.trim() || undefined,
-          notes: form.notes.trim() || undefined,
-        });
-        toast.success("Customer berhasil ditambahkan!");
-        resetForm();
-        setIsFormOpen(false);
-      } catch (createErr) {
-        toast.error("Gagal menambah customer", createErr instanceof Error ? createErr.message : (readOnlyReason ?? undefined));
-      }
+      await createCustomer({
+        name: form.name.trim(),
+        whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
+        status: form.status,
+        source: form.source.trim() || undefined,
+        notes: form.notes.trim() || undefined,
+      });
+      toast.success("Customer berhasil ditambahkan!");
+      resetForm();
+      setIsFormOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan customer.");
     } finally {
       setIsSubmitting(false);
     }
@@ -453,7 +451,10 @@ export function CustomerManager() {
               <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nomor WhatsApp</span>
               <Input
                 value={form.whatsappNumber}
-                onChange={(event) => setForm((current) => ({ ...current, whatsappNumber: event.target.value }))}
+                onChange={(event) => {
+                  event.target.value = event.target.value.replace(/[^\d]/g, "");
+                  setForm((current) => ({ ...current, whatsappNumber: event.target.value }));
+                }}
                 placeholder="Contoh: 08123456789"
               />
               {isDuplicatePhone && (

@@ -13,7 +13,7 @@ import { useAppData } from "@/components/providers/app-data-provider";
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { hydrated, currentUser, currentUserRole, subscriptionForCurrentBusiness } = useAppData();
+  const { hydrated, currentUser, currentUserRole, auth, subscriptionForCurrentBusiness, business } = useAppData();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
@@ -51,15 +51,31 @@ export function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (currentUserRole === "SUPER_ADMIN" && !pathname.startsWith("/app/super-admin")) {
+    if (currentUserRole === "SUPER_ADMIN" && !pathname.startsWith("/dashboard/super-admin")) {
       router.replace(ROUTES.superAdminBusinesses);
       return;
     }
 
-    if (currentUserRole === "OWNER" && pathname.startsWith("/app/super-admin")) {
-      router.replace(ROUTES.dashboard);
+    if (currentUserRole === "OWNER" && pathname.startsWith("/dashboard/super-admin")) {
+      // Force redirect to their actual dashboard
+      router.replace(ROUTES.dashboard(business.slug));
+      return;
     }
-  }, [currentUser, currentUserRole, hydrated, pathname, router]);
+
+    if (currentUserRole === "OWNER" && !auth.onboardingCompleted) {
+      router.replace(ROUTES.onboarding);
+      return;
+    }
+
+    if (currentUserRole === "OWNER" && auth.onboardingCompleted) {
+      const expectedPrefix = `/dashboard/${business.slug}`;
+      if (!pathname.startsWith(expectedPrefix)) {
+        const subPath = pathname.replace(/^\/dashboard\/?/, "");
+        const targetSubPath = subPath && !subPath.startsWith("super-admin") && subPath !== business.slug ? `/${subPath}` : "";
+        router.replace(`/dashboard/${business.slug}${targetSubPath}`);
+      }
+    }
+  }, [currentUser, currentUserRole, hydrated, pathname, router, auth.onboardingCompleted, business.slug]);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--color-background)] lg:flex">

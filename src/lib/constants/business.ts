@@ -1,4 +1,4 @@
-import type { BusinessMode, BusinessModeOption, BusinessResource, NicheTemplateOption, OperationalModel, OperationalModelOption } from "@/types/business";
+import type { BusinessMode, BusinessModeOption, BusinessResource, OperationalModel, OperationalModelOption } from "@/types/business";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/lib/booking";
 
 export const BUSINESS_MODE_OPTIONS: BusinessModeOption[] = [
@@ -37,31 +37,6 @@ export const OPERATIONAL_MODEL_OPTIONS: OperationalModelOption[] = [
   },
 ];
 
-export const NICHE_TEMPLATE_OPTIONS: NicheTemplateOption[] = [
-  { value: "STUDIO_MUSIK", label: "Studio Musik" },
-  { value: "BARBERSHOP", label: "Barbershop" },
-  { value: "TATTOO", label: "Tattoo Studio" },
-  { value: "RENTAL", label: "Penyewaan / Rental" },
-  { value: "TOUR", label: "Tour Travel" },
-  { value: "LAUNDRY", label: "Laundry" },
-  { value: "MAKANAN", label: "Catering / Makanan" },
-  { value: "HANDMADE", label: "Produk Handmade" },
-  { value: "CUSTOM", label: "Jasa Custom" },
-  { value: "LAINNYA", label: "Lainnya" },
-];
-
-export const NicheTemplateLabel: Record<NicheTemplateOption["value"], string> = {
-  STUDIO_MUSIK: "Studio Musik",
-  BARBERSHOP: "Barbershop",
-  TATTOO: "Tattoo Studio",
-  RENTAL: "Penyewaan / Rental",
-  TOUR: "Tour Travel",
-  LAUNDRY: "Laundry",
-  MAKANAN: "Catering / Makanan",
-  HANDMADE: "Produk Handmade",
-  CUSTOM: "Jasa Custom",
-  LAINNYA: "Lainnya",
-};
 
 export const RESOURCE_LABEL_SUGGESTIONS = ["Staf", "Tim", "Kapster", "Ruangan", "Meja", "PS", "Lapangan", "Court", "Studio", "Room"] as const;
 

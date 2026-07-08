@@ -14,7 +14,6 @@ import {
   createBusinessResources,
   doesOperationalModelUseResources,
   getDefaultOperationalModel,
-  NICHE_TEMPLATE_OPTIONS,
   OPERATIONAL_MODEL_OPTIONS,
 } from "@/lib/constants/business";
 import { ROUTES } from "@/lib/routes";
@@ -27,7 +26,7 @@ type Step = 1 | 2 | 3;
 export function OnboardingFlow() {
   const router = useRouter();
   const toast = useToast();
-  const { business, hydrated, completeOnboarding, currentUser } = useAppData();
+  const { business, hydrated, completeOnboarding, currentUser, auth } = useAppData();
   const [step, setStep] = useState<Step>(1);
   const [errors, setErrors] = useState<{
     name?: string;
@@ -35,10 +34,12 @@ export function OnboardingFlow() {
     resourceLabel?: string;
     resourceCount?: string;
     resources?: string;
+    niche?: string;
+    description?: string;
   }>({});
   const [form, setForm] = useState({
     name: business.name,
-    whatsappNumber: business.whatsappNumber || currentUser?.phoneNumber || "",
+    whatsappNumber: currentUser?.phoneNumber || business.whatsappNumber || "",
     mode: business.mode,
     operationalModel: business.operationalModel,
     usesResources: business.usesResources,
@@ -57,7 +58,7 @@ export function OnboardingFlow() {
 
     setForm({
       name: business.name,
-      whatsappNumber: business.whatsappNumber || currentUser?.phoneNumber || "",
+      whatsappNumber: currentUser?.phoneNumber || business.whatsappNumber || "",
       mode: business.mode,
       operationalModel: business.operationalModel,
       usesResources: business.usesResources,
@@ -69,6 +70,20 @@ export function OnboardingFlow() {
       description: business.description,
     });
   }, [business.defaultBookingDurationMinutes, business.description, business.mode, business.name, business.niche, business.operationalModel, business.resourceCount, business.resourceLabel, business.resources, business.usesResources, business.whatsappNumber, hydrated, currentUser?.phoneNumber]);
+
+  // Route Guard: Lindungi halaman onboarding dari akses tanpa auth atau jika sudah onboarded
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (!currentUser) {
+      router.replace(ROUTES.login);
+      return;
+    }
+
+    if (auth.onboardingCompleted) {
+      router.replace("/dashboard");
+    }
+  }, [hydrated, currentUser, auth.onboardingCompleted, router]);
 
 
 
@@ -87,10 +102,36 @@ export function OnboardingFlow() {
     if (currentStep === 1) {
       if (!form.name.trim()) {
         nextErrors.name = "Nama bisnis wajib diisi.";
+      } else if (form.name.trim().length < 2) {
+        nextErrors.name = "Nama bisnis minimal 2 karakter.";
       }
     }
 
+    if (currentStep === 2) {
+      if (form.usesResources) {
+        if (!form.resourceLabel.trim()) {
+          nextErrors.resourceLabel = "Sebutan unit/tim wajib diisi.";
+        }
+        const count = Number(form.resourceCount);
+        if (!form.resourceCount.trim() || isNaN(count) || count < 1) {
+          nextErrors.resourceCount = "Jumlah unit/tim minimal 1.";
+        }
+      }
+    }
 
+    if (currentStep === 3) {
+      if (!form.niche.trim()) {
+        nextErrors.niche = "Kategori bisnis wajib diisi.";
+      } else if (form.niche.trim().length < 2) {
+        nextErrors.niche = "Kategori bisnis minimal 2 karakter.";
+      } else if (form.niche.trim().length > 100) {
+        nextErrors.niche = "Kategori bisnis maksimal 100 karakter.";
+      }
+
+      if (form.description && form.description.trim().length > 500) {
+        nextErrors.description = "Deskripsi maksimal 500 karakter.";
+      }
+    }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -107,18 +148,30 @@ export function OnboardingFlow() {
     setStep((current) => Math.max(1, current - 1) as Step);
   }
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   async function finish() {
-    completeOnboarding({
-      ...form,
-      whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
-      resourceCount: form.usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
-      resources: form.usesResources ? form.resources : [],
-      defaultBookingDurationMinutes:
-        form.mode === "BOOKING_SERVICE" ? Math.max(15, Number(form.defaultBookingDurationMinutes) || 60) : undefined,
-    });
-    toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
-    await new Promise((resolve) => setTimeout(resolve, 180));
-    router.push(ROUTES.dashboard);
+    if (!validateStep(3)) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await completeOnboarding({
+        ...form,
+        whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
+        resourceCount: form.usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
+        resources: form.usesResources ? form.resources : [],
+        defaultBookingDurationMinutes:
+          form.mode === "BOOKING_SERVICE" ? Math.max(15, Number(form.defaultBookingDurationMinutes) || 60) : undefined,
+      });
+      toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      router.push("/dashboard");
+    } catch (err) {
+      toast.error("Gagal memproses onboarding", err instanceof Error ? err.message : "Kesalahan sistem.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleModeChange(nextMode: typeof form.mode) {
@@ -307,6 +360,7 @@ export function OnboardingFlow() {
                         onChange={(e) => setForm(c => ({ ...c, resourceLabel: e.target.value, resources: updateResources(e.target.value, c.resourceCount) }))}
                         placeholder="Contoh: Lapangan"
                       />
+                      {errors.resourceLabel ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceLabel}</p> : null}
                     </label>
                     <label className="block">
                       <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Jumlah {form.resourceLabel || "Unit"}</span>
@@ -316,6 +370,7 @@ export function OnboardingFlow() {
                         value={form.resourceCount}
                         onChange={(e) => setForm(c => ({ ...c, resourceCount: e.target.value, resources: updateResources(c.resourceLabel, e.target.value) }))}
                       />
+                      {errors.resourceCount ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceCount}</p> : null}
                     </label>
                   </div>
                 </div>
@@ -327,14 +382,18 @@ export function OnboardingFlow() {
             <div className="grid gap-5">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Kategori Bisnis</span>
-                <Select
+                <Input
                   value={form.niche}
-                  onValueChange={(value) => setForm((current) => ({ ...current, niche: value as typeof form.niche }))}
-                  options={NICHE_TEMPLATE_OPTIONS}
+                  onChange={(e) => setForm((current) => ({ ...current, niche: e.target.value }))}
+                  placeholder="Contoh: Warnet, Barbershop, Rental PS, Futsal, Laundry..."
                 />
-                <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                  💡 Kategori ini akan otomatis memuat contoh menu/layanan yang siap pakai di halaman booking Anda. Anda tidak perlu membuat daftar layanan dari nol!
-                </p>
+                {errors.niche ? (
+                  <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.niche}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    💡 Tulis kategori bisnis Anda secara bebas sesuai jenis usaha yang dijalankan.
+                  </p>
+                )}
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Deskripsi Singkat Bisnis</span>
@@ -343,6 +402,7 @@ export function OnboardingFlow() {
                   onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
                   placeholder="Contoh: Booking studio, follow-up cepat, dan nota sederhana."
                 />
+                {errors.description ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.description}</p> : null}
               </label>
 
               {/* Setup Summary Card */}
@@ -370,13 +430,13 @@ export function OnboardingFlow() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()}>
+                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
                   Tambah Order Pertama
                 </Button>
-                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()}>
+                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
                   Bagikan Link Bisnis
                 </Button>
-                <Button type="button" className="rounded-xl h-11 font-bold" onClick={() => void finish()}>
+                <Button type="button" className="rounded-xl h-11 font-bold" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
                   Lihat Dashboard
                 </Button>
               </div>
@@ -384,7 +444,7 @@ export function OnboardingFlow() {
           ) : null}
 
           <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-5">
-            <Button type="button" variant="secondary" className="rounded-xl h-11 px-5 font-bold text-sm" onClick={back} disabled={step === 1}>
+            <Button type="button" variant="secondary" className="rounded-xl h-11 px-5 font-bold text-sm" onClick={back} disabled={step === 1 || isSubmitting}>
               ← Kembali
             </Button>
             {step < 3 ? (

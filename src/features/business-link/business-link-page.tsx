@@ -20,13 +20,18 @@ async function copyToClipboard(text: string) {
 export function BusinessLinkPage() {
   const toast = useToast();
   const { business } = useAppData();
-  const [publicUrl, setPublicUrl] = useState(ROUTES.publicBusiness(business.slug));
+  const [linkType, setLinkType] = useState<"FORM" | "PROFILE">("FORM");
+  const [publicUrl, setPublicUrl] = useState(ROUTES.publicBusinessOrder(business.slug));
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const catalog = getPublicCatalog(business);
 
+  const activeUrlPath = linkType === "FORM" 
+    ? ROUTES.publicBusinessOrder(business.slug) 
+    : ROUTES.publicBusiness(business.slug);
+
   useEffect(() => {
-    setPublicUrl(`${window.location.origin}${ROUTES.publicBusiness(business.slug)}`);
-  }, [business.slug]);
+    setPublicUrl(`${window.location.origin}${activeUrlPath}`);
+  }, [business.slug, linkType, activeUrlPath]);
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -34,7 +39,7 @@ export function BusinessLinkPage() {
       <section className="animate-fade-up">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
           {/* Background decorative glows */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl" />
           <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
           
           <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
@@ -42,7 +47,7 @@ export function BusinessLinkPage() {
             <div className="space-y-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
                 <Link2 className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-                Link Profil Publik
+                {linkType === "FORM" ? "Link Form Booking" : "Link Profil Publik"}
               </span>
               <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
                 Bagikan Link Bisnis Anda
@@ -54,7 +59,7 @@ export function BusinessLinkPage() {
 
             {/* Right Actions */}
             <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={ROUTES.publicBusiness(business.slug)} className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-bold text-xs px-4 py-2 rounded-xl">
+              <LinkButton href={publicUrl} className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-bold text-xs px-4 py-2 rounded-xl">
                 Lihat Halaman Publik
               </LinkButton>
               <Button
@@ -110,6 +115,37 @@ export function BusinessLinkPage() {
                   <Link2 className="h-5 w-5 text-[var(--color-primary)] shrink-0" />
                 </div>
                 
+                <div className="flex rounded-xl bg-[var(--color-surface)] p-1 border border-[var(--color-border)]">
+                  <button
+                    type="button"
+                    onClick={() => setLinkType("FORM")}
+                    className={cn(
+                      "flex-1 rounded-lg py-1.5 text-[11px] font-extrabold transition-all",
+                      linkType === "FORM"
+                        ? "bg-[var(--color-primary)] text-white shadow-sm"
+                        : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                    )}
+                  >
+                    {business.mode === "BOOKING_SERVICE" 
+                      ? "Form Booking" 
+                      : business.mode === "PRODUCT_ORDER" 
+                      ? "Form Order" 
+                      : "Form Request"} (/order)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLinkType("PROFILE")}
+                    className={cn(
+                      "flex-1 rounded-lg py-1.5 text-[11px] font-extrabold transition-all",
+                      linkType === "PROFILE"
+                        ? "bg-[var(--color-primary)] text-white shadow-sm"
+                        : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                    )}
+                  >
+                    Profil & Katalog (/b)
+                  </button>
+                </div>
+
                 <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex items-center justify-between gap-3 relative overflow-hidden">
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">URL Halaman</p>
@@ -254,7 +290,7 @@ export function BusinessLinkPage() {
 
             <div className="grid gap-3 sm:grid-cols-2 pt-2">
               <LinkButton
-                href={ROUTES.messages}
+                href={ROUTES.messages(business.slug)}
                 variant="secondary"
                 className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-11"
               >
@@ -262,7 +298,7 @@ export function BusinessLinkPage() {
                 Pesan Cepat WA
               </LinkButton>
               <LinkButton
-                href={ROUTES.settings}
+                href={ROUTES.settings(business.slug)}
                 variant="secondary"
                 className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-11"
               >

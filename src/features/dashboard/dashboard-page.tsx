@@ -307,13 +307,13 @@ export function DashboardPage() {
 
             {/* Right: Actions */}
             <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={ROUTES.orders} size="sm" className="shadow-sm">
+              <LinkButton href={ROUTES.orders(business.slug)} size="sm" className="shadow-sm">
                 Tambah Order
               </LinkButton>
-              <LinkButton href={ROUTES.customers} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
+              <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
                 Tambah Customer
               </LinkButton>
-              <LinkButton href={ROUTES.messages} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
+              <LinkButton href={ROUTES.messages(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
                 Pesan Cepat
               </LinkButton>
             </div>
@@ -479,7 +479,7 @@ export function DashboardPage() {
                         )}
                         {item.type === "customer" && (
                           <>
-                            <LinkButton href={ROUTES.customers} variant="secondary" size="sm" className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold">
+                            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold">
                               Detail Customer
                             </LinkButton>
                             <Button
@@ -513,11 +513,11 @@ export function DashboardPage() {
 
       {/* ── QUICK LINKS ───────────────────────────────── */}
       <section className="animate-fade-up-delay-3 flex flex-wrap gap-2">
-        <LinkButton href={ROUTES.orders} variant="secondary" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] rounded-xl font-bold">
+        <LinkButton href={ROUTES.orders(business.slug)} variant="secondary" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] rounded-xl font-bold">
           Lihat Semua Order
           <ChevronRight className="h-4 w-4" />
         </LinkButton>
-        <LinkButton href={ROUTES.reports} variant="secondary" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] rounded-xl font-bold">
+        <LinkButton href={ROUTES.reports(business.slug)} variant="secondary" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] rounded-xl font-bold">
           Lihat Laporan
           <ChevronRight className="h-4 w-4" />
         </LinkButton>

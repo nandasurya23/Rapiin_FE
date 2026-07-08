@@ -242,7 +242,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
         if (!draftData.customerName || !draftData.title) {
           throw new Error("Lengkapi nama customer dan judul pesanan.");
         }
-        const newOrd = createOrder({
+        const newOrd = await createOrder({
           customerName: draftData.customerName,
           whatsappNumber: draftData.whatsappNumber || "",
           title: draftData.title,
@@ -258,7 +258,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
 
         let invoiceText = "";
         if (settings.autoCreateInvoice && planCode === "PREMIUM") {
-          const inv = createInvoiceFromOrder(newOrd.id);
+          const inv = await createInvoiceFromOrder(newOrd.id);
           if (inv) {
             invoiceText = ` & Nota Tagihan ${inv.invoiceCode} diterbitkan secara otomatis.`;
           }
@@ -282,7 +282,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
         const order = orders.find((o) => o.id === draftData.orderId);
         if (!order) throw new Error("Order tidak ditemukan.");
 
-        const updated = updateOrder(order.id, {
+        const updated = await updateOrder(order.id, {
           ...order,
           paymentStatus: draftData.paymentStatus,
           dpAmount: draftData.dpAmount !== undefined ? Number(draftData.dpAmount) : order.dpAmount,
@@ -298,7 +298,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
         const order = orders.find((o) => o.id === draftData.orderId);
         if (!order) throw new Error("Order tidak ditemukan.");
 
-        updateOrder(order.id, {
+        await updateOrder(order.id, {
           ...order,
           status: draftData.status,
         });
@@ -308,7 +308,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
       }
 
       else if (parsed.type === "CREATE_INVOICE") {
-        const inv = createInvoiceFromOrder(draftData.orderId);
+        const inv = await createInvoiceFromOrder(draftData.orderId);
         if (!inv) throw new Error("Gagal membuat invoice.");
 
         executedLogText = `Berhasil menerbitkan nota tagihan ${inv.invoiceCode} untuk ${draftData.customerName}`;
@@ -317,7 +317,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
 
       else if (parsed.type === "CREATE_CUSTOMER") {
         if (!draftData.name) throw new Error("Nama customer tidak boleh kosong.");
-        const cust = createCustomer({
+        const cust = await createCustomer({
           name: draftData.name,
           whatsappNumber: draftData.whatsappNumber || "",
           status: draftData.status,
@@ -919,7 +919,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
                             key={c.id}
                             onClick={() => {
                               handleClose();
-                              router.push(ROUTES.customers);
+                              router.push(ROUTES.customers(business.slug));
                             }}
                             className="text-left px-4 py-3 rounded-2xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] transition flex items-center justify-between text-xs"
                           >
@@ -944,7 +944,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
                             key={o.id}
                             onClick={() => {
                               handleClose();
-                              router.push(`${ROUTES.orders}?id=${o.id}`);
+                              router.push(`${ROUTES.orders(business.slug)}?id=${o.id}`);
                             }}
                             className="text-left px-4 py-3 rounded-2xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] transition flex items-center justify-between text-xs"
                           >

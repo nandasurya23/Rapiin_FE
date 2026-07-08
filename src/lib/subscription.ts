@@ -66,16 +66,7 @@ export function canCreateCustomer(state: Pick<AppStorageState, "business" | "cus
 
 export function canCreateOrder(state: { business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
   const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
-  if (!canAccessWriteMode(subscription)) {
-    return false;
-  }
-
-  if (!subscription) {
-    return false;
-  }
-
-  const usage = getOrderUsage(state);
-  return usage.used < usage.limit;
+  return canAccessWriteMode(subscription);
 }
 
 export function getOrderUsage(state: { business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
@@ -95,7 +86,7 @@ export function getOrderUsage(state: { business: { id: string }; subscriptions: 
     return orderCreatedTime >= startedTime && orderCreatedTime <= expiresTime;
   });
 
-  const limit = subscription.planCode === "FREE_TRIAL" ? 200 : subscription.planCode === "PRO" ? 2000 : 10000;
+  const limit = subscription.customerLimit;
   const used = cycleOrders.length;
 
   return {

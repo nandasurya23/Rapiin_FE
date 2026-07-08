@@ -1,6 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, type ReactNode } from "react";
+import { ApiAuthService } from "@/services/auth.service";
+import { ApiBusinessService } from "@/services/business.service";
+import { ApiCustomerService } from "@/services/customer.service";
+import { ApiOrderService } from "@/services/order.service";
+import { ApiInvoiceService } from "@/services/invoice.service";
+import { ApiMessageTemplateService } from "@/services/message-template.service";
+import type { MessageTemplate } from "@/types/message";
+import { apiFetch } from "@/lib/api-client";
+import { BusinessDTO } from "@/services/business.service";
 import {
   createAuthUser,
   createBackupRecord,
@@ -104,8 +113,8 @@ type RegisterOwnerInput = {
 };
 
 type ResetPasswordInput = {
-  identifier: string;
-  password: string;
+  token: string;
+  newPassword: string;
 };
 
 type PublicOrderInput = {
@@ -133,27 +142,30 @@ type AppDataContextValue = AppStorageState & {
     backupCount: number;
     latestBackup: BackupRecord | null;
   }>;
-  updateBusiness: (payload: Partial<Business>) => void;
-  saveBusinessSettings: (payload: BusinessSettingsInput) => void;
-  completeOnboarding: (payload: OnboardingPayload) => void;
-  registerOwner: (payload: RegisterOwnerInput) => { ok: true; user: AuthUser } | { ok: false; message: string };
-  login: (payload: LoginInput) => { ok: true; user: AuthUser } | { ok: false; message: string };
-  resetPassword: (payload: ResetPasswordInput) => { ok: true } | { ok: false; message: string };
-  logout: () => void;
-  createCustomer: (payload: CustomerInput) => Customer;
-  updateCustomer: (id: string, payload: CustomerInput) => Customer | null;
-  deleteCustomer: (id: string) => void;
-  createOrder: (payload: OrderInput) => Order;
-  updateOrder: (id: string, payload: OrderInput) => Order | null;
-  deleteOrder: (id: string) => void;
-  createInvoiceFromOrder: (orderId: string, notes?: string) => Invoice | null;
-  updateMessageTemplate: (id: string, payload: { title: string; content: string }) => void;
+  updateBusiness: (payload: Partial<Business>) => Promise<void>;
+  saveBusinessSettings: (payload: BusinessSettingsInput) => Promise<void>;
+  completeOnboarding: (payload: OnboardingPayload) => Promise<void>;
+  registerOwner: (payload: RegisterOwnerInput) => Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }>;
+  login: (payload: LoginInput) => Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }>;
+  requestForgotPassword: (email: string) => Promise<{ ok: true; message: string; devResetUrl?: string } | { ok: false; message: string }>;
+  resetPassword: (payload: ResetPasswordInput) => Promise<{ ok: true } | { ok: false; message: string }>;
+  logout: () => Promise<void>;
+  createCustomer: (payload: CustomerInput) => Promise<Customer>;
+  updateCustomer: (id: string, payload: CustomerInput) => Promise<Customer | null>;
+  deleteCustomer: (id: string) => Promise<void>;
+  createOrder: (payload: OrderInput) => Promise<Order>;
+  updateOrder: (id: string, payload: OrderInput) => Promise<Order | null>;
+  deleteOrder: (id: string) => Promise<void>;
+  createInvoiceFromOrder: (orderId: string, notes?: string) => Promise<Invoice | null>;
+  createMessageTemplate: (payload: { category: string; title: string; content: string }) => Promise<MessageTemplate>;
+  updateMessageTemplate: (id: string, payload: { title: string; content: string }) => Promise<MessageTemplate | null>;
+  deleteMessageTemplate: (id: string) => Promise<void>;
   updateMessageComposer: (payload: Partial<MessageComposerDraft>) => void;
   saveMessageDraft: (templateId: string, payload: { title: string; content: string }) => void;
-  submitPublicOrder: (input: PublicOrderInput) => { customer: Customer; order: Order };
+  submitPublicOrder: (input: PublicOrderInput) => Promise<unknown>;
   createBackup: () => BackupRecord;
   restoreBackup: (backupPayload: string) => boolean;
-  requestUpgrade: (toPlan: PlanCode, paymentNote?: string) => UpgradeRequest;
+  requestUpgrade: (toPlan: PlanCode, paymentNote?: string) => Promise<UpgradeRequest>;
   approveUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
   rejectUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
   extendTrial: (businessId: string, extraDays: number) => BusinessSubscription | null;
@@ -245,22 +257,99 @@ function withUpdatedTimestamp<T extends { updatedAt: string }>(value: T): T {
   return { ...value, updatedAt: new Date().toISOString() };
 }
 
+const authService = new ApiAuthService();
+const businessService = new ApiBusinessService();
+const customerService = new ApiCustomerService();
+const orderService = new ApiOrderService();
+const invoiceService = new ApiInvoiceService();
+const messageTemplateService = new ApiMessageTemplateService();
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppStorageState>(createInitialAppStorageState);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    const nextState = readAppStorageState();
-    setState(nextState);
-    setHydrated(true);
+  const fetchAllData = useCallback(async (userId: string) => {
+    try {
+      const business = await businessService.getBusinessById("");
+      if (!business) return;
+
+      const [orders, customers, invoices, messageTemplates] = await Promise.all([
+        orderService.getOrders(business.id),
+        customerService.getCustomers(business.id),
+        invoiceService.getInvoices(business.id),
+        messageTemplateService.getTemplates(business.id),
+      ]);
+
+      setState((prev) => ({
+        ...prev,
+        business,
+        orders,
+        customers,
+        invoices,
+        messageTemplates,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        subscriptions: (business as any).subscriptions || prev.subscriptions,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        upgradeRequests: (business as any).upgradeRequests || prev.upgradeRequests,
+      }));
+    } catch (err) {
+      console.error("Failed to load backend data", err);
+    }
   }, []);
+
+  useEffect(() => {
+    async function init() {
+      // getCurrentUser() calls /api/auth/me — cookie is source of truth, no localStorage
+      const user = await authService.getCurrentUser();
+      if (user) {
+        const onboardingCompleted = user.onboardingCompleted ?? false;
+
+        // Always fetch the business profile so form fields (e.g. whatsappNumber)
+        // are pre-populated from DB — needed for both onboarding and dashboard flows.
+        let businessData = null;
+        try {
+          businessData = await businessService.getBusinessById("");
+        } catch {
+          // Not critical — business may not exist yet for brand-new users
+        }
+
+        setState((prev) => ({
+          ...prev,
+          business: businessData || prev.business,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          subscriptions: businessData ? (businessData as any).subscriptions || prev.subscriptions : prev.subscriptions,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          upgradeRequests: businessData ? (businessData as any).upgradeRequests || prev.upgradeRequests : prev.upgradeRequests,
+          auth: {
+            ...prev.auth,
+            currentUserId: user.id,
+            onboardingCompleted,
+            users: [user],
+          },
+        }));
+        if (onboardingCompleted) {
+          await fetchAllData(user.id);
+        }
+      }
+      setHydrated(true);
+    }
+    init();
+  }, [fetchAllData]);
+
+
 
   useEffect(() => {
     if (!hydrated) {
       return;
     }
 
-    writeAppStorageState(state);
+    // Persist local state preferences to localStorage
+    writeAppStorageState({
+      ...state,
+      business: state.business,
+      auth: state.auth,
+      ui: state.ui,
+    });
   }, [hydrated, state]);
 
   function setAppState(updater: (current: AppStorageState) => AppStorageState) {
@@ -327,395 +416,181 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function updateBusiness(payload: Partial<Business>) {
-    setAppState((current) => ({
-      ...current,
-      business: normalizeBusinessPayload(current.business, payload),
-    }));
-  }
-
-  function saveBusinessSettings(payload: BusinessSettingsInput) {
-    setAppState((current) => ({
-      ...current,
-      business: normalizeBusinessPayload(current.business, payload),
-    }));
-  }
-
-  function completeOnboarding(payload: OnboardingPayload) {
-    setAppState((current) => ({
-      ...current,
-      business: {
-        ...normalizeBusinessPayload(current.business, payload),
-        ownerName: current.auth.users.find((user) => user.id === current.auth.currentUserId)?.name ?? current.business.ownerName,
-        slug: normalizeBusinessNameToSlug(payload.name) || current.business.slug,
-      },
-      auth: {
-        ...current.auth,
-        onboardingCompleted: true,
-      },
-    }));
-  }
-
-  function registerOwner(payload: RegisterOwnerInput) {
-    const normalizedEmail = normalizeIdentifier(payload.email);
-    const normalizedPhoneNumber = payload.phoneNumber.trim();
-    const existingEmail = state.auth.users.find((user) => user.email.toLowerCase() === normalizedEmail);
-    if (existingEmail) {
-      return { ok: false as const, message: "Email ini sudah terdaftar." };
+  function assertCanWrite() {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
+  }
 
-    const existingPhone = state.auth.users.find((user) => user.phoneNumber === normalizedPhoneNumber);
-    if (existingPhone) {
-      return { ok: false as const, message: "Nomor WhatsApp ini sudah dipakai untuk akun bisnis lain." };
+  async function updateBusiness(payload: Partial<Business>) {
+    assertCanWrite();
+    const updated = await businessService.updateBusiness(state.business.id, payload);
+    if (updated) {
+      setState((current) => ({
+        ...current,
+        business: updated,
+      }));
     }
+  }
 
-    const nextUser = createAuthUser({
-      name: payload.name.trim(),
-      email: normalizedEmail,
-      phoneNumber: normalizedPhoneNumber,
-      password: payload.password,
-      role: "OWNER",
-      businessId: state.business.id,
-      trialUsed: true,
-      isActive: true,
+  async function saveBusinessSettings(payload: BusinessSettingsInput) {
+    assertCanWrite();
+    const updated = await businessService.updateBusiness(state.business.id, payload);
+    if (updated) {
+      setState((current) => ({
+        ...current,
+        business: updated,
+      }));
+    }
+  }
+
+  async function completeOnboarding(payload: OnboardingPayload) {
+    const response = await apiFetch<BusinessDTO>("/api/business/onboarding", {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
-
-    setAppState((current) => ({
-      ...current,
-      business: {
-        ...current.business,
-        ownerName: nextUser.name,
-        updatedAt: new Date().toISOString(),
-      },
-      subscriptions: current.subscriptions.map((subscription) =>
-        subscription.businessId === current.business.id
-          ? createBusinessSubscriptionRecord({
-              businessId: current.business.id,
-              planCode: "FREE_TRIAL",
-              startedAt: new Date().toISOString(),
-            })
-          : subscription
-      ),
-      auth: {
-        ...current.auth,
-        currentUserId: nextUser.id,
-        onboardingCompleted: false,
-        users: [nextUser, ...current.auth.users],
-      },
-    }));
-
-    return { ok: true as const, user: nextUser };
-  }
-
-  function login(payload: LoginInput) {
-    const normalizedIdentifier = normalizeIdentifier(payload.identifier);
-    const user = state.auth.users.find(
-      (item) =>
-        (item.email.toLowerCase() === normalizedIdentifier || item.phoneNumber === payload.identifier.trim()) &&
-        item.password === payload.password
-    );
-
-    if (!user) {
-      return { ok: false as const, message: "Akun tidak ditemukan atau password salah." };
+    if (response) {
+      setState((prev) => ({
+        ...prev,
+        business: response as Business,
+        auth: {
+          ...prev.auth,
+          onboardingCompleted: true,
+        },
+      }));
+      await fetchAllData(state.auth.currentUserId || "");
     }
+  }
 
-    if (!user.isActive) {
-      return { ok: false as const, message: "Akun ini sedang tidak aktif." };
+  async function registerOwner(payload: RegisterOwnerInput) {
+    const result = await authService.register(payload);
+    if (result.ok) {
+      const onboardingCompleted = result.user.onboardingCompleted ?? false;
+      let businessData = null;
+      try {
+        businessData = await businessService.getBusinessById("");
+      } catch (err) {
+        console.error("Failed to fetch new business after registration", err);
+      }
+      setState((prev) => ({
+        ...prev,
+        business: businessData || prev.business,
+        auth: {
+          ...prev.auth,
+          currentUserId: result.user.id,
+          onboardingCompleted,
+          users: [result.user],
+        },
+      }));
     }
-
-    setAppState((current) => ({
-      ...current,
-      business: {
-        ...current.business,
-        ownerName: user.role === "OWNER" ? user.name : current.business.ownerName,
-      },
-      auth: {
-        ...current.auth,
-        currentUserId: user.id,
-      },
-    }));
-
-    return { ok: true as const, user };
+    return result;
   }
 
-  function logout() {
-    setAppState((current) => ({
-      ...current,
-      auth: {
-        ...current.auth,
-        currentUserId: null,
-      },
-    }));
-  }
-
-  function resetPassword(payload: ResetPasswordInput) {
-    const normalizedIdentifier = normalizeIdentifier(payload.identifier);
-    const existing = state.auth.users.find(
-      (user) => user.email.toLowerCase() === normalizedIdentifier || user.phoneNumber === payload.identifier.trim()
-    );
-
-    if (!existing) {
-      return { ok: false as const, message: "Akun dengan email / nomor HP ini tidak ditemukan." };
+  async function login(payload: LoginInput) {
+    const result = await authService.login(payload.identifier, payload.password);
+    if (result.ok) {
+      const onboardingCompleted = result.user.onboardingCompleted ?? false;
+      setState((prev) => ({
+        ...prev,
+        auth: {
+          ...prev.auth,
+          currentUserId: result.user.id,
+          onboardingCompleted,
+          users: [result.user],
+        },
+      }));
+      if (onboardingCompleted) {
+        await fetchAllData(result.user.id);
+      }
     }
-
-    setAppState((current) => ({
-      ...current,
-      auth: {
-        ...current.auth,
-        users: current.auth.users.map((user) =>
-          user.id === existing.id
-            ? {
-                ...user,
-                password: payload.password,
-                updatedAt: new Date().toISOString(),
-              }
-            : user
-        ),
-      },
-    }));
-
-    return { ok: true as const };
+    return result;
   }
 
-  function createCustomer(payload: CustomerInput) {
+  async function logout() {
+    await authService.logout();
+    // Reset ALL state to initial — prevents data leak between users on same device
+    setState(createInitialAppStorageState());
+  }
+
+  async function requestForgotPassword(email: string) {
+    return authService.requestForgotPassword(email);
+  }
+
+  async function resetPassword(payload: ResetPasswordInput) {
+    return authService.resetPassword(payload.token, payload.newPassword);
+  }
+
+  async function createCustomer(payload: CustomerInput) {
     assertCanCreateCustomer();
-
-    const nextCustomer = createCustomerRecord({
-      businessId: state.business.id,
+    const customer = await customerService.createCustomer({
       ...payload,
-      name: payload.name.trim(),
-      whatsappNumber: payload.whatsappNumber.trim(),
-      source: payload.source?.trim() || undefined,
-      notes: payload.notes?.trim() || undefined,
-    });
-
-    setAppState((current) => ({
-      ...current,
-      customers: [nextCustomer, ...current.customers],
-    }));
-
-    return nextCustomer;
-  }
-
-  function updateCustomer(id: string, payload: CustomerInput) {
-    let updatedCustomer: Customer | null = null;
-
-    setAppState((current) => ({
-      ...current,
-      customers: current.customers.map((customer) => {
-        if (customer.id !== id) {
-          return customer;
-        }
-
-        updatedCustomer = {
-          ...customer,
-          name: payload.name.trim(),
-          whatsappNumber: payload.whatsappNumber.trim(),
-          status: payload.status,
-          source: payload.source?.trim() || undefined,
-          notes: payload.notes?.trim() || undefined,
-          lastInteractionAt: payload.lastInteractionAt,
-          lastOrderSummary: payload.lastOrderSummary,
-          updatedAt: new Date().toISOString(),
-        };
-
-        return updatedCustomer;
-      }),
-    }));
-
-    return updatedCustomer;
-  }
-
-  function deleteCustomer(id: string) {
-    setAppState((current) => ({
-      ...current,
-      customers: current.customers.filter((customer) => customer.id !== id),
-    }));
-  }
-
-  function upsertCustomerFromOrder(current: AppStorageState, payload: Pick<OrderInput, "customerName" | "whatsappNumber" | "status" | "title">) {
-    const existingCustomer =
-      current.customers.find((customer) => customer.whatsappNumber === payload.whatsappNumber.trim()) ??
-      current.customers.find((customer) => customer.name.toLowerCase() === payload.customerName.trim().toLowerCase());
-
-    const nextCustomerStatus = getCustomerStatusFromOrderStatus(payload.status);
-    const lastInteractionAt = new Date().toISOString();
-
-    if (existingCustomer) {
-      const updatedCustomer: Customer = {
-        ...existingCustomer,
-        name: payload.customerName.trim(),
-        whatsappNumber: payload.whatsappNumber.trim(),
-        status: nextCustomerStatus,
-        lastInteractionAt,
-        lastOrderSummary: payload.title.trim(),
-        updatedAt: lastInteractionAt,
-      };
-
-      return {
-        customer: updatedCustomer,
-        customers: current.customers.map((item) => (item.id === existingCustomer.id ? updatedCustomer : item)),
-      };
-    }
-
-    const nextCustomer = createCustomerRecord({
-      businessId: current.business.id,
-      name: payload.customerName.trim(),
-      whatsappNumber: payload.whatsappNumber.trim(),
-      status: nextCustomerStatus,
-      lastInteractionAt,
-      lastOrderSummary: payload.title.trim(),
-      source: "Order manual",
-    });
-
-    return {
-      customer: nextCustomer,
-      customers: [nextCustomer, ...current.customers],
-    };
-  }
-
-  function createOrder(payload: OrderInput) {
-    assertCanCreateOrder();
-    const nextHoldExpiresAt = payload.bookingHoldExpiresAt;
-    let createdOrder: Order | null = null;
-
-    setAppState((current) => {
-      const customerSync = upsertCustomerFromOrder(current, {
-        customerName: payload.customerName,
-        whatsappNumber: payload.whatsappNumber,
-        status: payload.status,
-        title: payload.title,
-      });
-
-      createdOrder = createOrderRecord({
-        businessId: current.business.id,
-        customerId: customerSync.customer.id,
-        customerName: payload.customerName.trim(),
-        whatsappNumber: payload.whatsappNumber.trim(),
-        title: payload.title.trim(),
-        mode: payload.mode,
-        status: payload.status,
-        paymentStatus: payload.paymentStatus,
-        scheduledDate: payload.scheduledDate || undefined,
-        scheduledTime: payload.scheduledTime || undefined,
-        bookingDurationMinutes: payload.mode === "BOOKING_SERVICE" ? payload.bookingDurationMinutes : undefined,
-        bookingHoldExpiresAt: nextHoldExpiresAt,
-        resourceId: payload.resourceId,
-        resourceNameSnapshot: payload.resourceNameSnapshot,
-        totalAmount: payload.totalAmount,
-        dpAmount: payload.dpAmount,
-        notes: payload.notes?.trim() || undefined,
-        customerStatusSnapshot: customerSync.customer.status,
-      });
-
-      return {
-        ...current,
-        customers: customerSync.customers,
-        orders: createdOrder ? [createdOrder, ...current.orders] : current.orders,
-      };
-    });
-
-    if (!createdOrder) {
-      throw new Error("Failed to create order");
-    }
-
-    return createdOrder;
-  }
-
-  function updateOrder(id: string, payload: OrderInput) {
-    let updatedOrder: Order | null = null;
-
-    setAppState((current) => {
-      const customerSync = upsertCustomerFromOrder(current, {
-        customerName: payload.customerName,
-        whatsappNumber: payload.whatsappNumber,
-        status: payload.status,
-        title: payload.title,
-      });
-
-      return {
-        ...current,
-        customers: customerSync.customers,
-        orders: current.orders.map((order) => {
-          if (order.id !== id) {
-            return order;
-          }
-
-          updatedOrder = {
-            ...order,
-            customerId: customerSync.customer.id,
-            customerName: payload.customerName.trim(),
-            whatsappNumber: payload.whatsappNumber.trim(),
-            title: payload.title.trim(),
-            mode: payload.mode,
-            status: payload.status,
-            paymentStatus: payload.paymentStatus,
-            scheduledDate: payload.scheduledDate || undefined,
-            scheduledTime: payload.scheduledTime || undefined,
-            bookingDurationMinutes: payload.mode === "BOOKING_SERVICE" ? payload.bookingDurationMinutes : undefined,
-            bookingHoldExpiresAt: payload.bookingHoldExpiresAt,
-            resourceId: payload.resourceId,
-            resourceNameSnapshot: payload.resourceNameSnapshot,
-            totalAmount: payload.totalAmount,
-            dpAmount: payload.dpAmount,
-            notes: payload.notes?.trim() || undefined,
-            customerStatusSnapshot: customerSync.customer.status,
-            updatedAt: new Date().toISOString(),
-          };
-
-          return updatedOrder;
-        }),
-      };
-    });
-
-    return updatedOrder;
-  }
-
-  function deleteOrder(id: string) {
-    setAppState((current) => ({
-      ...current,
-      orders: current.orders.filter((order) => order.id !== id),
-      invoices: current.invoices.filter((invoice) => invoice.orderId !== id),
-    }));
-  }
-
-  function createInvoiceFromOrder(orderId: string, notes?: string) {
-    assertCanCreateInvoice();
-    const order = state.orders.find((item) => item.id === orderId);
-    if (!order) {
-      return null;
-    }
-
-    const existingInvoice = state.invoices.find((invoice) => invoice.orderId === order.id);
-    if (existingInvoice) {
-      return existingInvoice;
-    }
-
-    const nextInvoice = createInvoiceRecord({
       businessId: state.business.id,
-      orderId: order.id,
-      invoiceCode: createInvoiceCode(order.id, state.invoices.length + 1),
-      customerName: order.customerName,
-      totalAmount: order.totalAmount ?? 0,
-      paymentStatus: order.paymentStatus,
-      notes: notes?.trim() || "Nota dibuat dari order.",
     });
-
-    setAppState((current) => ({
-      ...current,
-      invoices: [nextInvoice, ...current.invoices],
-    }));
-
-    return nextInvoice;
+    await fetchAllData(state.auth.currentUserId || "");
+    return customer;
   }
 
-  function updateMessageTemplate(id: string, payload: { title: string; content: string }) {
-    setAppState((current) => ({
-      ...current,
-      messageTemplates: current.messageTemplates.map((template) =>
-        template.id === id ? createMessageTemplateRecord(template, payload) : template
-      ),
-    }));
+  async function updateCustomer(id: string, payload: CustomerInput) {
+    assertCanWrite();
+    const customer = await customerService.updateCustomer(id, payload);
+    await fetchAllData(state.auth.currentUserId || "");
+    return customer;
+  }
+
+  async function deleteCustomer(id: string) {
+    assertCanWrite();
+    await customerService.deleteCustomer(id);
+    await fetchAllData(state.auth.currentUserId || "");
+  }
+
+  async function createOrder(payload: OrderInput) {
+    assertCanCreateOrder();
+    const order = await orderService.createOrder({
+      ...payload,
+      businessId: state.business.id,
+    });
+    await fetchAllData(state.auth.currentUserId || "");
+    return order;
+  }
+
+  async function updateOrder(id: string, payload: OrderInput) {
+    assertCanWrite();
+    const order = await orderService.updateOrder(id, payload);
+    await fetchAllData(state.auth.currentUserId || "");
+    return order;
+  }
+
+  async function deleteOrder(id: string) {
+    assertCanWrite();
+    await orderService.deleteOrder(id);
+    await fetchAllData(state.auth.currentUserId || "");
+  }
+
+  async function createInvoiceFromOrder(orderId: string, notes?: string) {
+    assertCanCreateInvoice();
+    const invoice = await invoiceService.createInvoiceFromOrder(orderId, notes);
+    await fetchAllData(state.auth.currentUserId || "");
+    return invoice;
+  }
+
+  async function createMessageTemplate(payload: { category: string; title: string; content: string }) {
+    assertCanWrite();
+    const newTemplate = await messageTemplateService.createTemplate(payload);
+    await fetchAllData(state.auth.currentUserId || "");
+    return newTemplate;
+  }
+
+  async function updateMessageTemplate(id: string, payload: { title: string; content: string }) {
+    assertCanWrite();
+    const updated = await messageTemplateService.updateTemplate(id, payload);
+    await fetchAllData(state.auth.currentUserId || "");
+    return updated;
+  }
+
+  async function deleteMessageTemplate(id: string) {
+    assertCanWrite();
+    await messageTemplateService.deleteTemplate(id);
+    await fetchAllData(state.auth.currentUserId || "");
   }
 
   function updateMessageComposer(payload: Partial<MessageComposerDraft>) {
@@ -748,61 +623,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }));
   }
 
-  function submitPublicOrder(input: PublicOrderInput) {
-    assertCanCreateOrder();
-    const customerName = input.payload.name?.trim() || "Customer baru";
-    const whatsappNumber = input.payload.whatsappNumber?.trim() || "";
-    const mode = state.business.mode;
-    const operationalModel = state.business.operationalModel;
-    const title = getPublicOrderTitle(mode, input.payload);
-
-    const customer = createCustomerRecord({
-      businessId: state.business.id,
-      name: customerName,
-      whatsappNumber,
-      status: "NEW",
-      source: "Link Bisnis",
-      notes: input.payload.notes?.trim() || undefined,
-      lastInteractionAt: new Date().toISOString(),
-      lastOrderSummary: title,
+  async function submitPublicOrder(input: PublicOrderInput) {
+    const response = await apiFetch<unknown>(`/api/public/b/${state.business.slug}/submit`, {
+      method: "POST",
+      body: JSON.stringify({
+        mode: state.business.mode,
+        operationalModel: state.business.operationalModel,
+        payload: input.payload,
+      }),
     });
-
-    const order = createOrderRecord({
-      businessId: state.business.id,
-      customerId: customer.id,
-      customerName,
-      whatsappNumber,
-      title,
-      mode,
-      status: getDefaultOrderStatusForMode(mode),
-      paymentStatus: "UNPAID",
-      scheduledDate: input.payload.scheduledDate || input.payload.deadline || undefined,
-      scheduledTime: input.payload.scheduledTime || undefined,
-      bookingDurationMinutes: input.payload.bookingDurationMinutes ? Number(input.payload.bookingDurationMinutes) : undefined,
-      resourceId: input.payload.resourceId || undefined,
-      resourceNameSnapshot: state.business.resources?.find((r) => r.id === input.payload.resourceId)?.name || undefined,
-      totalAmount: input.payload.budget ? Number(input.payload.budget.replace(/[^\d]/g, "")) : undefined,
-      notes: input.payload.notes?.trim() || undefined,
-      customerStatusSnapshot: "NEW",
-    });
-
-    const publicSubmission = createPublicSubmissionRecord({
-      businessId: state.business.id,
-      customerId: customer.id,
-      orderId: order.id,
-      mode,
-      operationalModel,
-      payload: input.payload,
-    });
-
-    setAppState((current) => ({
-      ...current,
-      customers: [customer, ...current.customers],
-      orders: [order, ...current.orders],
-      publicSubmissions: [publicSubmission, ...current.publicSubmissions],
-    }));
-
-    return { customer, order };
+    return response;
   }
 
   function createBackup() {
@@ -870,7 +700,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function requestUpgrade(toPlan: PlanCode, paymentNote?: string) {
+  async function requestUpgrade(toPlan: PlanCode, paymentNote?: string) {
     const currentUserId = state.auth.currentUserId;
     if (!currentUserId) {
       throw new Error("Kamu harus login dulu.");
@@ -882,27 +712,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return existingPending;
     }
 
-    const nextRequest = createUpgradeRequestRecord({
-      businessId: state.business.id,
-      requestedByUserId: currentUserId,
-      fromPlan: currentSubscription?.planCode ?? "FREE_TRIAL",
-      toPlan,
-      paymentNote,
+    const nextRequest = await apiFetch<UpgradeRequest>("/api/business/upgrade", {
+      method: "POST",
+      body: JSON.stringify({
+        toPlan,
+        paymentNote,
+      }),
     });
 
-    setAppState((current) => ({
-      ...current,
-      upgradeRequests: [nextRequest, ...current.upgradeRequests],
-      subscriptions: current.subscriptions.map((subscription) =>
-        subscription.businessId === current.business.id
-          ? withUpdatedTimestamp({
-              ...subscription,
-              status: "PENDING_UPGRADE_APPROVAL",
-            })
-          : subscription
-      ),
-    }));
-
+    await fetchAllData(currentUserId);
     return nextRequest;
   }
 
@@ -1133,6 +951,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     completeOnboarding,
     registerOwner,
     login,
+    requestForgotPassword,
     resetPassword,
     logout,
     createCustomer,
@@ -1142,7 +961,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updateOrder,
     deleteOrder,
     createInvoiceFromOrder,
+    createMessageTemplate,
     updateMessageTemplate,
+    deleteMessageTemplate,
     updateMessageComposer,
     saveMessageDraft,
     submitPublicOrder,

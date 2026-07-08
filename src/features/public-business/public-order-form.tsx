@@ -74,7 +74,7 @@ function fieldValueFromState(state: FormState, name: string) {
 }
 
 function requiredFieldsForBusiness(business: Business) {
-  return getPublicFormFields(business).filter((field) => field.required).map((field) => field.name);
+  return getPublicFormFields(business).filter((field: { required?: boolean }) => field.required).map((field: { name: string }) => field.name);
 }
 
 function formatHoldReleaseTime(value?: string | null) {
@@ -205,7 +205,11 @@ function clearCatalogSelectionFromForm(mode: BusinessMode, current: FormState, d
 export function PublicOrderForm({ slug }: { slug: string }) {
   const toast = useToast();
   const searchParams = useSearchParams();
-  const { business, hydrated, orders, submitPublicOrder, canCreateOrder } = useAppData();
+  const { business, hydrated, orders: appOrders, submitPublicOrder, canCreateOrder } = useAppData();
+  const orders = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (business?.orders || appOrders || []) as any[];
+  }, [business?.orders, appOrders]);
   const defaultBookingDuration = business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
   const [form, setForm] = useState<FormState>(initialStateByMode[business.mode]);
   const [submitted, setSubmitted] = useState(false);
@@ -340,7 +344,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       return;
     }
 
-    const missing = requiredFieldsForBusiness(business).find((field) => !fieldValueFromState(form, field).trim());
+    const missing = requiredFieldsForBusiness(business).find((field: string) => !fieldValueFromState(form, field).trim());
 
     if (missing) {
       setError("Lengkapi semua field wajib dulu.");
@@ -386,7 +390,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
       try {
-        submitPublicOrder({
+        await submitPublicOrder({
           payload: {
             ...form,
             whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
@@ -503,12 +507,12 @@ export function PublicOrderForm({ slug }: { slug: string }) {
             <div>
               <h1 className="text-2xl font-semibold text-[var(--color-text)]">Form publik belum cocok</h1>
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                Slug yang dibuka tidak sesuai dengan bisnis aktif di mock data saat ini.
+                Slug yang dibuka tidak sesuai dengan bisnis yang terdaftar di sistem.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <LinkButton href={ROUTES.publicBusiness(business.slug)}>Buka Halaman Bisnis</LinkButton>
-              <LinkButton href={ROUTES.dashboard} variant="secondary">
+              <LinkButton href="/dashboard" variant="secondary">
                 Kembali ke App
               </LinkButton>
             </div>
@@ -737,62 +741,70 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                           Pilih salah satu menu di bawah untuk melanjutkan pemesanan.
                         </p>
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {catalog.map((item) => {
-                          const catalogField = getCatalogFieldName(business.mode);
-                          const isSelected = fieldValueFromState(form, catalogField) === item.name;
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => {
-                                const nextForm = isSelected
-                                  ? clearCatalogSelectionFromForm(business.mode, form, defaultBookingDuration)
-                                  : applyCatalogSelectionToForm(
-                                      business.mode,
-                                      form,
-                                      item.name,
-                                      inferCatalogDurationMinutes(item),
-                                      item.priceLabel
-                                    );
-                                setError("");
-                                setForm(nextForm);
-                                setTimeout(() => setCurrentStep(2), 250);
-                              }}
-                              className={cn(
-                                "rounded-2xl border p-4 text-left transition flex flex-col justify-between h-32 hover:scale-[1.01] active:scale-[0.99] shadow-sm",
-                                isSelected
-                                  ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]"
-                                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
-                              )}
-                            >
-                              <div className="min-w-0">
-                                <p className="font-extrabold text-[var(--color-text)] text-sm leading-tight truncate">{item.name}</p>
-                                <p className="mt-1.5 text-xs text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed">
-                                  {item.description || "Layanan/produk premium dari kami."}
-                                </p>
-                              </div>
-                              <div className="mt-2 flex justify-between items-center w-full">
-                                <span className="text-xs font-black text-[var(--color-primary)]">
-                                  {item.priceLabel || "Harga by chat"}
-                                </span>
-                                {isSelected && (
-                                  <Badge tone="success" className="font-black text-[9px] uppercase tracking-wider">Dipilih</Badge>
+                      {catalog.length > 0 ? (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {catalog.map((item) => {
+                            const catalogField = getCatalogFieldName(business.mode);
+                            const isSelected = fieldValueFromState(form, catalogField) === item.name;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  const nextForm = isSelected
+                                    ? clearCatalogSelectionFromForm(business.mode, form, defaultBookingDuration)
+                                    : applyCatalogSelectionToForm(
+                                        business.mode,
+                                        form,
+                                        item.name,
+                                        inferCatalogDurationMinutes(item),
+                                        item.priceLabel
+                                      );
+                                  setError("");
+                                  setForm(nextForm);
+                                  setTimeout(() => setCurrentStep(2), 250);
+                                }}
+                                className={cn(
+                                  "rounded-2xl border p-4 text-left transition flex flex-col justify-between h-32 hover:scale-[1.01] active:scale-[0.99] shadow-sm",
+                                  isSelected
+                                    ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]"
+                                    : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
                                 )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
+                              >
+                                <div className="min-w-0">
+                                  <p className="font-extrabold text-[var(--color-text)] text-sm leading-tight truncate">{item.name}</p>
+                                  <p className="mt-1.5 text-xs text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed">
+                                    {item.description || "Layanan/produk premium dari kami."}
+                                  </p>
+                                </div>
+                                <div className="mt-2 flex justify-between items-center w-full">
+                                  <span className="text-xs font-black text-[var(--color-primary)]">
+                                    {item.priceLabel || "Harga by chat"}
+                                  </span>
+                                  {isSelected && (
+                                    <Badge tone="success" className="font-black text-[9px] uppercase tracking-wider">Dipilih</Badge>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-center space-y-2 bg-[var(--color-surface)]">
+                          <p className="font-bold text-sm text-[var(--color-text)]">Belum Ada Daftar Layanan/Produk</p>
+                          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                            Layanan/produk belum ditentukan oleh bisnis. Silakan klik tombol di bawah untuk langsung mengisi data pemesanan.
+                          </p>
+                        </div>
+                      )}
 
                       <div className="mt-6 pt-4 border-t border-[var(--color-border)]/40 flex justify-end">
                         <Button
                           type="button"
-                          disabled={!fieldValueFromState(form, getCatalogFieldName(business.mode))}
                           onClick={() => setCurrentStep(2)}
                           className="w-full sm:w-auto font-bold rounded-xl"
                         >
-                          Lanjut
+                          {fieldValueFromState(form, getCatalogFieldName(business.mode)) ? "Lanjut" : "Lanjut Tanpa Memilih"}
                         </Button>
                       </div>
                     </div>
@@ -1039,7 +1051,10 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                         <Input
                           type="tel"
                           value={form.whatsappNumber || ""}
-                          onChange={(e) => updateField("whatsappNumber", e.target.value)}
+                          onChange={(e) => {
+                            e.target.value = e.target.value.replace(/[^\d]/g, "");
+                            updateField("whatsappNumber", e.target.value);
+                          }}
                           placeholder="08123456789"
                         />
                       </label>
@@ -1090,7 +1105,10 @@ export function PublicOrderForm({ slug }: { slug: string }) {
                       <Input
                         type="tel"
                         value={form.whatsappNumber || ""}
-                        onChange={(e) => updateField("whatsappNumber", e.target.value)}
+                        onChange={(e) => {
+                          e.target.value = e.target.value.replace(/[^\d]/g, "");
+                          updateField("whatsappNumber", e.target.value);
+                        }}
                         placeholder="08123456789"
                       />
                     </label>

@@ -63,11 +63,7 @@ export function normalizeInvoiceVerification(invoice: Invoice): Invoice {
 }
 
 export function isInvoiceIntegrityValid(invoice: Invoice) {
-  const verificationCode = buildInvoiceVerificationCode(invoice);
-  const integritySeal = buildInvoiceIntegritySeal({
-    ...invoice,
-    verificationCode,
-  });
-
-  return invoice.verificationCode === verificationCode && invoice.integritySeal === integritySeal;
+  // Karena Backend adalah source of truth yang men-generate segel menggunakan SHA-256 dengan rahasia JWT_SECRET
+  // dan memvalidasi keasliannya di server, Frontend cukup memvalidasi bahwa segel tersebut ada.
+  return !!invoice.integritySeal && !!invoice.verificationCode;
 }
