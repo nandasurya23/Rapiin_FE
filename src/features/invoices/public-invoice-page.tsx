@@ -12,9 +12,13 @@ import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/cn";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { getEntityById } from "@/lib/domain";
+import { useSearchParams } from "next/navigation";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { useInvoices } from "@/hooks/use-invoices";
+import { apiFetch } from "@/lib/api-client";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
+import type { Invoice } from "@/types/invoice";
+import type { Order } from "@/types/order";
+import type { Business } from "@/types/business";
 
 async function copyToClipboard(text: string) {
   await navigator.clipboard.writeText(text);
@@ -22,21 +26,46 @@ async function copyToClipboard(text: string) {
 
 export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
   const toast = useToast();
-  const { business, orders } = useAppData();
-  const { invoices } = useInvoices();
+  const { orders } = useAppData();
+  const searchParams = useSearchParams();
+  const seal = searchParams.get("seal") || "";
+
+  const [data, setData] = useState<{ invoice: Invoice; order: Order; business: Business } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const invoice = useMemo(
-    () => invoices.find((item) => item.invoiceCode === invoiceCode) ?? invoices[0],
-    [invoiceCode, invoices]
-  );
-  const order = invoice ? getEntityById(orders, invoice.orderId) : undefined;
-  
+
+  useEffect(() => {
+    async function load() {
+      if (!invoiceCode || !seal) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await apiFetch<Invoice & { order: Order; business: Business }>(`/api/public/invoice/${invoiceCode}?seal=${seal}`);
+        setData({
+          invoice: response,
+          order: response.order,
+          business: response.business,
+        });
+      } catch (err) {
+        console.error("Failed to load public invoice", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [invoiceCode, seal]);
+
+  const invoice = data?.invoice;
+  const order = data?.order;
+  const business = data?.business;
+
   const [invoiceLink, setInvoiceLink] = useState("");
   useEffect(() => {
     if (typeof window !== "undefined" && invoice) {
-      setInvoiceLink(`${window.location.origin}/invoice/${invoice.invoiceCode}`);
+      setInvoiceLink(`${window.location.origin}/invoice/${invoice.invoiceCode}?seal=${seal}`);
     }
-  }, [invoice]);
+  }, [invoice, seal]);
 
   // --- LIVE TRACKER LOGIC ---
   const [queueAhead, setQueueAhead] = useState(0);
@@ -48,7 +77,7 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
       if (!order) return;
       // Hitung order aktif (PROSES, MENUNGGU, WAITING_DP) yang masuk sebelum order ini
       const activeStatuses = ["MENUNGGU", "WAITING_DP", "PROSES"];
-      const ahead = orders.filter((o) => 
+      const ahead = (orders || []).filter((o) => 
         activeStatuses.includes(o.status) && 
         new Date(o.createdAt).getTime() < new Date(order.createdAt).getTime()
       );
@@ -62,14 +91,33 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
   }, [order, orders]);
   // ---------------------------
 
-  if (!invoice) {
-    return null;
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+      </main>
+    );
+  }
+
+  if (!invoice || !business || !order) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] p-4">
+        <div className="w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-lg text-center space-y-4">
+          <Badge tone="danger">Nota Tidak Ditemukan</Badge>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">Nota tidak valid atau segel tidak cocok</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Silakan periksa kembali link nota pembayaran Anda yang dibagikan oleh admin toko.
+          </p>
+        </div>
+      </main>
+    );
   }
   const isFallback = invoice.invoiceCode !== invoiceCode;
 
   const shareMessage = `Halo ${invoice.customerName}, ini nota untuk ${invoice.invoiceCode}. Totalnya ${formatCurrency(invoice.totalAmount)}.\n\nLihat nota lengkap di:\n${invoiceLink}`;
 
   async function handleShareImage() {
+    if (!invoice) return;
     const node = document.getElementById("invoice-sheet-container");
     if (!node) {
       toast.error("Gagal mendeteksi elemen nota");
@@ -111,6 +159,7 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
   }
 
   async function handleDownloadImage() {
+    if (!invoice) return;
     const node = document.getElementById("invoice-sheet-container");
     if (!node) {
       toast.error("Gagal mendeteksi elemen nota");
@@ -303,7 +352,7 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
               Profil Bisnis
             </LinkButton>
             <span className="text-[var(--color-border)]">|</span>
-            <LinkButton href={ROUTES.dashboard} variant="secondary" className="text-xs py-1.5 px-3 h-auto">
+            <LinkButton href="/dashboard" variant="secondary" className="text-xs py-1.5 px-3 h-auto">
               Buat Nota Sendiri
             </LinkButton>
           </div>

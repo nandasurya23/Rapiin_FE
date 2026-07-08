@@ -1,9 +1,9 @@
 import type { PlanCode, PlanDefinition } from "@/types/subscription";
 
-export const TRIAL_CUSTOMER_LIMIT = 200;
+export const TRIAL_CUSTOMER_LIMIT = 25;
 export const TRIAL_DURATION_DAYS = 30;
-export const PRO_CUSTOMER_LIMIT = 2000;
-export const PREMIUM_CUSTOMER_LIMIT = 10000;
+export const PRO_CUSTOMER_LIMIT = 500;
+export const PREMIUM_CUSTOMER_LIMIT = 9999;
 export const TRIAL_WARNING_DAYS = 5;
 
 export const PLAN_DEFINITIONS: PlanDefinition[] = [

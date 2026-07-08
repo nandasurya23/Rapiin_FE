@@ -32,7 +32,19 @@ async function copyToClipboard(text: string) {
 
 export function MessagesPage() {
   const toast = useToast();
-  const { business, customers, orders, messageTemplates, ui, updateMessageComposer, saveMessageDraft } = useAppData();
+  const {
+    business,
+    customers,
+    orders,
+    messageTemplates,
+    ui,
+    updateMessageComposer,
+    saveMessageDraft,
+    createMessageTemplate,
+    updateMessageTemplate,
+    deleteMessageTemplate,
+  } = useAppData();
+
   const [activeCategory, setActiveCategory] = useState<(typeof categoryOrder)[number]>("FOLLOW_UP");
   const [selectedTemplateId, setSelectedTemplateId] = useState(messageTemplates[1]?.id ?? messageTemplates[0]?.id ?? "");
   const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id ?? "");
@@ -41,6 +53,29 @@ export function MessagesPage() {
   const [draftContent, setDraftContent] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+
+  // Tabs for Composer: SEND (Kirim Pesan) vs EDIT_TEMPLATE (Edit Template Asli)
+  const [composerTab, setComposerTab] = useState<"SEND" | "EDIT_TEMPLATE">("SEND");
+
+  // Raw Template Edit States
+  const [templateRawTitle, setTemplateRawTitle] = useState("");
+  const [templateRawContent, setTemplateRawContent] = useState("");
+
+  // Create Template States
+  const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
+  const [newTemplateTitle, setNewTemplateTitle] = useState("");
+  const [newTemplateCategory, setNewTemplateCategory] = useState<MessageCategory>("FOLLOW_UP");
+  const [newTemplateContent, setNewTemplateContent] = useState("");
+
+  const AVAILABLE_VARIABLE_BUTTONS = [
+    { placeholder: "{{customer_name}}", label: "👤 Nama Pelanggan" },
+    { placeholder: "{{business_name}}", label: "🏢 Nama Bisnis" },
+    { placeholder: "{{order_title}}", label: "🛍️ Layanan" },
+    { placeholder: "{{scheduled_date}}", label: "📅 Tanggal" },
+    { placeholder: "{{scheduled_time}}", label: "⏰ Jam" },
+    { placeholder: "{{total_amount}}", label: "💰 Total" },
+    { placeholder: "{{dp_amount}}", label: "💳 DP" },
+  ];
 
   const templatesInCategory = useMemo(
     () => messageTemplates.filter((template) => template.category === activeCategory),
@@ -85,20 +120,6 @@ export function MessagesPage() {
     return activeCustomerOrders.find((o) => o.id === selectedOrderId) ?? activeCustomerOrders[0] ?? undefined;
   }, [selectedCustomer, selectedOrderId, orders]);
 
-  useEffect(() => {
-    if (selectedCustomer) {
-      const activeCustomerOrders = orders.filter((o) => o.customerId === selectedCustomer.id);
-      if (activeCustomerOrders.length > 0) {
-        const exists = activeCustomerOrders.some((o) => o.id === selectedOrderId);
-        if (!exists) {
-          setSelectedOrderId(activeCustomerOrders[0].id);
-        }
-      } else {
-        setSelectedOrderId("");
-      }
-    }
-  }, [selectedCustomer, orders, selectedOrderId]);
-
   const sampleValues = useMemo(
     () => ({
       customer_name: selectedCustomer?.name ?? "-",
@@ -120,6 +141,10 @@ export function MessagesPage() {
     const savedDraft = ui.messageComposer.drafts[selectedTemplate.id];
     setDraftTitle(savedDraft?.title ?? selectedTemplate.title);
     setDraftContent(savedDraft?.content ?? renderTemplate(selectedTemplate.content, sampleValues));
+
+    // Also load raw template values
+    setTemplateRawTitle(selectedTemplate.title);
+    setTemplateRawContent(selectedTemplate.content);
   }, [sampleValues, selectedTemplate, ui.messageComposer.drafts]);
 
   const renderedPreview = draftContent;
@@ -204,6 +229,84 @@ export function MessagesPage() {
     toast.info("Template dikembalikan", "Isi pesan kembali ke versi default.");
   }
 
+  async function handleSaveTemplatePermanent() {
+    if (!selectedTemplate) return;
+    setLoadingAction("save-template");
+    try {
+      await updateMessageTemplate(selectedTemplate.id, {
+        title: templateRawTitle,
+        content: templateRawContent,
+      });
+      toast.success("Template berhasil disimpan secara permanen ke Database!");
+    } catch (err) {
+      toast.error("Gagal menyimpan template", err instanceof Error ? err.message : "Terjadi kesalahan.");
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  async function handleCreateTemplate() {
+    if (!newTemplateTitle.trim() || !newTemplateContent.trim()) {
+      toast.error("Judul dan isi template wajib diisi.");
+      return;
+    }
+    setLoadingAction("create-template");
+    try {
+      await createMessageTemplate({
+        category: newTemplateCategory,
+        title: newTemplateTitle,
+        content: newTemplateContent,
+      });
+      toast.success("Template kustom baru berhasil dibuat!");
+      setIsCreatingTemplate(false);
+      setNewTemplateTitle("");
+      setNewTemplateContent("");
+    } catch (err) {
+      toast.error("Gagal membuat template", err instanceof Error ? err.message : "Terjadi kesalahan.");
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  async function handleDeleteTemplate() {
+    if (!selectedTemplate) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus template "${selectedTemplate.title}" secara permanen?`)) return;
+    setLoadingAction("delete-template");
+    try {
+      await deleteMessageTemplate(selectedTemplate.id);
+      toast.success("Template berhasil dihapus!");
+      setSelectedTemplateId(messageTemplates[0]?.id ?? "");
+    } catch (err) {
+      toast.error("Gagal menghapus template", err instanceof Error ? err.message : "Terjadi kesalahan.");
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  function insertVariable(variable: string, targetId: string) {
+    const textarea = document.getElementById(targetId) as HTMLTextAreaElement;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      const nextContent = text.substring(0, start) + variable + text.substring(end);
+
+      if (targetId === "message-content-textarea") {
+        setDraftContent(nextContent);
+        saveMessageDraft(selectedTemplateId, { title: draftTitle, content: nextContent });
+      } else if (targetId === "template-raw-content-textarea") {
+        setTemplateRawContent(nextContent);
+      } else if (targetId === "template-new-content-textarea") {
+        setNewTemplateContent(nextContent);
+      }
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + variable.length, start + variable.length);
+      }, 50);
+    }
+  }
+
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HERO HEADER */}
@@ -230,7 +333,7 @@ export function MessagesPage() {
 
             {/* Right: Actions */}
             <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <Button onClick={() => setIsComposerOpen(true)} className="shadow-sm">
+              <Button onClick={() => { setIsComposerOpen(true); setComposerTab("SEND"); }} className="shadow-sm">
                 <PencilLine className="h-4 w-4 mr-2" />
                 Buat Pesan Manual
               </Button>
@@ -251,14 +354,14 @@ export function MessagesPage() {
                 Daftar template WhatsApp otomatis akan aktif secara instan setelah Anda menambahkan pelanggan pertama atau menerima pemesanan dari pelanggan!
               </p>
             </div>
-            <LinkButton href={ROUTES.customers} size="sm">
+            <LinkButton href={ROUTES.customers(business.slug)} size="sm">
               Tambah Pelanggan Baru
             </LinkButton>
           </CardBody>
         </Card>
       ) : (
         <>
-          {/* SECTION 2: FOLLOW-UP QUICK ACTIONS (MOVED UP & PRIORITIZED) */}
+          {/* SECTION 2: FOLLOW-UP QUICK ACTIONS */}
           <section className="space-y-4 animate-fade-up-delay-1">
             <div>
               <h2 className="text-xl font-bold text-[var(--color-text)]">Aksi Cepat Follow-Up</h2>
@@ -357,150 +460,322 @@ export function MessagesPage() {
           <Sheet
             isOpen={isComposerOpen}
             onClose={() => setIsComposerOpen(false)}
-            title="Komposer Pesan Manual"
-            description="Pilih template dan sesuaikan isi pesan sebelum dikirim."
+            title="Komposer & Manajer Pesan"
+            description="Kirim pesan cepat ke pelanggan atau edit template database Anda."
             className="w-full sm:max-w-xl md:max-w-2xl"
           >
             <div className="space-y-6 pt-4 pb-12 overflow-y-auto">
-              {/* Template Selection */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-sm text-[var(--color-text)]">1. Pilih Kategori & Template</h3>
-                <FilterChipGroup
-                  value={activeCategory}
-                  onChange={(key: string) => {
-                    setActiveCategory(key as MessageCategory);
-                    updateMessageComposer({ activeCategory: key as MessageCategory });
-                  }}
-                  options={categoryOrder.map((cat) => ({
-                    value: cat,
-                    label: MESSAGE_CATEGORY_LABELS[cat],
-                  }))}
-                  size="sm"
-                />
-
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                  {templatesInCategory.map((template) => {
-                    const isSelected = template.id === selectedTemplateId;
-                    return (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedTemplateId(template.id);
-                          updateMessageComposer({ selectedTemplateId: template.id });
-                        }}
-                        className={cn(
-                          "w-full text-left p-3.5 rounded-2xl border transition-all duration-[var(--transition-base)]",
-                          isSelected
-                            ? "bg-[var(--color-primary-surface)] border-[var(--color-info-border)] shadow-sm"
-                            : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
-                        )}
-                      >
-                        <p className={cn("text-xs font-bold transition", isSelected ? "text-[var(--color-primary)]" : "text-[var(--color-text)]")}>
-                          {template.title}
-                        </p>
-                        <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 line-clamp-2 leading-relaxed">
-                          {template.content}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
+              
+              {/* Tab Switcher */}
+              <div className="flex border-b border-[var(--color-border)] mb-4">
+                <button
+                  type="button"
+                  onClick={() => { setComposerTab("SEND"); setIsCreatingTemplate(false); }}
+                  className={cn(
+                    "flex-1 py-2 text-center text-xs font-bold border-b-2 transition-all",
+                    composerTab === "SEND"
+                      ? "border-[var(--color-primary)] text-[var(--color-primary)] font-black"
+                      : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                  )}
+                >
+                  🚀 Kirim Pesan Cepat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setComposerTab("EDIT_TEMPLATE"); setIsCreatingTemplate(false); }}
+                  className={cn(
+                    "flex-1 py-2 text-center text-xs font-bold border-b-2 transition-all",
+                    composerTab === "EDIT_TEMPLATE"
+                      ? "border-[var(--color-primary)] text-[var(--color-primary)] font-black"
+                      : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                  )}
+                >
+                  ⚙️ Edit Template Asli
+                </button>
               </div>
 
-              {/* Customization */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-sm text-[var(--color-text)]">2. Sesuaikan Pesan</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Penerima (Customer)</span>
-                    <Select
-                      value={selectedCustomer.id}
-                      onValueChange={(value) => {
-                        setSelectedCustomerId(value);
-                        updateMessageComposer({ selectedCustomerId: value });
-                      }}
-                      options={customers.map((customer) => ({ value: customer.id, label: customer.name }))}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Kaitkan Order</span>
-                    <Select
-                      value={selectedOrder?.id ?? ""}
-                      onValueChange={(value) => {
-                        setSelectedOrderId(value);
-                        updateMessageComposer({ selectedOrderId: value });
-                      }}
-                      options={
-                        orders.filter((o) => o.customerId === selectedCustomer.id).length > 0
-                          ? orders
-                              .filter((o) => o.customerId === selectedCustomer.id)
-                              .map((order) => ({ value: order.id, label: order.title }))
-                          : [{ value: "", label: "Tidak ada order" }]
-                      }
-                    />
-                  </label>
+              {/* Template Selection */}
+              {!isCreatingTemplate && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center gap-2">
+                    <h3 className="font-bold text-sm text-[var(--color-text)]">1. Pilih Kategori & Template</h3>
+                    {composerTab === "EDIT_TEMPLATE" && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setIsCreatingTemplate(true)}
+                        className="rounded-lg h-7 text-[10px] font-bold border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)]"
+                      >
+                        [+] Template Baru
+                      </Button>
+                    )}
+                  </div>
+                  <FilterChipGroup
+                    value={activeCategory}
+                    onChange={(key: string) => {
+                      setActiveCategory(key as MessageCategory);
+                      updateMessageComposer({ activeCategory: key as MessageCategory });
+                    }}
+                    options={categoryOrder.map((cat) => ({
+                      value: cat,
+                      label: MESSAGE_CATEGORY_LABELS[cat],
+                    }))}
+                    size="sm"
+                  />
+
+                  <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                    {templatesInCategory.map((template) => {
+                      const isSelected = template.id === selectedTemplateId;
+                      return (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTemplateId(template.id);
+                            updateMessageComposer({ selectedTemplateId: template.id });
+                          }}
+                          className={cn(
+                            "w-full text-left p-3.5 rounded-2xl border transition-all duration-[var(--transition-base)]",
+                            isSelected
+                              ? "bg-[var(--color-primary-surface)] border-[var(--color-info-border)] shadow-sm"
+                              : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
+                          )}
+                        >
+                          <p className={cn("text-xs font-bold transition", isSelected ? "text-[var(--color-primary)]" : "text-[var(--color-text)]")}>
+                            {template.title}
+                          </p>
+                          <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 line-clamp-2 leading-relaxed font-semibold">
+                            {template.content}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+              )}
 
-                <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Judul Draf</span>
-                  <Input
-                    value={draftTitle}
-                    onChange={(event) => {
-                      setDraftTitle(event.target.value);
-                      saveMessageDraft(selectedTemplateId, { title: event.target.value, content: draftContent });
-                    }}
-                  />
-                </label>
+              {/* Form 1: Kirim Pesan Cepat (SEND tab) */}
+              {composerTab === "SEND" && selectedTemplate && (
+                <div className="space-y-4 animate-fade-in">
+                  <h3 className="font-bold text-sm text-[var(--color-text)]">2. Sesuaikan Pesan</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Penerima (Customer)</span>
+                      <Select
+                        value={selectedCustomer?.id ?? ""}
+                        onValueChange={(value) => {
+                          setSelectedCustomerId(value);
+                          updateMessageComposer({ selectedCustomerId: value });
+                        }}
+                        options={customers.map((customer) => ({ value: customer.id, label: customer.name }))}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Kaitkan Order</span>
+                      <Select
+                        value={selectedOrder?.id ?? ""}
+                        onValueChange={(value) => {
+                          setSelectedOrderId(value);
+                          updateMessageComposer({ selectedOrderId: value });
+                        }}
+                        options={
+                          selectedCustomer && orders.filter((o) => o.customerId === selectedCustomer.id).length > 0
+                            ? orders
+                                .filter((o) => o.customerId === selectedCustomer.id)
+                                .map((order) => ({ value: order.id, label: order.title }))
+                            : [{ value: "", label: "Tidak ada order" }]
+                        }
+                      />
+                    </label>
+                  </div>
 
-                <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Isi Pesan</span>
-                  <Textarea
-                    rows={6}
-                    className="font-mono text-xs"
-                    value={draftContent}
-                    onChange={(event) => {
-                      setDraftContent(event.target.value);
-                      saveMessageDraft(selectedTemplateId, { title: draftTitle, content: event.target.value });
-                    }}
-                  />
-                </label>
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Judul Draf</span>
+                    <Input
+                      value={draftTitle}
+                      onChange={(event) => {
+                        setDraftTitle(event.target.value);
+                        saveMessageDraft(selectedTemplateId, { title: event.target.value, content: draftContent });
+                      }}
+                    />
+                  </label>
 
-                {variablesDetected.length > 0 ? (
-                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-text)]">
-                      <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
-                      Variabel Terdeteksi
+                  <label className="block">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Isi Pesan</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] italic font-semibold">Draft siap kirim</span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {humanReadableVariables.map((variable) => (
-                        <Badge key={variable} tone="info" className="text-[9px] font-bold">
-                          {variable}
-                        </Badge>
+                    <Textarea
+                      id="message-content-textarea"
+                      rows={6}
+                      className="font-mono text-xs"
+                      value={draftContent}
+                      onChange={(event) => {
+                        setDraftContent(event.target.value);
+                        saveMessageDraft(selectedTemplateId, { title: draftTitle, content: event.target.value });
+                      }}
+                    />
+                  </label>
+
+                  {/* CTAs */}
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-2">
+                    <WhatsAppButton
+                      phoneNumber={selectedCustomer?.whatsappNumber ?? ""}
+                      message={renderedPreview}
+                      label="Buka WhatsApp"
+                      className="flex-1"
+                    />
+                    <div className="flex gap-2 flex-1">
+                      <Button type="button" variant="secondary" className="flex-1 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4" isLoading={loadingAction === "copy-message"} onClick={handleCopyMessage}>
+                        <Copy className="h-4 w-4" />
+                        Salin Pesan
+                      </Button>
+                      <Button type="button" variant="secondary" className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4" onClick={handleResetDraft} title="Reset">
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Form 2: Edit Template Asli (EDIT_TEMPLATE tab, not creating) */}
+              {composerTab === "EDIT_TEMPLATE" && !isCreatingTemplate && selectedTemplate && (
+                <div className="space-y-4 animate-fade-in">
+                  <h3 className="font-bold text-sm text-[var(--color-text)]">2. Edit Isi Template</h3>
+                  
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Judul Template</span>
+                    <Input
+                      value={templateRawTitle}
+                      onChange={(event) => setTemplateRawTitle(event.target.value)}
+                    />
+                  </label>
+
+                  <div>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Isi Template</span>
+                    
+                    {/* Klik Variabel Instan untuk menyisipkan */}
+                    <div className="flex flex-wrap gap-1.5 mb-2.5 bg-[var(--color-surface-elevated)] border border-[var(--color-border)] rounded-xl p-3 shadow-xs">
+                      <span className="w-full block text-[9px] uppercase font-extrabold tracking-wider text-[var(--color-text-muted)] mb-1">Klik untuk menyisipkan variabel:</span>
+                      {AVAILABLE_VARIABLE_BUTTONS.map((btn) => (
+                        <button
+                          key={btn.placeholder}
+                          type="button"
+                          onClick={() => insertVariable(btn.placeholder, "template-raw-content-textarea")}
+                          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)] hover:text-[var(--color-text)] transition-colors active:scale-95"
+                        >
+                          {btn.label}
+                        </button>
                       ))}
                     </div>
-                  </div>
-                ) : null}
 
-                {/* CTAs */}
-                <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-2">
-                  <WhatsAppButton
-                    phoneNumber={selectedCustomer.whatsappNumber}
-                    message={renderedPreview}
-                    label="Buka WhatsApp"
-                    className="flex-1"
-                  />
-                  <div className="flex gap-2 flex-1">
-                    <Button type="button" variant="secondary" className="flex-1 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4" isLoading={loadingAction === "copy-message"} onClick={handleCopyMessage}>
-                      <Copy className="h-4 w-4" />
-                      Salin Pesan
+                    <Textarea
+                      id="template-raw-content-textarea"
+                      rows={6}
+                      className="font-mono text-xs"
+                      value={templateRawContent}
+                      onChange={(event) => setTemplateRawContent(event.target.value)}
+                      placeholder="Masukkan konten template dengan variabel..."
+                    />
+                  </div>
+
+                  {/* Actions for Edit */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      isLoading={loadingAction === "save-template"}
+                      onClick={handleSaveTemplatePermanent}
+                      className="flex-1 font-bold text-sm h-11 rounded-xl"
+                    >
+                      Simpan Ke Database
                     </Button>
-                    <Button type="button" variant="secondary" className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4" onClick={handleResetDraft} title="Reset">
-                      <RotateCcw className="h-4 w-4" />
+                    <Button
+                      type="button"
+                      variant="danger"
+                      isLoading={loadingAction === "delete-template"}
+                      onClick={handleDeleteTemplate}
+                      className="font-bold text-sm h-11 rounded-xl px-4"
+                    >
+                      Hapus
                     </Button>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Form 3: Tambah Template Baru (EDIT_TEMPLATE tab, is creating) */}
+              {composerTab === "EDIT_TEMPLATE" && isCreatingTemplate && (
+                <div className="space-y-4 animate-fade-in">
+                  <h3 className="font-bold text-sm text-[var(--color-text)]">Buat Template Baru</h3>
+                  
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Kategori</span>
+                      <Select
+                        value={newTemplateCategory}
+                        onValueChange={(value) => setNewTemplateCategory(value as MessageCategory)}
+                        options={categoryOrder.map((cat) => ({ value: cat, label: MESSAGE_CATEGORY_LABELS[cat] }))}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Judul Template</span>
+                      <Input
+                        value={newTemplateTitle}
+                        onChange={(event) => setNewTemplateTitle(event.target.value)}
+                        placeholder="Contoh: Pengingat Order Baru"
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Isi Template</span>
+                    
+                    {/* Klik Variabel Instan untuk menyisipkan */}
+                    <div className="flex flex-wrap gap-1.5 mb-2.5 bg-[var(--color-surface-elevated)] border border-[var(--color-border)] rounded-xl p-3 shadow-xs">
+                      <span className="w-full block text-[9px] uppercase font-extrabold tracking-wider text-[var(--color-text-muted)] mb-1">Klik untuk menyisipkan variabel:</span>
+                      {AVAILABLE_VARIABLE_BUTTONS.map((btn) => (
+                        <button
+                          key={btn.placeholder}
+                          type="button"
+                          onClick={() => insertVariable(btn.placeholder, "template-new-content-textarea")}
+                          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)] hover:text-[var(--color-text)] transition-colors active:scale-95"
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <Textarea
+                      id="template-new-content-textarea"
+                      rows={6}
+                      className="font-mono text-xs"
+                      value={newTemplateContent}
+                      onChange={(event) => setNewTemplateContent(event.target.value)}
+                      placeholder="Masukkan konten template dengan variabel..."
+                    />
+                  </div>
+
+                  {/* Actions for Creation */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      isLoading={loadingAction === "create-template"}
+                      onClick={handleCreateTemplate}
+                      className="flex-1 font-bold text-sm h-11 rounded-xl"
+                    >
+                      Simpan Template Baru
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setIsCreatingTemplate(false)}
+                      className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-11 px-4"
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </div>
+              )}
+
             </div>
           </Sheet>
         </>

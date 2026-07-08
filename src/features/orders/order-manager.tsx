@@ -71,7 +71,7 @@ export function OrderManager() {
 
   async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus) {
     try {
-      updateOrder(order.id, {
+      await updateOrder(order.id, {
         customerName: order.customerName,
         whatsappNumber: order.whatsappNumber,
         title: order.title,

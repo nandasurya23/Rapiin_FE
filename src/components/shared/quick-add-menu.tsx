@@ -8,17 +8,17 @@ import { useAppData } from "@/components/providers/app-data-provider";
 import { cn } from "@/lib/cn";
 import { QuickPasteModal } from "@/components/shared/quick-paste-modal";
 
-const items = [
-  { label: "Tambah Customer", href: ROUTES.customers },
-  { label: "Tambah Order / Booking", href: ROUTES.orders },
-  { label: "Buat Nota", href: ROUTES.invoices },
-];
-
 export function QuickAddMenu() {
   const [open, setOpen] = useState(false);
   const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
-  const { canAccessWriteMode } = useAppData();
+  const { canAccessWriteMode, business } = useAppData();
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const items = [
+    { label: "Tambah Customer", href: ROUTES.customers(business.slug) },
+    { label: "Tambah Order / Booking", href: ROUTES.orders(business.slug) },
+    { label: "Buat Nota", href: ROUTES.invoices(business.slug) },
+  ];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

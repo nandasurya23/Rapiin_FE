@@ -5,7 +5,7 @@ import { Bell, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { QuickAddMenu } from "@/components/shared/quick-add-menu";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { cn } from "@/lib/cn";
-import { APP_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
+import { getAppNavItems, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 
 type TopbarProps = {
   sidebarCollapsed: boolean;
@@ -17,8 +17,8 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
   const { business, currentUser, isSuperAdmin, canAccessWriteMode, subscriptionForCurrentBusiness } = useAppData();
 
   // Derive current page label from nav items
-  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : APP_NAV_ITEMS;
-  const currentNav = navItems.find((item) => pathname.startsWith(item.href));
+  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : getAppNavItems(business.slug);
+  const currentNav = navItems.find((item: { href: string }) => pathname.startsWith(item.href));
   const pageLabel = currentNav?.label ?? "Rapiin";
 
   // User initials for avatar

@@ -57,3 +57,29 @@ export const PAYMENT_FILTER_OPTIONS: Array<{ value: "ALL" | PaymentStatus; label
   { value: "REFUNDED", label: "Refund" },
   { value: "CANCELLED", label: "Batal" },
 ];
+
+export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  INQUIRY: ["WAITING_DP", "CONFIRMED", "REQUEST_MASUK", "DEAL", "SELESAI", "BATAL"],
+  WAITING_DP: ["CONFIRMED", "SELESAI", "BATAL"],
+  CONFIRMED: ["ORDER_BARU", "DIPROSES", "DIBAHAS", "SELESAI", "BATAL"],
+  ORDER_BARU: ["DIPROSES", "SELESAI", "BATAL"],
+  DIPROSES: ["DIKIRIM_DIAMBIL", "SELESAI", "BATAL"],
+  DIKIRIM_DIAMBIL: ["SELESAI", "BATAL"],
+  REQUEST_MASUK: ["DIBAHAS", "SELESAI", "BATAL"],
+  DIBAHAS: ["PENAWARAN_DIKIRIM", "DEAL", "SELESAI", "BATAL"],
+  PENAWARAN_DIKIRIM: ["DEAL", "SELESAI", "BATAL"],
+  DEAL: ["SELESAI", "BATAL"],
+  SELESAI: [],
+  BATAL: [],
+};
+
+export function getValidStatusOptions(currentStatus: OrderStatus | undefined, mode: BusinessMode): StatusOption[] {
+  const allOptions = ORDER_STATUS_BY_MODE[mode] ?? [];
+  if (!currentStatus) {
+    return allOptions;
+  }
+  const allowedNext = ORDER_STATUS_TRANSITIONS[currentStatus] ?? [];
+  return allOptions.filter(
+    (opt) => opt.value === currentStatus || allowedNext.includes(opt.value)
+  );
+}

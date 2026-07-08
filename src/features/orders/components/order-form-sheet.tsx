@@ -25,7 +25,7 @@ import {
 } from "@/lib/booking";
 import { formatCurrency } from "@/lib/format";
 import { parseIndonesianNumber } from "@/lib/number";
-import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
+import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS, getValidStatusOptions } from "@/lib/constants/orders";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
 
 import type { BusinessMode } from "@/types/business";
@@ -190,7 +190,13 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     );
   }, [customers, form.customerName]);
 
-  const statusOptions = ORDER_STATUS_BY_MODE[form.mode];
+  const order = useMemo(() => {
+    return editingId ? orders.find((o) => o.id === editingId) : undefined;
+  }, [editingId, orders]);
+
+  const statusOptions = useMemo(() => {
+    return getValidStatusOptions(order?.status, form.mode);
+  }, [order?.status, form.mode]);
   const catalogList = getPublicCatalog(business);
   const bookingDurationMinutes = useMemo(() => {
     const parsedDuration = Number(form.bookingDurationMinutes);
@@ -311,18 +317,24 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
       return;
     }
 
+    const normalizedTotal = parseIndonesianNumber(form.totalAmount);
+    const normalizedDp = parseIndonesianNumber(form.dpAmount);
+
+    if (normalizedDp !== undefined && normalizedTotal !== undefined && normalizedDp > normalizedTotal) {
+      setError("Uang muka (DP) tidak boleh melebihi total biaya.");
+      return;
+    }
+
     setError("");
     setIsSubmitting(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 250));
-      const normalizedTotal = parseIndonesianNumber(form.totalAmount);
-      const normalizedDp = parseIndonesianNumber(form.dpAmount);
       const nextHoldExpiresAt = form.mode === "BOOKING_SERVICE" && form.paymentStatus === "UNPAID" && form.status === "WAITING_DP"
         ? new Date(Date.now() + BOOKING_HOLD_MINUTES * 60 * 1000).toISOString()
         : undefined;
 
       if (editingId) {
-        updateOrder(editingId, {
+        await updateOrder(editingId, {
           customerName: form.customerName.trim(),
           whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
           title: form.title.trim(),
@@ -344,7 +356,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
         return;
       }
 
-      createOrder({
+      await createOrder({
         customerName: form.customerName.trim(),
         whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
         title: form.title.trim(),
@@ -364,7 +376,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
       toast.success("Order baru berhasil dibuat");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan sistem.");
+      setError(err instanceof Error ? err.message : "Gagal menyimpan order.");
     } finally {
       setIsSubmitting(false);
     }
@@ -454,9 +466,19 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
             
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Nomor WhatsApp</label>
-              <Input
+               <Input
                 value={form.whatsappNumber}
-                onChange={(e) => updateFormField("whatsappNumber", e.target.value)}
+                onChange={(e) => {
+                  const num = e.target.value.replace(/[^\d]/g, "");
+                  updateFormField("whatsappNumber", num);
+                  const normalized = normalizePhoneNumber(num);
+                  if (normalized && normalized.length >= 9) {
+                    const match = customers.find((c) => normalizePhoneNumber(c.whatsappNumber) === normalized);
+                    if (match && !form.customerName.trim()) {
+                      updateFormField("customerName", match.name);
+                    }
+                  }
+                }}
                 placeholder="08123..."
               />
               {isDuplicatePhone && (

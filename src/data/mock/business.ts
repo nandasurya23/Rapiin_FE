@@ -2,10 +2,10 @@ import type { Business } from "@/types/business";
 
 export const mockBusiness: Business = {
   id: "biz_001",
-  ownerName: "Pemilik Toko",
-  name: "Toko Baru",
-  slug: "toko-baru",
-  whatsappNumber: "628",
+  ownerName: "",
+  name: "",
+  slug: "",
+  whatsappNumber: "",
   mode: "BOOKING_SERVICE",
   operationalModel: "RESOURCE_BOOKING",
   usesResources: true,

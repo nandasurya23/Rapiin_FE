@@ -18,11 +18,11 @@ export type AuthUser = {
   name: string;
   email: string;
   phoneNumber: string;
-  password: string;
   role: UserRole;
   businessId?: ID;
   trialUsed: boolean;
   isActive: boolean;
+  onboardingCompleted?: boolean;
   createdAt: string;
   updatedAt: string;
 };

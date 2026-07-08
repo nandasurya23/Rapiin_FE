@@ -5,15 +5,18 @@ import { useState, type InputHTMLAttributes } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 
-type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type">;
+type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  hasError?: boolean;
+};
 
-export function PasswordInput({ className, ...props }: PasswordInputProps) {
+export function PasswordInput({ className, hasError, ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
     <div className="relative">
       <Input
         {...props}
+        hasError={hasError}
         type={visible ? "text" : "password"}
         className={cn("pr-11", className)}
       />

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Calendar, Clock, Copy, PencilLine, ReceiptText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/cn";
 import type { Order, OrderStatus } from "@/types/order";
 import type { StatusTone } from "@/types/common";
+import { getValidStatusOptions } from "@/lib/constants/orders";
 
 // Helpers for CRM Initials Avatar and gradients
 export function getInitials(name: string) {
@@ -53,6 +55,7 @@ export function OrderBoard({
   onEdit,
   getWhatsAppConfig,
 }: OrderBoardProps) {
+  const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
   const toast = useToast();
 
   async function handleCopyMessage(message: string) {
@@ -78,6 +81,10 @@ export function OrderBoard({
         <div className="flex gap-4">
           {statusOptions.map((option) => {
             const laneOrders = orders.filter((order) => order.status === option.value);
+            const isValidDropTarget = draggedOrder && (
+              draggedOrder.status === option.value || 
+              getValidStatusOptions(draggedOrder.status, draggedOrder.mode).some(opt => opt.value === option.value)
+            );
 
             return (
               <div key={option.value} className="w-[310px] shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 flex flex-col justify-between">
@@ -86,7 +93,25 @@ export function OrderBoard({
                   <Badge tone={option.tone} className="text-[9px] uppercase tracking-wider font-extrabold">{laneOrders.length}</Badge>
                 </div>
 
-                <div className="space-y-3 flex-1 min-h-[400px]">
+                <div
+                  onDragOver={(e) => {
+                    if (isValidDropTarget) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggedOrder && isValidDropTarget && draggedOrder.status !== option.value) {
+                      onUpdateStatus(draggedOrder, option.value);
+                    }
+                    setDraggedOrder(null);
+                  }}
+                  className={cn(
+                    "space-y-3 flex-1 min-h-[400px] rounded-xl transition-all duration-200 p-1",
+                    isValidDropTarget && "border-2 border-dashed border-[var(--color-primary)]/40 bg-[var(--color-primary)]/[0.02]",
+                    draggedOrder && !isValidDropTarget && "opacity-40"
+                  )}
+                >
                   {laneOrders.length ? (
                     laneOrders.map((order) => {
                       const waConfig = getWhatsAppConfig(order);
@@ -100,8 +125,25 @@ export function OrderBoard({
                         leftBorderStripe = "border-l-4 border-l-rose-500";
                       }
 
+                      const isDraggable = order.status !== "SELESAI" && order.status !== "BATAL";
+
                       return (
-                        <div key={order.id} className={cn("rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm hover:shadow transition-all duration-300", leftBorderStripe)}>
+                        <div
+                          key={order.id}
+                          draggable={isDraggable}
+                          onDragStart={(e) => {
+                            setDraggedOrder(order);
+                            e.dataTransfer.setData("orderId", order.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedOrder(null);
+                          }}
+                          className={cn(
+                            "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm hover:shadow transition-all duration-300",
+                            leftBorderStripe,
+                            isDraggable ? "cursor-grab active:cursor-grabbing" : "opacity-90 cursor-default"
+                          )}
+                        >
                           <div className="flex items-start gap-3">
                             <div className={cn(
                               "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white text-[10px] font-black shadow-xs select-none border border-white/20",
@@ -201,7 +243,7 @@ export function OrderBoard({
                                 "h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[11px] font-bold text-[var(--color-text)] outline-none hover:border-[var(--color-border-strong)] transition-colors cursor-pointer"
                               )}
                             >
-                              {statusOptions.map((opt) => (
+                              {getValidStatusOptions(order.status, order.mode).map((opt) => (
                                 <option key={opt.value} value={opt.value}>
                                   {opt.label}
                                 </option>

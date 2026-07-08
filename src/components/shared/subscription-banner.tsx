@@ -17,6 +17,7 @@ export function SubscriptionBanner() {
     currentBusinessUsage,
     createBackup,
     readOnlyReason,
+    business,
   } = useAppData();
 
   if (isSuperAdmin || !subscriptionForCurrentBusiness) {
@@ -103,7 +104,7 @@ export function SubscriptionBanner() {
               Backup sekarang
             </Button>
           ) : null}
-          <LinkButton href={ROUTES.plan} size="sm">
+          <LinkButton href={ROUTES.plan(business.slug)} size="sm">
             <WalletCards className="h-4 w-4" />
             Lihat plan
           </LinkButton>

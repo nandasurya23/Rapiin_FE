@@ -93,7 +93,7 @@ export function InvoicesPage() {
 
   const selectedInvoice = filteredInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? filteredInvoices[0] ?? invoices[0];
   const selectedOrder = getEntityById(orders, selectedOrderId) ?? orders[0];
-  const selectedOrderLink = selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices;
+  const selectedOrderLink = selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug);
 
   async function createFromOrder() {
     if (!selectedOrder) {
@@ -163,12 +163,12 @@ export function InvoicesPage() {
 
             {/* Right Actions */}
             <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={ROUTES.orders} className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-bold text-xs px-4 py-2 rounded-xl">
+              <LinkButton href={ROUTES.orders(business.slug)} className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-bold text-xs px-4 py-2 rounded-xl">
                 <Plus className="h-4 w-4" />
                 Buat Nota Baru
               </LinkButton>
               <LinkButton
-                href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices}
+                href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug)}
                 variant="secondary"
                 className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold text-xs px-4 py-2 rounded-xl"
               >

@@ -3,18 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { MOBILE_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
+import { getMobileNavItems, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 import { useAppData } from "@/components/providers/app-data-provider";
 
 import { ROUTES } from "@/lib/routes";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { isSuperAdmin, subscriptionForCurrentBusiness } = useAppData();
+  const { isSuperAdmin, subscriptionForCurrentBusiness, business } = useAppData();
   const navItems = isSuperAdmin 
     ? SUPER_ADMIN_NAV_ITEMS 
-    : MOBILE_NAV_ITEMS.filter(item => 
-        item.href !== ROUTES.assistant || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
+    : getMobileNavItems(business.slug).filter(item => 
+        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
       );
 
   return (

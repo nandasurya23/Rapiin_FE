@@ -28,7 +28,7 @@ import {
   getBookingSlotsForDate,
   getResourceBookingAvailability,
 } from "@/lib/booking";
-import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
+import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS, getValidStatusOptions } from "@/lib/constants/orders";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { ROUTES } from "@/lib/routes";
@@ -648,7 +648,7 @@ function CalendarDetailContent({
                         <Select
                           value={getDraftStatus(order)}
                           onValueChange={(value) => onDraftStatusChange(order.id, value as OrderStatus)}
-                          options={ORDER_STATUS_BY_MODE[order.mode]}
+                          options={getValidStatusOptions(order.status, order.mode)}
                         />
                       </label>
                       <label className="block">
@@ -875,7 +875,7 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
       const nextStatus = patch?.status ?? getDraftStatus(order);
       const nextPaymentStatus = patch?.paymentStatus ?? getDraftPaymentStatus(order);
 
-      updateOrder(order.id, {
+      await updateOrder(order.id, {
         customerName: order.customerName,
         whatsappNumber: order.whatsappNumber,
         title: order.title,

@@ -1,19 +1,10 @@
 import type { ID, Timestamped } from "@/types/common";
+import type { Order } from "@/types/order";
 
 export type BusinessMode = "BOOKING_SERVICE" | "PRODUCT_ORDER" | "CUSTOM_REQUEST";
 export type OperationalModel = "APPOINTMENT" | "RESOURCE_BOOKING" | "ORDER_REQUEST";
 
-export type NicheTemplate =
-  | "STUDIO_MUSIK"
-  | "BARBERSHOP"
-  | "TATTOO"
-  | "RENTAL"
-  | "TOUR"
-  | "LAUNDRY"
-  | "MAKANAN"
-  | "CUSTOM"
-  | "HANDMADE"
-  | "LAINNYA";
+export type NicheTemplate = string;
 
 export type BusinessResource = {
   id: ID;
@@ -52,6 +43,7 @@ export type Business = Timestamped & {
   logoUrl?: string;
   paymentInstructions?: string;
   closedDates?: Record<string, string>;
+  orders?: Partial<Order>[];
 };
 
 export type BusinessModeOption = {
@@ -66,7 +58,3 @@ export type OperationalModelOption = {
   helperText: string;
 };
 
-export type NicheTemplateOption = {
-  value: NicheTemplate;
-  label: string;
-};

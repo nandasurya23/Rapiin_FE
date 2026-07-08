@@ -1,62 +1,35 @@
-import { useState, useEffect, useCallback } from "react";
-import { LocalAuthService } from "@/services/auth.service.local";
-import type { AuthUserDTO } from "@/services/auth.service";
-import type { AuthUser } from "@/types/app-state";
-
-const authService = new LocalAuthService();
+import { useAppData } from "@/components/providers/app-data-provider";
 
 export function useAuth() {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    currentUser,
+    login: appLogin,
+    logout,
+    registerOwner,
+    requestForgotPassword: appRequestForgot,
+    resetPassword: appResetPassword,
+  } = useAppData();
 
-  const fetchCurrentUser = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const user = await authService.getCurrentUser();
-      setCurrentUser(user);
-    } catch (error) {
-      console.error("Failed to fetch current user", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const login = async (identifier: string, password: string) => {
+    return appLogin({ identifier, password });
+  };
 
-  useEffect(() => {
-    fetchCurrentUser();
+  const requestForgotPassword = async (email: string) => {
+    return appRequestForgot(email);
+  };
 
-    const handleSync = () => {
-      fetchCurrentUser();
-    };
-
-    window.addEventListener("rapiin-storage-sync", handleSync);
-    return () => {
-      window.removeEventListener("rapiin-storage-sync", handleSync);
-    };
-  }, [fetchCurrentUser]);
-
-  const login = useCallback(async (identifier: string, password: string) => {
-    return authService.login(identifier, password);
-  }, []);
-
-  const logout = useCallback(async () => {
-    return authService.logout();
-  }, []);
-
-  const registerOwner = useCallback(async (payload: Omit<AuthUserDTO, "id" | "createdAt" | "updatedAt" | "role" | "isActive" | "trialUsed" | "businessId"> & { password: string }) => {
-    return authService.register(payload);
-  }, []);
-
-  const resetPassword = useCallback(async (identifier: string, password: string) => {
-    return authService.resetPassword(identifier, password);
-  }, []);
+  const resetPassword = async (token: string, newPassword: string) => {
+    return appResetPassword({ token, newPassword });
+  };
 
   return {
     currentUser,
-    isLoading,
+    isLoading: false,
     login,
     logout,
     registerOwner,
+    requestForgotPassword,
     resetPassword,
-    refreshUser: fetchCurrentUser,
+    refreshUser: async () => {},
   };
 }
