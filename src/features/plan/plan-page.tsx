@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   ShieldCheck,
-  WalletCards,
   Sparkles,
   Zap,
   CheckCircle2,
@@ -15,8 +14,8 @@ import {
   ShieldAlert,
   Download
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
@@ -127,26 +126,18 @@ export function PlanPage() {
   return (
     <main className="page-enter space-y-8 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HERO HEADER & STATS */}
-      <section>
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-8 sm:px-8 sm:py-10 text-white">
-          {/* Decorative background blur shapes */}
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--color-accent)] opacity-20 blur-3xl" />
-          <div className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-[var(--color-primary)] opacity-35 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <Sparkles className="h-3 w-3 animate-pulse" />
-                Plan & Backup System
-              </div>
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
-                Kelola Langganan & Keamanan Data
-              </h1>
-              <p className="max-w-2xl text-sm leading-relaxed text-white/70">
-                Pantau masa trial, kapasitas customer, status backup database lokal, dan kirim permintaan upgrade secara instan tanpa hambatan.
-              </p>
+      <section className="space-y-6">
+        <PageHeader
+          variant="hero"
+          title="Kelola Langganan & Keamanan Data"
+          description="Pantau masa trial, kapasitas customer, status backup database lokal, dan kirim permintaan upgrade secara instan tanpa hambatan."
+          badge={
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+              <Sparkles className="h-3 w-3 animate-pulse" />
+              Plan & Backup System
             </div>
-            
+          }
+          action={
             <div className="flex flex-wrap items-center gap-2.5 lg:mt-0">
               <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-gold-500)]/15 text-[var(--color-gold-300)] border border-[var(--color-gold-500)]/30 px-3.5 py-1 text-xs font-extrabold uppercase tracking-widest">
                 {PLAN_LABELS[subscriptionForCurrentBusiness.planCode]}
@@ -159,9 +150,10 @@ export function PlanPage() {
                 {subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? "Backup Optimal" : "Backup Wajib"}
               </span>
             </div>
-          </div>
+          }
+        />
 
-          <div className="grid gap-4 mt-8 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             <SummaryStat
               label="Status Plan"
               value={subscriptionForCurrentBusiness.status.replace("_", " ")}
@@ -187,7 +179,6 @@ export function PlanPage() {
               description="Cadangan database lokal"
             />
           </div>
-        </div>
       </section>
 
       {/* SECTION 2: 3-COLUMN PRICING GRID */}

@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/shared/page-header";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { useBusiness } from "@/hooks/use-business";
@@ -292,40 +293,27 @@ export function SettingsPage() {
           </div>
         }
       >
-        {/* SECTION 1: HERO HEADER */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          {/* Background decorative glows */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            {/* Left */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <Settings className="h-3.5 w-3.5 animate-spin-slow text-[var(--color-accent)]" />
-                Pengaturan Operasional
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Atur Cara Kerja Bisnis Anda
-              </h1>
-              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Halaman ini menjadi sumber data utama (source of truth) untuk form publik, order admin, kalender, dan ketersediaan slot bisnis.
-              </p>
-            </div>
-
-            {/* Right: Floating summary badges */}
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <Badge tone="info" className="bg-white/10 text-white border-white/20 px-3 py-1 text-xs font-bold">
-                Mode: {form.mode === "BOOKING_SERVICE" ? "Booking Jasa" : "Request Order"}
-              </Badge>
-              <Badge tone={usesResources ? "warning" : "success"} className="bg-white/10 text-white border-white/20 px-3 py-1 text-xs font-bold">
-                {usesResources ? `${form.resourceLabel || "Unit"} Aktif` : "Tanpa Unit Khusus"}
-              </Badge>
-            </div>
+      <PageHeader
+        variant="hero"
+        title="Atur Cara Kerja Bisnis Anda"
+        description="Halaman ini menjadi sumber data utama (source of truth) untuk form publik, order admin, kalender, dan ketersediaan slot bisnis."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+            <Settings className="h-3.5 w-3.5 animate-spin-slow text-[var(--color-accent)]" />
+            Pengaturan Operasional
+          </span>
+        }
+        action={
+          <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+            <Badge tone="info" className="bg-white/10 text-white border-white/20 px-3 py-1 text-xs font-bold">
+              Mode: {form.mode === "BOOKING_SERVICE" ? "Booking Jasa" : "Request Order"}
+            </Badge>
+            <Badge tone={usesResources ? "warning" : "success"} className="bg-white/10 text-white border-white/20 px-3 py-1 text-xs font-bold">
+              {usesResources ? `${form.resourceLabel || "Unit"} Aktif` : "Tanpa Unit Khusus"}
+            </Badge>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] animate-fade-up-delay-1">
         {/* Left Column: Profil Bisnis */}

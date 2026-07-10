@@ -24,6 +24,10 @@ type ToastContextValue = {
   success: (title: string, description?: string) => void;
   error: (title: string, description?: string) => void;
   info: (title: string, description?: string) => void;
+  promise: <T>(
+    promise: Promise<T>,
+    msgs: { loading: string; success: string; error: string }
+  ) => Promise<T>;
 };
 
 const TOAST_DURATION_MS = 3200;
@@ -82,14 +86,33 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [dismissToast]
   );
 
+  const promise = useCallback(
+    async <T,>(
+      prom: Promise<T>,
+      msgs: { loading: string; success: string; error: string }
+    ) => {
+      showToast({ title: msgs.loading, tone: "info" });
+      try {
+        const result = await prom;
+        showToast({ title: msgs.success, tone: "success" });
+        return result;
+      } catch (err) {
+        showToast({ title: msgs.error, tone: "error" });
+        throw err;
+      }
+    },
+    [showToast]
+  );
+
   const value = useMemo<ToastContextValue>(
     () => ({
       showToast,
       success: (title, description) => showToast({ title, description, tone: "success" }),
       error: (title, description) => showToast({ title, description, tone: "error" }),
       info: (title, description) => showToast({ title, description, tone: "info" }),
+      promise,
     }),
-    [showToast]
+    [showToast, promise]
   );
 
   return (

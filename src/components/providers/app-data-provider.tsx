@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, type ReactNode } from "react";
@@ -7,6 +8,7 @@ import { ApiCustomerService } from "@/services/customer.service";
 import { ApiOrderService } from "@/services/order.service";
 import { ApiInvoiceService } from "@/services/invoice.service";
 import { ApiMessageTemplateService } from "@/services/message-template.service";
+import { ApiAdminService } from "@/services/admin.service";
 import type { MessageTemplate } from "@/types/message";
 import { apiFetch } from "@/lib/api-client";
 import { BusinessDTO } from "@/services/business.service";
@@ -23,7 +25,6 @@ import {
   createSuperAdminActionLog,
   createUpgradeRequestRecord,
   getDefaultOrderStatusForMode,
-  readAppStorageState,
   writeAppStorageState,
 } from "@/lib/storage-service";
 import { createBusinessResources, doesOperationalModelUseResources } from "@/lib/constants/business";
@@ -166,11 +167,13 @@ type AppDataContextValue = AppStorageState & {
   createBackup: () => BackupRecord;
   restoreBackup: (backupPayload: string) => boolean;
   requestUpgrade: (toPlan: PlanCode, paymentNote?: string) => Promise<UpgradeRequest>;
-  approveUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
-  rejectUpgrade: (requestId: string, adminNote?: string) => UpgradeRequest | null;
-  extendTrial: (businessId: string, extraDays: number) => BusinessSubscription | null;
-  suspendBusiness: (businessId: string, reason?: string) => BusinessSubscription | null;
-  reactivateBusiness: (businessId: string) => BusinessSubscription | null;
+  approveUpgrade: (requestId: string, adminNote?: string) => Promise<any>;
+  rejectUpgrade: (requestId: string, adminNote?: string) => Promise<any>;
+  extendTrial: (businessId: string, extraDays: number) => any;
+  suspendBusiness: (businessId: string, reason?: string) => Promise<any>;
+  reactivateBusiness: (businessId: string) => Promise<any>;
+  downloadBusinessBackup: (businessId: string, businessSlug: string) => Promise<any>;
+  deleteBusiness: (businessId: string) => Promise<any>;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
@@ -270,28 +273,53 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const fetchAllData = useCallback(async (userId: string) => {
     try {
-      const business = await businessService.getBusinessById("");
-      if (!business) return;
+      const user = await authService.getCurrentUser();
+      if (!user) return;
 
-      const [orders, customers, invoices, messageTemplates] = await Promise.all([
-        orderService.getOrders(business.id),
-        customerService.getCustomers(business.id),
-        invoiceService.getInvoices(business.id),
-        messageTemplateService.getTemplates(business.id),
-      ]);
+      if (user.role === "SUPER_ADMIN") {
+        const [businessesResponse, upgradesResponse] = await Promise.all([
+          ApiAdminService.fetchBusinesses(1, 100, "", "", ""),
+          ApiAdminService.fetchUpgradeRequests(1, 100)
+        ]);
 
-      setState((prev) => ({
-        ...prev,
-        business,
-        orders,
-        customers,
-        invoices,
-        messageTemplates,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        subscriptions: (business as any).subscriptions || prev.subscriptions,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        upgradeRequests: (business as any).upgradeRequests || prev.upgradeRequests,
-      }));
+        const mappedBusinesses = (businessesResponse.data || []).map((b: any) => ({
+          business: b,
+          owner: b.users?.find((u: any) => u.role === "OWNER") ?? null,
+          subscription: b.subscriptions?.[0] ?? null,
+          customerCount: b._count?.customers ?? 0,
+          backupCount: 0,
+          latestBackup: null,
+        }));
+
+        setState((prev) => ({
+          ...prev,
+          businessDirectory: mappedBusinesses as any,
+          upgradeRequests: upgradesResponse.data || [],
+        }));
+      } else {
+        const business = await businessService.getBusinessById("");
+        if (!business) return;
+
+        const [orders, customers, invoices, messageTemplates] = await Promise.all([
+          orderService.getOrders(business.id),
+          customerService.getCustomers(business.id),
+          invoiceService.getInvoices(business.id),
+          messageTemplateService.getTemplates(business.id),
+        ]);
+
+        setState((prev) => ({
+          ...prev,
+          business,
+          orders,
+          customers,
+          invoices,
+          messageTemplates,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          subscriptions: (business as any).subscriptions || prev.subscriptions,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          upgradeRequests: (business as any).upgradeRequests || prev.upgradeRequests,
+        }));
+      }
     } catch (err) {
       console.error("Failed to load backend data", err);
     }
@@ -299,18 +327,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function init() {
-      // getCurrentUser() calls /api/auth/me — cookie is source of truth, no localStorage
       const user = await authService.getCurrentUser();
       if (user) {
         const onboardingCompleted = user.onboardingCompleted ?? false;
 
-        // Always fetch the business profile so form fields (e.g. whatsappNumber)
-        // are pre-populated from DB — needed for both onboarding and dashboard flows.
         let businessData = null;
-        try {
-          businessData = await businessService.getBusinessById("");
-        } catch {
-          // Not critical — business may not exist yet for brand-new users
+        if (user.role !== "SUPER_ADMIN") {
+          try {
+            businessData = await businessService.getBusinessById("");
+          } catch {
+            // Not critical — business may not exist yet for brand-new users
+          }
         }
 
         setState((prev) => ({
@@ -378,52 +405,31 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const readOnlyReason = getReadOnlyReason(subscriptionForCurrentBusiness);
 
   const businessDirectory = useMemo(
-    () => [
-      {
-        business: state.business,
-        owner: state.auth.users.find((user) => user.role === "OWNER" && user.businessId === state.business.id) ?? null,
-        subscription: subscriptionForCurrentBusiness,
-        customerCount: state.customers.length,
-        backupCount: state.backupRecords.filter((record) => record.businessId === state.business.id).length,
-        latestBackup:
-          state.backupRecords
-            .filter((record) => record.businessId === state.business.id)
-            .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null,
-      },
-    ],
-    [state.auth.users, state.backupRecords, state.business, state.customers.length, subscriptionForCurrentBusiness]
+    () => {
+      if (currentUserRole === "SUPER_ADMIN") {
+        return (state as any).businessDirectory || [];
+      }
+      return [
+        {
+          business: state.business,
+          owner: state.auth.users.find((user) => user.role === "OWNER" && user.businessId === state.business.id) ?? null,
+          subscription: subscriptionForCurrentBusiness,
+          customerCount: state.customers.length,
+          backupCount: state.backupRecords.filter((record) => record.businessId === state.business.id).length,
+          latestBackup:
+            state.backupRecords
+              .filter((record) => record.businessId === state.business.id)
+              .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null,
+        },
+      ];
+    },
+    [currentUserRole, (state as any).businessDirectory, state.auth.users, state.backupRecords, state.business, state.customers.length, subscriptionForCurrentBusiness]
   );
 
-  function assertCanCreateCustomer() {
+  const updateBusiness = useCallback(async (payload: Partial<Business>) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
-
-    if (!canCreateCustomer) {
-      throw new Error(`Batas customer plan ini sudah penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`);
-    }
-  }
-
-  function assertCanCreateOrder() {
-    if (!canCreateOrder) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-  }
-
-  function assertCanCreateInvoice() {
-    if (!canCreateInvoiceValue) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-  }
-
-  function assertCanWrite() {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-  }
-
-  async function updateBusiness(payload: Partial<Business>) {
-    assertCanWrite();
     const updated = await businessService.updateBusiness(state.business.id, payload);
     if (updated) {
       setState((current) => ({
@@ -431,10 +437,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         business: updated,
       }));
     }
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.business.id]);
 
-  async function saveBusinessSettings(payload: BusinessSettingsInput) {
-    assertCanWrite();
+  const saveBusinessSettings = useCallback(async (payload: BusinessSettingsInput) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     const updated = await businessService.updateBusiness(state.business.id, payload);
     if (updated) {
       setState((current) => ({
@@ -442,9 +450,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         business: updated,
       }));
     }
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.business.id]);
 
-  async function completeOnboarding(payload: OnboardingPayload) {
+  const completeOnboarding = useCallback(async (payload: OnboardingPayload) => {
     const response = await apiFetch<BusinessDTO>("/api/business/onboarding", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -460,9 +468,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }));
       await fetchAllData(state.auth.currentUserId || "");
     }
-  }
+  }, [state.auth.currentUserId, fetchAllData]);
 
-  async function registerOwner(payload: RegisterOwnerInput) {
+  const registerOwner = useCallback(async (payload: RegisterOwnerInput) => {
     const result = await authService.register(payload);
     if (result.ok) {
       const onboardingCompleted = result.user.onboardingCompleted ?? false;
@@ -484,9 +492,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }));
     }
     return result;
-  }
+  }, []);
 
-  async function login(payload: LoginInput) {
+  const login = useCallback(async (payload: LoginInput) => {
     const result = await authService.login(payload.identifier, payload.password);
     if (result.ok) {
       const onboardingCompleted = result.user.onboardingCompleted ?? false;
@@ -504,96 +512,132 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     }
     return result;
-  }
+  }, [fetchAllData]);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await authService.logout();
-    // Reset ALL state to initial — prevents data leak between users on same device
     setState(createInitialAppStorageState());
-  }
+  }, []);
 
-  async function requestForgotPassword(email: string) {
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("rapiin-unauthorized", handleUnauthorized);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("rapiin-unauthorized", handleUnauthorized);
+      }
+    };
+  }, [logout]);
+
+  const requestForgotPassword = useCallback(async (email: string) => {
     return authService.requestForgotPassword(email);
-  }
+  }, []);
 
-  async function resetPassword(payload: ResetPasswordInput) {
+  const resetPassword = useCallback(async (payload: ResetPasswordInput) => {
     return authService.resetPassword(payload.token, payload.newPassword);
-  }
+  }, []);
 
-  async function createCustomer(payload: CustomerInput) {
-    assertCanCreateCustomer();
+  const createCustomer = useCallback(async (payload: CustomerInput) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
+    if (!canCreateCustomer) {
+      throw new Error(`Batas customer plan ini sudah penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`);
+    }
     const customer = await customerService.createCustomer({
       ...payload,
       businessId: state.business.id,
     });
     await fetchAllData(state.auth.currentUserId || "");
     return customer;
-  }
+  }, [canAccessWriteMode, readOnlyReason, canCreateCustomer, currentBusinessUsage, state.business.id, state.auth.currentUserId, fetchAllData]);
 
-  async function updateCustomer(id: string, payload: CustomerInput) {
-    assertCanWrite();
+  const updateCustomer = useCallback(async (id: string, payload: CustomerInput) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     const customer = await customerService.updateCustomer(id, payload);
     await fetchAllData(state.auth.currentUserId || "");
     return customer;
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  async function deleteCustomer(id: string) {
-    assertCanWrite();
+  const deleteCustomer = useCallback(async (id: string) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     await customerService.deleteCustomer(id);
     await fetchAllData(state.auth.currentUserId || "");
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  async function createOrder(payload: OrderInput) {
-    assertCanCreateOrder();
+  const createOrder = useCallback(async (payload: OrderInput) => {
+    if (!canCreateOrder) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     const order = await orderService.createOrder({
       ...payload,
       businessId: state.business.id,
     });
     await fetchAllData(state.auth.currentUserId || "");
     return order;
-  }
+  }, [canCreateOrder, readOnlyReason, state.business.id, state.auth.currentUserId, fetchAllData]);
 
-  async function updateOrder(id: string, payload: OrderInput) {
-    assertCanWrite();
+  const updateOrder = useCallback(async (id: string, payload: OrderInput) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     const order = await orderService.updateOrder(id, payload);
     await fetchAllData(state.auth.currentUserId || "");
     return order;
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  async function deleteOrder(id: string) {
-    assertCanWrite();
+  const deleteOrder = useCallback(async (id: string) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     await orderService.deleteOrder(id);
     await fetchAllData(state.auth.currentUserId || "");
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  async function createInvoiceFromOrder(orderId: string, notes?: string) {
-    assertCanCreateInvoice();
+  const createInvoiceFromOrder = useCallback(async (orderId: string, notes?: string) => {
+    if (!canCreateInvoiceValue) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     const invoice = await invoiceService.createInvoiceFromOrder(orderId, notes);
     await fetchAllData(state.auth.currentUserId || "");
     return invoice;
-  }
+  }, [canCreateInvoiceValue, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  async function createMessageTemplate(payload: { category: string; title: string; content: string }) {
-    assertCanWrite();
+  const createMessageTemplate = useCallback(async (payload: { category: string; title: string; content: string }) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     const newTemplate = await messageTemplateService.createTemplate(payload);
     await fetchAllData(state.auth.currentUserId || "");
     return newTemplate;
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  async function updateMessageTemplate(id: string, payload: { title: string; content: string }) {
-    assertCanWrite();
+  const updateMessageTemplate = useCallback(async (id: string, payload: { title: string; content: string }) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     const updated = await messageTemplateService.updateTemplate(id, payload);
     await fetchAllData(state.auth.currentUserId || "");
     return updated;
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  async function deleteMessageTemplate(id: string) {
-    assertCanWrite();
+  const deleteMessageTemplate = useCallback(async (id: string) => {
+    if (!canAccessWriteMode) {
+      throw new Error(readOnlyReason || "Mode baca saja aktif.");
+    }
     await messageTemplateService.deleteTemplate(id);
     await fetchAllData(state.auth.currentUserId || "");
-  }
+  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
 
-  function updateMessageComposer(payload: Partial<MessageComposerDraft>) {
+  const updateMessageComposer = useCallback((payload: Partial<MessageComposerDraft>) => {
     setAppState((current) => ({
       ...current,
       ui: {
@@ -605,9 +649,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         },
       },
     }));
-  }
+  }, []);
 
-  function saveMessageDraft(templateId: string, payload: { title: string; content: string }) {
+  const saveMessageDraft = useCallback((templateId: string, payload: { title: string; content: string }) => {
     setAppState((current) => ({
       ...current,
       ui: {
@@ -621,9 +665,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         },
       },
     }));
-  }
+  }, []);
 
-  async function submitPublicOrder(input: PublicOrderInput) {
+  const submitPublicOrder = useCallback(async (input: PublicOrderInput) => {
     const response = await apiFetch<unknown>(`/api/public/b/${state.business.slug}/submit`, {
       method: "POST",
       body: JSON.stringify({
@@ -633,9 +677,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }),
     });
     return response;
-  }
+  }, [state.business.slug, state.business.mode, state.business.operationalModel]);
 
-  function createBackup() {
+  const createBackup = useCallback(() => {
     const payload = JSON.stringify({
       business: state.business,
       customers: state.customers,
@@ -670,9 +714,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }));
 
     return nextRecord;
-  }
+  }, [state.business, state.customers, state.orders, state.invoices, state.messageTemplates, state.publicSubmissions, state.version]);
 
-  function restoreBackup(backupPayload: string): boolean {
+  const restoreBackup = useCallback((backupPayload: string): boolean => {
     try {
       const parsed = JSON.parse(backupPayload);
       if (!parsed.business || !parsed.business.id) {
@@ -698,15 +742,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       console.error(e);
       return false;
     }
-  }
+  }, []);
 
-  async function requestUpgrade(toPlan: PlanCode, paymentNote?: string) {
+  const requestUpgrade = useCallback(async (toPlan: PlanCode, paymentNote?: string) => {
     const currentUserId = state.auth.currentUserId;
     if (!currentUserId) {
       throw new Error("Kamu harus login dulu.");
     }
 
-    const currentSubscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
     const existingPending = state.upgradeRequests.find((request) => request.businessId === state.business.id && request.status === "PENDING");
     if (existingPending) {
       return existingPending;
@@ -722,216 +765,105 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
     await fetchAllData(currentUserId);
     return nextRequest;
-  }
+  }, [state.auth.currentUserId, state.business.id, state.upgradeRequests, fetchAllData]);
 
-  function approveUpgrade(requestId: string, adminNote?: string) {
-    const request = state.upgradeRequests.find((item) => item.id === requestId);
-    if (!request || !state.auth.currentUserId) {
-      return null;
+  const approveUpgrade = useCallback(async (requestId: string, adminNote?: string) => {
+    try {
+      await ApiAdminService.approveUpgrade(requestId, adminNote);
+      if (state.auth.currentUserId) {
+        await fetchAllData(state.auth.currentUserId);
+      }
+    } catch (err) {
+      console.error("Failed to approve upgrade request", err);
     }
+    return null;
+  }, [state.auth.currentUserId, fetchAllData]);
 
-    let updatedRequest: UpgradeRequest | null = null;
-
-    setAppState((current) => ({
-      ...current,
-      upgradeRequests: current.upgradeRequests.map((item) => {
-        if (item.id !== requestId) {
-          return item;
-        }
-
-        updatedRequest = {
-          ...item,
-          status: "APPROVED",
-          adminNote,
-          reviewedAt: new Date().toISOString(),
-          reviewedByUserId: current.auth.currentUserId ?? undefined,
-          updatedAt: new Date().toISOString(),
-        };
-        return updatedRequest;
-      }),
-      subscriptions: current.subscriptions.map((subscription) =>
-        subscription.businessId === request.businessId
-          ? withUpdatedTimestamp({
-              ...subscription,
-              planCode: request.toPlan,
-              status: "ACTIVE",
-              customerLimit: request.toPlan === "PRO" ? PRO_CUSTOMER_LIMIT : PREMIUM_CUSTOMER_LIMIT,
-              startedAt: new Date().toISOString(),
-              expiresAt: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
-              readOnlyReason: undefined,
-            })
-          : subscription
-      ),
-      superAdminLogs: [
-        createSuperAdminActionLog({
-          actorUserId: current.auth.currentUserId ?? "system",
-          targetBusinessId: request.businessId,
-          actionType: "APPROVE_UPGRADE",
-          metadata: { toPlan: request.toPlan, fromPlan: request.fromPlan },
-        }),
-        ...current.superAdminLogs,
-      ],
-    }));
-
-    return updatedRequest;
-  }
-
-  function rejectUpgrade(requestId: string, adminNote?: string) {
-    const request = state.upgradeRequests.find((item) => item.id === requestId);
-    if (!request || !state.auth.currentUserId) {
-      return null;
+  const rejectUpgrade = useCallback(async (requestId: string, adminNote?: string) => {
+    try {
+      await ApiAdminService.rejectUpgrade(requestId, adminNote);
+      if (state.auth.currentUserId) {
+        await fetchAllData(state.auth.currentUserId);
+      }
+    } catch (err) {
+      console.error("Failed to reject upgrade request", err);
     }
+    return null;
+  }, [state.auth.currentUserId, fetchAllData]);
 
-    let updatedRequest: UpgradeRequest | null = null;
+  const extendTrial = useCallback(async (businessId: string, extraDays: number) => {
+    try {
+      await ApiAdminService.extendTrial(businessId, extraDays);
+      if (state.auth.currentUserId) {
+        await fetchAllData(state.auth.currentUserId);
+      }
+    } catch (err) {
+      console.error("Failed to extend trial", err);
+    }
+    return null;
+  }, [state.auth.currentUserId, fetchAllData]);
 
-    setAppState((current) => ({
-      ...current,
-      upgradeRequests: current.upgradeRequests.map((item) => {
-        if (item.id !== requestId) {
-          return item;
-        }
+  const suspendBusiness = useCallback(async (businessId: string, reason?: string) => {
+    try {
+      await ApiAdminService.suspendBusiness(businessId, reason);
+      if (state.auth.currentUserId) {
+        await fetchAllData(state.auth.currentUserId);
+      }
+    } catch (err) {
+      console.error("Failed to suspend business", err);
+    }
+    return null;
+  }, [state.auth.currentUserId, fetchAllData]);
 
-        updatedRequest = {
-          ...item,
-          status: "REJECTED",
-          adminNote,
-          reviewedAt: new Date().toISOString(),
-          reviewedByUserId: current.auth.currentUserId ?? undefined,
-          updatedAt: new Date().toISOString(),
-        };
-        return updatedRequest;
-      }),
-      subscriptions: current.subscriptions.map((subscription) =>
-        subscription.businessId === request.businessId
-          ? withUpdatedTimestamp({
-              ...subscription,
-              status: getSubscriptionStatus(subscription) === "TRIAL_EXPIRED" ? "TRIAL_EXPIRED" : subscription.planCode === "FREE_TRIAL" ? "TRIAL_ACTIVE" : "ACTIVE",
-            })
-          : subscription
-      ),
-      superAdminLogs: [
-        createSuperAdminActionLog({
-          actorUserId: current.auth.currentUserId ?? "system",
-          targetBusinessId: request.businessId,
-          actionType: "REJECT_UPGRADE",
-          metadata: { toPlan: request.toPlan, fromPlan: request.fromPlan },
-        }),
-        ...current.superAdminLogs,
-      ],
-    }));
+  const reactivateBusiness = useCallback(async (businessId: string) => {
+    try {
+      await ApiAdminService.reactivateBusiness(businessId);
+      if (state.auth.currentUserId) {
+        await fetchAllData(state.auth.currentUserId);
+      }
+    } catch (err) {
+      console.error("Failed to reactivate business", err);
+    }
+    return null;
+  }, [state.auth.currentUserId, fetchAllData]);
 
-    return updatedRequest;
-  }
+  const downloadBusinessBackup = useCallback(async (businessId: string, businessSlug: string) => {
+    try {
+      const data = await ApiAdminService.downloadBusinessBackup(businessId);
+      if (data) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `rapiin-backup-${businessSlug}-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      if (state.auth.currentUserId) {
+        await fetchAllData(state.auth.currentUserId);
+      }
+    } catch (err) {
+      console.error("Failed to download business backup", err);
+      throw err;
+    }
+  }, [state.auth.currentUserId, fetchAllData]);
 
-  function extendTrial(businessId: string, extraDays: number) {
-    let updatedSubscription: BusinessSubscription | null = null;
+  const deleteBusiness = useCallback(async (businessId: string) => {
+    try {
+      await ApiAdminService.deleteBusiness(businessId);
+      if (state.auth.currentUserId) {
+        await fetchAllData(state.auth.currentUserId);
+      }
+    } catch (err) {
+      console.error("Failed to delete business", err);
+      throw err;
+    }
+    return null;
+  }, [state.auth.currentUserId, fetchAllData]);
 
-    setAppState((current) => ({
-      ...current,
-      subscriptions: current.subscriptions.map((subscription) => {
-        if (subscription.businessId !== businessId) {
-          return subscription;
-        }
-
-        const nextExpiry = new Date(subscription.expiresAt);
-        nextExpiry.setDate(nextExpiry.getDate() + extraDays);
-        updatedSubscription = {
-          ...subscription,
-          status: "TRIAL_ACTIVE",
-          expiresAt: nextExpiry.toISOString(),
-          readOnlyReason: undefined,
-          updatedAt: new Date().toISOString(),
-        };
-        return updatedSubscription;
-      }),
-      superAdminLogs:
-        current.auth.currentUserId
-          ? [
-              createSuperAdminActionLog({
-                actorUserId: current.auth.currentUserId,
-                targetBusinessId: businessId,
-                actionType: "EXTEND_TRIAL",
-                metadata: { extraDays: String(extraDays) },
-              }),
-              ...current.superAdminLogs,
-            ]
-          : current.superAdminLogs,
-    }));
-
-    return updatedSubscription;
-  }
-
-  function suspendBusiness(businessId: string, reason?: string) {
-    let updatedSubscription: BusinessSubscription | null = null;
-
-    setAppState((current) => ({
-      ...current,
-      subscriptions: current.subscriptions.map((subscription) => {
-        if (subscription.businessId !== businessId) {
-          return subscription;
-        }
-
-        updatedSubscription = {
-          ...subscription,
-          status: "SUSPENDED",
-          readOnlyReason: reason || "Bisnis disuspend oleh super admin.",
-          updatedAt: new Date().toISOString(),
-        };
-
-        return updatedSubscription;
-      }),
-      superAdminLogs:
-        current.auth.currentUserId
-          ? [
-              createSuperAdminActionLog({
-                actorUserId: current.auth.currentUserId,
-                targetBusinessId: businessId,
-                actionType: "SUSPEND_BUSINESS",
-                metadata: { reason: reason || "" },
-              }),
-              ...current.superAdminLogs,
-            ]
-          : current.superAdminLogs,
-    }));
-
-    return updatedSubscription;
-  }
-
-  function reactivateBusiness(businessId: string) {
-    let updatedSubscription: BusinessSubscription | null = null;
-
-    setAppState((current) => ({
-      ...current,
-      subscriptions: current.subscriptions.map((subscription) => {
-        if (subscription.businessId !== businessId) {
-          return subscription;
-        }
-
-        updatedSubscription = {
-          ...subscription,
-          status: subscription.planCode === "FREE_TRIAL" ? "TRIAL_ACTIVE" : "ACTIVE",
-          readOnlyReason: undefined,
-          updatedAt: new Date().toISOString(),
-        };
-        return updatedSubscription;
-      }),
-      superAdminLogs:
-        current.auth.currentUserId
-          ? [
-              createSuperAdminActionLog({
-                actorUserId: current.auth.currentUserId,
-                targetBusinessId: businessId,
-                actionType: "REACTIVATE_BUSINESS",
-              }),
-              ...current.superAdminLogs,
-            ]
-          : current.superAdminLogs,
-    }));
-
-    return updatedSubscription;
-  }
-
-  const value: AppDataContextValue = {
+  const value: AppDataContextValue = useMemo(() => ({
     ...state,
     hydrated,
     currentUser,
@@ -975,7 +907,55 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     extendTrial,
     suspendBusiness,
     reactivateBusiness,
-  };
+    downloadBusinessBackup,
+    deleteBusiness,
+  }), [
+    state,
+    hydrated,
+    currentUser,
+    currentUserRole,
+    isSuperAdmin,
+    subscriptionForCurrentBusiness,
+    currentBusinessUsage,
+    currentOrderUsage,
+    canCreateCustomer,
+    canCreateOrder,
+    canCreateInvoiceValue,
+    canAccessWriteMode,
+    readOnlyReason,
+    businessDirectory,
+    updateBusiness,
+    saveBusinessSettings,
+    completeOnboarding,
+    registerOwner,
+    login,
+    requestForgotPassword,
+    resetPassword,
+    logout,
+    createCustomer,
+    updateCustomer,
+    deleteCustomer,
+    createOrder,
+    updateOrder,
+    deleteOrder,
+    createInvoiceFromOrder,
+    createMessageTemplate,
+    updateMessageTemplate,
+    deleteMessageTemplate,
+    updateMessageComposer,
+    saveMessageDraft,
+    submitPublicOrder,
+    createBackup,
+    restoreBackup,
+    requestUpgrade,
+    approveUpgrade,
+    rejectUpgrade,
+    extendTrial,
+    suspendBusiness,
+    reactivateBusiness,
+    downloadBusinessBackup,
+    deleteBusiness,
+  ]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }

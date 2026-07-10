@@ -47,7 +47,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!hydrated) return;
 
     if (!currentUser) {
-      router.replace(ROUTES.login);
+      if (pathname.startsWith("/dashboard/super-admin")) {
+        router.replace(ROUTES.superAdminLogin);
+      } else {
+        router.replace(ROUTES.login);
+      }
       return;
     }
 
@@ -76,6 +80,42 @@ export function AppShell({ children }: { children: ReactNode }) {
       }
     }
   }, [currentUser, currentUserRole, hydrated, pathname, router, auth.onboardingCompleted, business.slug]);
+
+  // 1. Show loading screen while hydration is in progress
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+          <p className="text-sm text-[var(--color-text-muted)] font-medium">Memuat halaman...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Prevent rendering layout and children during authorization redirection checks
+  if (!currentUser) {
+    return null;
+  }
+
+  if (currentUserRole === "SUPER_ADMIN" && !pathname.startsWith("/dashboard/super-admin")) {
+    return null;
+  }
+
+  if (currentUserRole === "OWNER" && pathname.startsWith("/dashboard/super-admin")) {
+    return null;
+  }
+
+  if (currentUserRole === "OWNER" && !auth.onboardingCompleted) {
+    return null;
+  }
+
+  if (currentUserRole === "OWNER" && auth.onboardingCompleted) {
+    const expectedPrefix = `/dashboard/${business.slug}`;
+    if (!pathname.startsWith(expectedPrefix)) {
+      return null;
+    }
+  }
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--color-background)] lg:flex">

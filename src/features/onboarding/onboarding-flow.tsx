@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast-provider";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   BUSINESS_MODE_OPTIONS,
   createBusinessResources,
@@ -211,23 +211,17 @@ export function OnboardingFlow() {
       <div className="w-full space-y-5">
 
         {/* HERO BANNER */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] px-6 py-6 sm:px-8 sm:py-7 text-white">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
-
-          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
-                <Sparkles className="h-3 w-3" />
-                Setup Bisnis
-              </span>
-              <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
-                {currentStepInfo.title}
-              </h1>
-              <p className="text-sm text-white/60 leading-relaxed">{currentStepInfo.subtitle}</p>
-            </div>
-
-            {/* Progress indicator */}
+        <PageHeader
+          variant="hero"
+          title={currentStepInfo.title}
+          description={currentStepInfo.subtitle}
+          badge={
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
+              <Sparkles className="h-3 w-3" />
+              Setup Bisnis
+            </span>
+          }
+          action={
             <div className="flex items-center gap-3 sm:shrink-0">
               <div className="flex gap-1.5">
                 {[1, 2, 3].map((s) => (
@@ -243,8 +237,8 @@ export function OnboardingFlow() {
                 {progress}
               </span>
             </div>
-          </div>
-        </div>
+          }
+        />
 
         <Card className="w-full border-[var(--color-border)] shadow-[var(--shadow-md)]">
           <CardBody className="space-y-6 p-6 sm:p-8">

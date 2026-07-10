@@ -14,6 +14,7 @@ import { CUSTOMER_FILTER_OPTIONS, CUSTOMER_STATUS_LABELS } from "@/lib/constants
 import { formatDateTime, formatPhoneNumber } from "@/lib/format";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { CustomerStatusBadge } from "@/components/shared/status-badge";
+import { PageHeader } from "@/components/shared/page-header";
 import { ROUTES } from "@/lib/routes";
 import type { Customer, CustomerStatus } from "@/types/customer";
 import { useAppData } from "@/components/providers/app-data-provider";
@@ -188,45 +189,34 @@ export function CustomerManager() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HERO HEADER */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            {/* Left */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <Users className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
-                Database Pelanggan
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                CRM &amp; Manajemen Pelanggan
-              </h1>
-              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Kelola kontak, rekam riwayat interaksi, dan identifikasi pelanggan loyal (CRM). Semua pelanggan yang tersimpan bisa ditelepon atau dikirimi template WhatsApp dalam 1 klik.
-              </p>
-            </div>
-
-            {/* Right: Actions */}
-            <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
-              <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold h-12 flex items-center">
-                {customers.length} Terdaftar
-              </Badge>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleCreateNew}
-                disabled={!canCreateCustomer}
-                className="h-12 px-6 rounded-2xl font-bold shadow-sm"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Tambah Pelanggan
-              </Button>
-            </div>
+      <PageHeader
+        variant="hero"
+        title="CRM & Manajemen Pelanggan"
+        description="Kelola kontak, rekam riwayat interaksi, dan identifikasi pelanggan loyal (CRM). Semua pelanggan yang tersimpan bisa ditelepon atau dikirimi template WhatsApp dalam 1 klik."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+            <Users className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
+            Database Pelanggan
+          </span>
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
+            <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold h-10 flex items-center">
+              {customers.length} Terdaftar
+            </Badge>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCreateNew}
+              disabled={!canCreateCustomer}
+              className="shadow-sm font-bold"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Tambah Pelanggan
+            </Button>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       {/* SECTION 2: SEARCH & STATS */}
       <section className="animate-fade-up-delay-1">
@@ -366,7 +356,7 @@ export function CustomerManager() {
                       <LinkButton
                         href={`${ROUTES.orders}?name=${encodeURIComponent(customer.name)}&phone=${customer.whatsappNumber}`}
                         variant="secondary"
-                        className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4"
+                        className="font-bold border-[var(--color-border)]"
                       >
                         Tambah Order
                       </LinkButton>
@@ -374,7 +364,7 @@ export function CustomerManager() {
                         type="button"
                         variant="secondary"
                         onClick={() => startEdit(customer)}
-                        className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-3.5 flex items-center gap-1.5"
+                        className="font-bold border-[var(--color-border)] flex items-center gap-1.5"
                       >
                         <PencilLine className="h-4 w-4" />
                         Edit

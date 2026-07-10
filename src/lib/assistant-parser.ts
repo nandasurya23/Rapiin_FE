@@ -499,3 +499,15 @@ export function parseAssistantCommand(
     },
   };
 }
+
+export function renderFormattedExplanation(text: string): string {
+  if (!text) return "";
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+  return escaped.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+}

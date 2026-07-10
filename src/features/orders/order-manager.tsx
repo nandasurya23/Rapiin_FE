@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { useOrders } from "@/hooks/use-orders";
+import { PageHeader } from "@/components/shared/page-header";
 
 import { ORDER_STATUS_BY_MODE, PAYMENT_FILTER_OPTIONS } from "@/lib/constants/orders";
 import { renderTemplate } from "@/lib/messages";
@@ -165,43 +166,34 @@ export function OrderManager() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8" id="order-manager">
       {/* SECTION 1: HERO HEADER */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <ClipboardList className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
-                Manajemen Pesanan
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Daftar Order & Reservasi
-              </h1>
-              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Pantau antrean pesanan masuk, ketersediaan unit slot operasional, status pembayaran uang muka (DP), dan kelola alur kerja dengan mudah.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
-              <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold h-12 flex items-center">
-                {filteredOrders.length} Order Aktif
-              </Badge>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleCreateNew}
-                disabled={!canCreateOrder}
-                className="h-12 px-6 rounded-2xl font-bold shadow-sm"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Tambah Order
-              </Button>
-            </div>
+      <PageHeader
+        variant="hero"
+        title="Daftar Order & Reservasi"
+        description="Pantau antrean pesanan masuk, ketersediaan unit slot operasional, status pembayaran uang muka (DP), dan kelola alur kerja dengan mudah."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+            <ClipboardList className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
+            Manajemen Pesanan
+          </span>
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
+            <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold h-10 flex items-center">
+              {filteredOrders.length} Order Aktif
+            </Badge>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCreateNew}
+              disabled={!canCreateOrder}
+              className="shadow-sm font-bold"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Tambah Order
+            </Button>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       {/* SECTION 2: SEARCH & QUICK CONTROLS */}
       <section className="animate-fade-up-delay-1">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import { ROUTES } from "@/lib/routes";
@@ -25,6 +25,7 @@ type AuthPanelProps = {
   mode: "login" | "register" | "request-reset" | "reset-password";
   /** Token dari URL query param untuk mode "reset-password" */
   resetToken?: string;
+  roleFilter?: "OWNER" | "SUPER_ADMIN";
 };
 
 const benefits = [
@@ -34,10 +35,10 @@ const benefits = [
   "Kalender booking bawaan tanpa integrasi lain",
 ];
 
-export function AuthPanel({ mode, resetToken = "" }: AuthPanelProps) {
+export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthPanelProps) {
   const router = useRouter();
   const toast = useToast();
-  const { login, registerOwner, requestForgotPassword, resetPassword } = useAuth();
+  const { currentUser, login, registerOwner, requestForgotPassword, resetPassword, logout } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [pwdValue, setPwdValue] = useState("");
@@ -46,9 +47,27 @@ export function AuthPanel({ mode, resetToken = "" }: AuthPanelProps) {
   // Dev only: direct URL to reset page so user doesn't need to copy token
   const [devResetUrl, setDevResetUrl] = useState<string | undefined>();
 
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === "SUPER_ADMIN") {
+        router.replace(ROUTES.superAdminBusinesses);
+      } else {
+        router.replace("/dashboard");
+      }
+    }
+  }, [currentUser, router]);
+
   // Local state for inline validation errors and touch state
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+
+  if (currentUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+      </div>
+    );
+  }
 
   function handleBlur(name: string, value: string) {
     setTouchedFields((prev) => ({ ...prev, [name]: true }));
@@ -137,6 +156,18 @@ export function AuthPanel({ mode, resetToken = "" }: AuthPanelProps) {
         await new Promise((resolve) => setTimeout(resolve, 250));
         const result = await login(identifier, password);
         if (!result.ok) { setError(result.message); return; }
+
+        if (roleFilter === "SUPER_ADMIN" && result.user.role !== "SUPER_ADMIN") {
+          setError("Akun ini tidak memiliki akses Super Admin. Silakan gunakan portal Owner.");
+          await logout();
+          return;
+        }
+        if (roleFilter === "OWNER" && result.user.role === "SUPER_ADMIN") {
+          setError("Akun ini tidak memiliki akses Owner. Silakan gunakan portal Super Admin.");
+          await logout();
+          return;
+        }
+
         toast.success("Berhasil masuk");
         await new Promise((resolve) => setTimeout(resolve, 180));
         if (result.user.role === "SUPER_ADMIN") { router.push(ROUTES.superAdminBusinesses); return; }
@@ -611,30 +642,32 @@ export function AuthPanel({ mode, resetToken = "" }: AuthPanelProps) {
                 </form>
 
                 {/* Footer links */}
-                <div className="flex flex-col items-center gap-2 pt-2 text-sm text-[var(--color-text-muted)]">
-                  {mode === "login" ? (
-                    <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-primary)] text-xs font-semibold">
-                      Lupa password?
-                    </LinkButton>
-                  ) : null}
-                  {(mode === "request-reset" || mode === "reset-password") ? (
-                    <LinkButton href={ROUTES.login} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-text-muted)] text-xs">
-                      ← Kembali ke login
-                    </LinkButton>
-                  ) : null}
-                  {(mode === "login" || mode === "register") ? (
-                    <span className="text-xs">
-                      {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
-                      <LinkButton
-                        href={mode === "login" ? ROUTES.register : ROUTES.login}
-                        variant="ghost"
-                        className="h-auto px-0 py-0 text-[var(--color-primary)] font-bold text-xs"
-                      >
-                        {mode === "login" ? "Daftar gratis" : "Masuk"}
+                {roleFilter !== "SUPER_ADMIN" ? (
+                  <div className="flex flex-col items-center gap-2 pt-2 text-sm text-[var(--color-text-muted)]">
+                    {mode === "login" ? (
+                      <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-primary)] text-xs font-semibold">
+                        Lupa password?
                       </LinkButton>
-                    </span>
-                  ) : null}
-                </div>
+                    ) : null}
+                    {(mode === "request-reset" || mode === "reset-password") ? (
+                      <LinkButton href={ROUTES.login} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-text-muted)] text-xs">
+                        ← Kembali ke login
+                      </LinkButton>
+                    ) : null}
+                    {(mode === "login" || mode === "register") ? (
+                      <span className="text-xs">
+                        {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
+                        <LinkButton
+                          href={mode === "login" ? ROUTES.register : ROUTES.login}
+                          variant="ghost"
+                          className="h-auto px-0 py-0 text-[var(--color-primary)] font-bold text-xs"
+                        >
+                          {mode === "login" ? "Daftar gratis" : "Masuk"}
+                        </LinkButton>
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </CardBody>
             </Card>
           )}

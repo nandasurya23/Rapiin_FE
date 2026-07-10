@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { Card, CardBody } from "@/components/ui/card";
@@ -32,7 +32,8 @@ import {
   isBusinessSlugMatch,
 } from "@/lib/public-business";
 import type { Business, BusinessMode } from "@/types/business";
-import { useAppData } from "@/components/providers/app-data-provider";
+import { apiFetch } from "@/lib/api-client";
+import { canCreateOrder as checkCanCreateOrder } from "@/lib/subscription";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 
 type FormState = Record<string, string>;
@@ -202,23 +203,51 @@ function clearCatalogSelectionFromForm(mode: BusinessMode, current: FormState, d
   return next;
 }
 
-export function PublicOrderForm({ slug }: { slug: string }) {
+export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initialBusiness?: Business | null }) {
   const toast = useToast();
   const searchParams = useSearchParams();
-  const { business, hydrated, orders: appOrders, submitPublicOrder, canCreateOrder } = useAppData();
+
+  const [business, setBusiness] = useState<Business | null>(initialBusiness || null);
+  const [loading, setLoading] = useState(!initialBusiness);
+
+  useEffect(() => {
+    if (initialBusiness) return;
+    async function load() {
+      try {
+        const data = await apiFetch<Business>(`/api/public/b/${slug}`);
+        setBusiness(data);
+      } catch (err) {
+        console.error("Failed to load business profile", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [slug, initialBusiness]);
+
   const orders = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (business?.orders || appOrders || []) as any[];
-  }, [business?.orders, appOrders]);
-  const defaultBookingDuration = business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
-  const [form, setForm] = useState<FormState>(initialStateByMode[business.mode]);
+    return (business?.orders || []) as any[];
+  }, [business?.orders]);
+
+  const defaultBookingDuration = business?.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
+  const [form, setForm] = useState<FormState>(() => {
+    if (business) {
+      return {
+        ...initialStateByMode[business.mode],
+        bookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES),
+      };
+    }
+    return initialStateByMode.BOOKING_SERVICE;
+  });
+
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
-    if (!hydrated) {
+    if (!business) {
       return;
     }
 
@@ -248,10 +277,31 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     setError("");
     setCurrentStep(step);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [business.mode, defaultBookingDuration, hydrated]);
+  }, [business?.mode, defaultBookingDuration]);
 
-  const isMatch = isBusinessSlugMatch(business, slug);
-  const catalog = getPublicCatalog(business);
+  const canCreateOrder = useMemo(() => {
+    if (!business) return false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subscriptions = (business as any).subscriptions || [];
+    return checkCanCreateOrder({
+      business,
+      subscriptions,
+      orders,
+    });
+  }, [business, orders]);
+
+  const submitPublicOrder = async (input: { payload: Record<string, string> }) => {
+    if (!business) return;
+    await apiFetch<unknown>(`/api/public/b/${business.slug}/submit`, {
+      method: "POST",
+      body: JSON.stringify({
+        mode: business.mode,
+        operationalModel: business.operationalModel,
+        payload: input.payload,
+      }),
+    });
+  };
+
   const bookingDurationMinutes = useMemo(() => {
     const parsedDuration = Number(form.bookingDurationMinutes);
 
@@ -261,21 +311,24 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
     return parsedDuration;
   }, [form.bookingDurationMinutes]);
+
   const bookingAvailability = useMemo(
-    () => getBookingAvailability(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, undefined, undefined, business.bookingCapacity),
-    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business.bookingCapacity]
+    () => business ? getBookingAvailability(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, undefined, undefined, business.bookingCapacity) : { isFull: false, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: 0 },
+    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business?.bookingCapacity]
   );
+
   const resourceBookingAvailability = useMemo(
     () =>
-      getResourceBookingAvailability(
+      business ? getResourceBookingAvailability(
         orders,
         business.resources ?? [],
         form.scheduledDate,
         form.scheduledTime,
         bookingDurationMinutes
-      ),
-    [bookingDurationMinutes, business.resources, form.scheduledDate, form.scheduledTime, orders]
+      ) : { isFull: false, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: 0 },
+    [bookingDurationMinutes, business?.resources, form.scheduledDate, form.scheduledTime, orders]
   );
+
   const specificResourceAvailability = useMemo(() => {
     if (!form.resourceId || form.resourceId === "ANY") return null;
     return getResourceAvailabilityForSelection(orders, form.resourceId, form.scheduledDate, form.scheduledTime, bookingDurationMinutes);
@@ -283,15 +336,15 @@ export function PublicOrderForm({ slug }: { slug: string }) {
 
   const activeAvailability = form.resourceId && form.resourceId !== "ANY"
     ? specificResourceAvailability!
-    : business.operationalModel === "RESOURCE_BOOKING" ? resourceBookingAvailability : bookingAvailability;
+    : business?.operationalModel === "RESOURCE_BOOKING" ? resourceBookingAvailability : bookingAvailability;
 
   const resourceDetailsForDate = useMemo(() => {
-    if (business.operationalModel !== "RESOURCE_BOOKING" || !form.scheduledDate) return [];
+    if (!business || business.operationalModel !== "RESOURCE_BOOKING" || !form.scheduledDate) return [];
     return getResourceBookingDetailsForDate(orders, business.resources ?? [], form.scheduledDate);
-  }, [business.operationalModel, business.resources, form.scheduledDate, orders]);
+  }, [business?.operationalModel, business?.resources, form.scheduledDate, orders]);
 
   const slotHint = useMemo(() => {
-    if (business.mode !== "BOOKING_SERVICE") {
+    if (!business || business.mode !== "BOOKING_SERVICE") {
       return "";
     }
 
@@ -322,14 +375,13 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     }
 
     return activeAvailability.remaining === 1 ? "Sisa 1 jadwal tersedia" : `Sisa ${activeAvailability.remaining} jadwal tersedia`;
-  }, [activeAvailability.count, activeAvailability.earliestHoldExpiresAt, activeAvailability.hasHold, activeAvailability.isFull, activeAvailability.remaining, business.mode, business.operationalModel, form.scheduledDate, form.scheduledTime]);
+  }, [activeAvailability.count, activeAvailability.earliestHoldExpiresAt, activeAvailability.hasHold, activeAvailability.isFull, activeAvailability.remaining, business?.mode, business?.operationalModel, form.scheduledDate, form.scheduledTime]);
 
-  const waMessage = useMemo(() => createPublicWhatsAppMessage(business, form), [business, form]);
+  const waMessage = useMemo(() => business ? createPublicWhatsAppMessage(business, form) : "", [business, form]);
   const waLink = useMemo(
-    () => buildWhatsAppUrl(business.whatsappNumber, waMessage),
-    [business.whatsappNumber, waMessage]
+    () => business ? buildWhatsAppUrl(business.whatsappNumber, waMessage) : "",
+    [business?.whatsappNumber, waMessage]
   );
-
 
   function updateField(name: string, value: string) {
     setError("");
@@ -344,7 +396,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       return;
     }
 
-    const missing = requiredFieldsForBusiness(business).find((field: string) => !fieldValueFromState(form, field).trim());
+    const missing = requiredFieldsForBusiness(business!).find((field: string) => !fieldValueFromState(form, field).trim());
 
     if (missing) {
       setError("Lengkapi semua field wajib dulu.");
@@ -352,7 +404,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       return;
     }
 
-    if (form.scheduledDate && business.closedDates?.[form.scheduledDate]) {
+    if (form.scheduledDate && business?.closedDates?.[form.scheduledDate]) {
       setError(`Toko sedang tutup/libur pada tanggal terpilih karena: "${business.closedDates[form.scheduledDate]}". Silakan pilih tanggal lain.`);
       setSubmitted(false);
       return;
@@ -365,7 +417,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     }
 
     if (
-      business.mode === "BOOKING_SERVICE" &&
+      business?.mode === "BOOKING_SERVICE" &&
       business.operationalModel === "RESOURCE_BOOKING" &&
       !form.resourceId
     ) {
@@ -375,7 +427,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     }
 
     if (
-      business.mode === "BOOKING_SERVICE" &&
+      business?.mode === "BOOKING_SERVICE" &&
       (business.operationalModel === "RESOURCE_BOOKING"
         ? activeAvailability.isFull
         : isBookingSlotFull(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, undefined, undefined, business.bookingCapacity))
@@ -411,7 +463,7 @@ export function PublicOrderForm({ slug }: { slug: string }) {
     let startHour = 8;
     let endHour = 21;
 
-    if (business.openingHours) {
+    if (business?.openingHours) {
       const parts = business.openingHours.split("-").map(p => p.trim());
       if (parts.length === 2) {
         const sPart = parseInt(parts[0].split(":")[0], 10);
@@ -426,10 +478,10 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       candidates.push(`${String(i).padStart(2, "0")}:00`);
     }
     return candidates;
-  }, [business.openingHours]);
+  }, [business?.openingHours]);
 
   const fullyBookedDates = useMemo(() => {
-    if (business.mode !== "BOOKING_SERVICE") return [];
+    if (!business || business.mode !== "BOOKING_SERVICE") return [];
     
     const fullDates: string[] = [];
     const today = new Date();
@@ -465,13 +517,15 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       }
     }
     return fullDates;
-  }, [business.mode, business.closedDates, business.operationalModel, business.resources, business.bookingCapacity, orders, bookingDurationMinutes, timeCandidates]);
+  }, [business?.mode, business?.closedDates, business?.operationalModel, business?.resources, business?.bookingCapacity, orders, bookingDurationMinutes, timeCandidates]);
 
   const disabledDates = useMemo(() => {
+    if (!business) return [];
     return [...Object.keys(business.closedDates || {}), ...fullyBookedDates];
-  }, [business.closedDates, fullyBookedDates]);
+  }, [business?.closedDates, fullyBookedDates]);
 
   const getCandidateAvailability = (time: string) => {
+    if (!business) return { isFull: false, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: 0 };
     if (business.operationalModel === "RESOURCE_BOOKING") {
       if (form.resourceId && form.resourceId !== "ANY") {
         return getResourceAvailabilityForSelection(orders, form.resourceId, form.scheduledDate, time, bookingDurationMinutes);
@@ -487,6 +541,17 @@ export function PublicOrderForm({ slug }: { slug: string }) {
       return getBookingAvailability(orders, form.scheduledDate, time, bookingDurationMinutes, undefined, undefined, business.bookingCapacity);
     }
   };
+
+  if (loading || !business) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+      </main>
+    );
+  }
+
+  const isMatch = isBusinessSlugMatch(business, slug);
+  const catalog = getPublicCatalog(business);
 
   let steps = [
     { num: 1, label: business.mode === "BOOKING_SERVICE" ? "Pilih Layanan" : business.mode === "PRODUCT_ORDER" ? "Pilih Produk" : "Detail Request" },

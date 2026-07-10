@@ -44,6 +44,7 @@ export type Business = Timestamped & {
   paymentInstructions?: string;
   closedDates?: Record<string, string>;
   orders?: Partial<Order>[];
+  autoCreateOrderFromSubmission?: boolean;
 };
 
 export type BusinessModeOption = {

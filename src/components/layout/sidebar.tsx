@@ -135,7 +135,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       >
         <div className="space-y-0.5">
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = item.href === ROUTES.dashboard(business?.slug || "")
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
             const Icon = item.icon;
 
             return (

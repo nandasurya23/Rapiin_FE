@@ -6,6 +6,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
+import { PageHeader } from "@/components/shared/page-header";
 import { ROUTES } from "@/lib/routes";
 import { buildWhatsAppShareUrl } from "@/lib/whatsapp";
 import { getPublicCatalog, getPublicPageSubtitle, getPublicPageTitle } from "@/lib/public-business";
@@ -36,69 +37,57 @@ export function BusinessLinkPage() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HERO HEADER */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          {/* Background decorative glows */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            {/* Left */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <Link2 className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-                {linkType === "FORM" ? "Link Form Booking" : "Link Profil Publik"}
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Bagikan Link Bisnis Anda
-              </h1>
-              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Rapiin menyediakan landing page khusus bagi pelanggan Anda untuk melihat list layanan catalog, dan melakukan reservasi booking secara instan.
-              </p>
-            </div>
-
-            {/* Right Actions */}
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={publicUrl} className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-bold text-xs px-4 py-2 rounded-xl">
-                Lihat Halaman Publik
-              </LinkButton>
-              <Button
-                type="button"
-                variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold text-xs px-4 py-2 rounded-xl"
-                isLoading={loadingAction === "copy-link"}
-                onClick={async () => {
-                  setLoadingAction("copy-link");
-                  try {
-                    await copyToClipboard(publicUrl);
-                    toast.success("Link publik disalin");
-                  } finally {
-                    setLoadingAction(null);
-                  }
-                }}
-              >
-                <ClipboardCopy className="h-4 w-4" />
-                Salin Link
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold text-xs px-4 py-2 rounded-xl"
-                isLoading={loadingAction === "share-wa"}
-                onClick={async () => {
-                  setLoadingAction("share-wa");
-                  window.open(buildWhatsAppShareUrl(publicUrl), "_blank", "noopener,noreferrer");
-                  toast.info("Share WhatsApp dibuka", "Link bisnis siap dibagikan ke customer.");
+      <PageHeader
+        variant="hero"
+        title="Bagikan Link Bisnis Anda"
+        description="Rapiin menyediakan landing page khusus bagi pelanggan Anda untuk melihat list layanan catalog, dan melakukan reservasi booking secara instan."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+            <Link2 className="h-3.5 w-3.5 text-[var(--color-accent)]" />
+            {linkType === "FORM" ? "Link Form Booking" : "Link Profil Publik"}
+          </span>
+        }
+        action={
+          <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+            <LinkButton href={publicUrl} variant="accent" className="font-bold shadow-sm">
+              Lihat Halaman Publik
+            </LinkButton>
+            <Button
+              type="button"
+              variant="secondary"
+              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold shadow-sm hover:text-white"
+              isLoading={loadingAction === "copy-link"}
+              onClick={async () => {
+                setLoadingAction("copy-link");
+                try {
+                  await copyToClipboard(publicUrl);
+                  toast.success("Link publik disalin");
+                } finally {
                   setLoadingAction(null);
-                }}
-              >
-                <Share2 className="h-4 w-4" />
-                Share ke WA
-              </Button>
-            </div>
+                }
+              }}
+            >
+              <ClipboardCopy className="h-4 w-4" />
+              Salin Link
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold shadow-sm hover:text-white"
+              isLoading={loadingAction === "share-wa"}
+              onClick={async () => {
+                setLoadingAction("share-wa");
+                window.open(buildWhatsAppShareUrl(publicUrl), "_blank", "noopener,noreferrer");
+                toast.info("Share WhatsApp dibuka", "Link bisnis siap dibagikan ke customer.");
+                setLoadingAction(null);
+              }}
+            >
+              <Share2 className="h-4 w-4" />
+              Share ke WA
+            </Button>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       {/* SECTION 2: LINK ACTIVE PREVIEW & CONFIGS */}
       <section className="animate-fade-up-delay-1">
