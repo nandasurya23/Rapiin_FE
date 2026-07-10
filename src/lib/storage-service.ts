@@ -22,10 +22,6 @@ import type {
 } from "@/types/subscription";
 
 const STORAGE_KEY = "rapiin-app-storage";
-const SUPER_ADMIN_EMAIL = "superadmin@rapiin.local";
-const SUPER_ADMIN_PHONE = "6289900000000";
-const SUPER_ADMIN_PASSWORD = "superadmin123";
-const SUPER_ADMIN_ID = "usr_super_admin";
 
 function now() {
   return new Date().toISOString();
@@ -62,22 +58,6 @@ function createDefaultMessageComposer(messageTemplates: MessageTemplate[], custo
   };
 }
 
-function createDefaultSuperAdmin(): AuthUser {
-  const timestamp = now();
-
-  return {
-    id: SUPER_ADMIN_ID,
-    name: "Super Admin",
-    email: SUPER_ADMIN_EMAIL,
-    phoneNumber: SUPER_ADMIN_PHONE,
-    role: "SUPER_ADMIN",
-    businessId: undefined,
-    trialUsed: false,
-    isActive: true,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-}
 
 function normalizeBusinessConfig(business: Business): Business {
   const modeConfig = getDefaultBusinessConfigForMode(business.mode);
@@ -113,7 +93,7 @@ function normalizeInvoices(invoices: Invoice[]) {
 
 function normalizeAuthUsers(users: AppStorageState["auth"]["users"] | unknown, businessId: string) {
   if (!Array.isArray(users)) {
-    return [createDefaultSuperAdmin()];
+    return [];
   }
 
   const normalizedUsers: AuthUser[] = users.map((user) => {
@@ -127,7 +107,7 @@ function normalizeAuthUsers(users: AppStorageState["auth"]["users"] | unknown, b
       name: legacyUser.name?.trim() || "Owner",
       email,
       phoneNumber,
-      role: legacyUser.role ?? (legacyUser.id === SUPER_ADMIN_ID ? "SUPER_ADMIN" : "OWNER"),
+      role: legacyUser.role ?? "OWNER",
       businessId: legacyUser.role === "SUPER_ADMIN" ? undefined : legacyUser.businessId ?? businessId,
       trialUsed: typeof legacyUser.trialUsed === "boolean" ? legacyUser.trialUsed : true,
       isActive: typeof legacyUser.isActive === "boolean" ? legacyUser.isActive : true,
@@ -135,10 +115,6 @@ function normalizeAuthUsers(users: AppStorageState["auth"]["users"] | unknown, b
       updatedAt: legacyUser.updatedAt ?? legacyUser.createdAt ?? now(),
     } satisfies AuthUser;
   });
-
-  if (!normalizedUsers.some((user) => user.id === SUPER_ADMIN_ID)) {
-    normalizedUsers.unshift(createDefaultSuperAdmin());
-  }
 
   return normalizedUsers;
 }
@@ -235,10 +211,10 @@ export function createInitialAppStorageState(): AppStorageState {
     auth: {
       currentUserId: null,
       onboardingCompleted: false,
-      users: [createDefaultSuperAdmin()],
+      users: [],
     },
     system: {
-      superAdminUserIds: [SUPER_ADMIN_ID],
+      superAdminUserIds: [],
       planCatalog: clone(PLAN_DEFINITIONS),
     },
     ui: {

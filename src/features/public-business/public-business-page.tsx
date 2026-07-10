@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { CalendarDays, MessageCircleMore, PhoneCall, ExternalLink, Sparkles, Loader2, Clock, MapPin, Info, ShoppingBag, ArrowRight, ClipboardCopy } from "lucide-react";
+import { CalendarDays, MessageCircleMore, PhoneCall, ExternalLink, Sparkles, Loader2, Clock, Info, ShoppingBag, ArrowRight } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,6 @@ import {
   getPublicCatalog,
   getPublicFormTitle,
   getPublicPageSubtitle,
-  getPublicPageTitle,
 } from "@/lib/public-business";
 import { ROUTES } from "@/lib/routes";
 import { apiFetch } from "@/lib/api-client";
@@ -22,13 +21,14 @@ async function copyToClipboard(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function PublicBusinessPage({ slug }: { slug: string }) {
+export function PublicBusinessPage({ slug, initialBusiness }: { slug: string; initialBusiness?: Business | null }) {
   const toast = useToast();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [business, setBusiness] = useState<Business | null>(initialBusiness || null);
+  const [loading, setLoading] = useState(!initialBusiness);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialBusiness) return;
     async function load() {
       try {
         const data = await apiFetch<Business>(`/api/public/b/${slug}`);
@@ -40,7 +40,7 @@ export function PublicBusinessPage({ slug }: { slug: string }) {
       }
     }
     load();
-  }, [slug]);
+  }, [slug, initialBusiness]);
 
   const catalog = useMemo(() => business ? getPublicCatalog(business) : [], [business]);
   
@@ -124,7 +124,8 @@ export function PublicBusinessPage({ slug }: { slug: string }) {
             <div className="flex flex-wrap gap-3 md:shrink-0 pt-2 md:pt-0">
               <LinkButton 
                 href={publicOrderLink} 
-                className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-amber-500/10 hover:shadow-amber-500/25 transition-all duration-300"
+                variant="accent"
+                className="font-extrabold shadow-lg shadow-amber-500/10 hover:shadow-amber-500/25 transition-all duration-300"
               >
                 <CalendarDays className="h-4 w-4" />
                 {getPublicFormTitle(business)}
@@ -132,7 +133,7 @@ export function PublicBusinessPage({ slug }: { slug: string }) {
               <LinkButton 
                 href={waLink} 
                 variant="secondary" 
-                className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold text-xs px-5 py-2.5 rounded-xl backdrop-blur-md"
+                className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold hover:text-white"
               >
                 <PhoneCall className="h-4 w-4" />
                 Chat WhatsApp

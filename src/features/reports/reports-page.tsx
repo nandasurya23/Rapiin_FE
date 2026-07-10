@@ -3,23 +3,19 @@
 import { useMemo, useState } from "react";
 import {
   Download,
-  Sparkles,
   TrendingUp,
   Wallet,
   Users,
   CheckCircle2,
   XCircle,
-  Clock,
-  Package
+  Clock
 } from "lucide-react";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency } from "@/lib/format";
-import { ROUTES } from "@/lib/routes";
-import { LinkButton } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/page-header";
 import { getReportSummary, getOrderReferenceDate, isWithinPeriod } from "@/lib/domain";
 import type { ReportPeriod } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
@@ -68,24 +64,22 @@ export function ReportsPage() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HEADER & PERIOD FILTER */}
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-text)]">Laporan & Statistik</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">Ringkasan performa bisnis Anda.</p>
-        </div>
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title="Laporan & Statistik"
+        description="Ringkasan performa bisnis Anda."
+        action={
           <FilterChipGroup
             options={periodOptions}
             value={period}
             onChange={(v) => setPeriod(v as PeriodFilter)}
           />
-        </div>
-      </section>
+        }
+      />
 
       {/* SECTION 2: KEY METRICS */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-fade-up-delay-1">
         {/* Omzet Card */}
-        <div className="rounded-3xl bg-gradient-to-br from-amber-500 to-amber-600 p-5 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+        <div className="rounded-3xl bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-hover)] p-5 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
           <div className="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-white/10 blur-xl" />
           <div className="flex items-center gap-2 text-amber-50">
             <Wallet className="h-4 w-4" />
@@ -98,7 +92,7 @@ export function ReportsPage() {
         </div>
 
         {/* Total Orders Card */}
-        <div className="rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+        <div className="rounded-3xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] p-5 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
           <div className="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-white/10 blur-xl" />
           <div className="flex items-center gap-2 text-blue-100">
             <TrendingUp className="h-4 w-4" />
@@ -171,7 +165,7 @@ export function ReportsPage() {
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={cn(
                       "flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white",
-                      index === 0 ? "bg-amber-500" : index === 1 ? "bg-slate-400" : "bg-[#b0743b]"
+                      index === 0 ? "bg-[var(--color-accent)]" : index === 1 ? "bg-[var(--color-navy-500)]" : "bg-[var(--color-navy-700)]"
                     )}>
                       {index + 1}
                     </span>

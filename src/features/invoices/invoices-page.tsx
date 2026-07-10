@@ -11,6 +11,7 @@ import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/shared/status-badge";
+import { PageHeader } from "@/components/shared/page-header";
 import { ROUTES } from "@/lib/routes";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { getEntityById } from "@/lib/domain";
@@ -140,45 +141,33 @@ export function InvoicesPage() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HERO HEADER */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          {/* Background decorative glows */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            {/* Left */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <ReceiptText className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-                Manajemen Nota Tagihan
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Nota Rapi &amp; Siap Dibagikan
-              </h1>
-              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Buat invoice tagihan atau tanda terima DP otomatis dari data order, preview tampilan secara langsung, dan kirimkan format link publik ke customer lewat WhatsApp.
-              </p>
-            </div>
-
-            {/* Right Actions */}
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={ROUTES.orders(business.slug)} className="bg-[var(--color-accent)] text-slate-900 hover:bg-[var(--color-accent-hover)] font-bold text-xs px-4 py-2 rounded-xl">
-                <Plus className="h-4 w-4" />
-                Buat Nota Baru
-              </LinkButton>
-              <LinkButton
-                href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug)}
-                variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold text-xs px-4 py-2 rounded-xl"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Buka Link Publik
-              </LinkButton>
-            </div>
+      <PageHeader
+        variant="hero"
+        title="Nota Rapi & Siap Dibagikan"
+        description="Buat invoice tagihan atau tanda terima DP otomatis dari data order, preview tampilan secara langsung, dan kirimkan format link publik ke customer lewat WhatsApp."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+            <ReceiptText className="h-3.5 w-3.5 text-[var(--color-accent)]" />
+            Manajemen Nota Tagihan
+          </span>
+        }
+        action={
+          <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+            <LinkButton href={ROUTES.orders(business.slug)} variant="accent" className="font-bold shadow-sm">
+              <Plus className="h-4 w-4" />
+              Buat Nota Baru
+            </LinkButton>
+            <LinkButton
+              href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug)}
+              variant="secondary"
+              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold shadow-sm hover:text-white"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Buka Link Publik
+            </LinkButton>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       {/* SECTION 2: STATS SUMMARY */}
       <section className="animate-fade-up-delay-1">

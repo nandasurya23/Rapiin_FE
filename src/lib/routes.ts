@@ -1,5 +1,6 @@
 export const ROUTES = {
   login: "/auth/login",
+  superAdminLogin: "/auth/super-admin/login",
   register: "/auth/register",
   forgotPassword: "/auth/forgot-password",   // Step 1: request reset link
   resetPassword: "/auth/reset-password",     // Step 2: enter token + new password

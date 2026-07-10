@@ -1,25 +1,25 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Link2, RotateCcw, Send, Sparkles, Users, PencilLine } from "lucide-react";
+import { Copy, RotateCcw, Send, Users, PencilLine, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
-import { MESSAGE_CATEGORY_LABELS, MESSAGE_VARIABLES } from "@/lib/constants/messages";
+import { MESSAGE_CATEGORY_LABELS } from "@/lib/constants/messages";
 import { buildWhatsAppUrl, isValidWhatsappNumber } from "@/lib/whatsapp";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { renderTemplate, extractTemplateVariables } from "@/lib/messages";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
+import { PageHeader } from "@/components/shared/page-header";
 import { ROUTES } from "@/lib/routes";
 import { LinkButton } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
-import { getEntityById } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { getEntityById } from "@/lib/domain";
 import { cn } from "@/lib/cn";
 import type { MessageCategory } from "@/types/message";
 import { Sheet } from "@/components/ui/sheet";
@@ -149,28 +149,7 @@ export function MessagesPage() {
 
   const renderedPreview = draftContent;
   const variablesDetected = extractTemplateVariables(selectedTemplate?.content ?? "");
-  const humanReadableVariables = variablesDetected.map((variable) => {
-    switch (variable) {
-      case "customer_name":
-        return "nama customer";
-      case "business_name":
-        return "nama bisnis";
-      case "order_title":
-        return "nama order";
-      case "scheduled_date":
-        return "tanggal";
-      case "scheduled_time":
-        return "jam";
-      case "total_amount":
-        return "total";
-      case "dp_amount":
-        return "DP";
-      default:
-        return variable;
-    }
-  });
   const generatedUrl = selectedCustomer ? buildWhatsAppUrl(selectedCustomer.whatsappNumber, renderedPreview) : "";
-  const canOpenWhatsApp = selectedCustomer ? isValidWhatsappNumber(selectedCustomer.whatsappNumber) : false;
 
   const followUpActions = [
     {
@@ -206,15 +185,7 @@ export function MessagesPage() {
     }
   }
 
-  async function handleCopyLink() {
-    setLoadingAction("copy-link");
-    try {
-      await copyToClipboard(generatedUrl);
-      toast.success("Link WhatsApp disalin");
-    } finally {
-      setLoadingAction(null);
-    }
-  }
+
 
   async function handleResetDraft() {
     if (!selectedTemplate) {
@@ -310,37 +281,25 @@ export function MessagesPage() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HERO HEADER */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          {/* Background decorative glows */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            {/* Left */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <MessageCircle className="h-3.5 w-3.5 animate-pulse text-[var(--color-accent)]" />
-                Pesan Cepat
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Template WhatsApp Siap Pakai
-              </h1>
-              <p className="max-w-xl text-sm text-white/70 leading-relaxed">
-                Kirim pesan cepat ke pelanggan untuk menagih DP, follow-up, atau minta review. Atau susun pesan manual dari katalog template.
-              </p>
-            </div>
-
-            {/* Right: Actions */}
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <Button onClick={() => { setIsComposerOpen(true); setComposerTab("SEND"); }} className="shadow-sm">
-                <PencilLine className="h-4 w-4 mr-2" />
-                Buat Pesan Manual
-              </Button>
-            </div>
+      <PageHeader
+        variant="hero"
+        title="Template WhatsApp Siap Pakai"
+        description="Kirim pesan cepat ke pelanggan untuk menagih DP, follow-up, atau minta review. Atau susun pesan manual dari katalog template."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+            <MessageCircle className="h-3.5 w-3.5 animate-pulse text-[var(--color-accent)]" />
+            Pesan Cepat
+          </span>
+        }
+        action={
+          <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+            <Button onClick={() => { setIsComposerOpen(true); setComposerTab("SEND"); }} variant="accent" className="shadow-sm">
+              <PencilLine className="h-4 w-4 mr-2" />
+              Buat Pesan Manual
+            </Button>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       {customers.length === 0 ? (
         <Card className="border-[var(--color-border)] shadow-none animate-fade-up">

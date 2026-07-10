@@ -25,6 +25,7 @@ export interface BusinessDTO {
   logoUrl?: string;
   paymentInstructions?: string;
   closedDates?: Record<string, string>;
+  autoCreateOrderFromSubmission?: boolean;
   createdAt: string;
   updatedAt: string;
 }

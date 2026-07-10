@@ -11,12 +11,16 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, options?: RequestInit & { rawResponse?: boolean }): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const defaultHeaders: Record<string, string> = {};
 
   if (!(options?.body instanceof FormData)) {
     defaultHeaders["Content-Type"] = "application/json";
+  }
+
+  if (typeof window !== "undefined") {
+    defaultHeaders["X-Rapiin-Path"] = window.location.pathname;
   }
 
   const response = await fetch(url, {
@@ -29,6 +33,9 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("rapiin-unauthorized"));
+    }
     let message = `API request failed with status ${response.status}`;
     try {
       const data = await response.json();
@@ -48,6 +55,9 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   const contentType = response.headers.get("content-type");
   if (contentType && contentType.includes("application/json")) {
     const data = await response.json();
+    if (options?.rawResponse) {
+      return data as T;
+    }
     // In Rapiin_BE, responses are structured as { ok: true, data: T } or { ok: true, data: T[], meta: ... }
     if (data && typeof data === "object" && "data" in data) {
       return data.data as T;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -729,7 +729,7 @@ function getTimelineStatusLabel(status: OrderStatus): string {
   return labels[status] ?? status;
 }
 
-export function DashboardCalendar({ business, orders, selectedDate, onDateSelect }: DashboardCalendarProps) {
+export const DashboardCalendar = memo(function DashboardCalendar({ business, orders, selectedDate, onDateSelect }: DashboardCalendarProps) {
   const toast = useToast();
   const { updateOrder, updateBusiness } = useAppData();
   const { invoices, createInvoiceFromOrder } = useInvoices();
@@ -1473,4 +1473,4 @@ export function DashboardCalendar({ business, orders, selectedDate, onDateSelect
       ) : null}
     </>
   );
-}
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Send, Share2, CheckCircle2, Clock, MapPin, Package, Loader2, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import * as htmlToImage from "html-to-image";
 import Image from "next/image";
@@ -11,9 +11,8 @@ import { formatCurrency } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/cn";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
-import { getEntityById } from "@/lib/domain";
+
 import { useSearchParams } from "next/navigation";
-import { useAppData } from "@/components/providers/app-data-provider";
 import { apiFetch } from "@/lib/api-client";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
 import type { Invoice } from "@/types/invoice";
@@ -24,17 +23,23 @@ async function copyToClipboard(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
+export function PublicInvoicePage({
+  invoiceCode,
+  initialData,
+}: {
+  invoiceCode: string;
+  initialData?: { invoice: Invoice; order: Order; business: Business } | null;
+}) {
   const toast = useToast();
-  const { orders } = useAppData();
   const searchParams = useSearchParams();
   const seal = searchParams.get("seal") || "";
 
-  const [data, setData] = useState<{ invoice: Invoice; order: Order; business: Business } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<{ invoice: Invoice; order: Order; business: Business } | null>(initialData || null);
+  const [loading, setLoading] = useState(!initialData);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialData) return;
     async function load() {
       if (!invoiceCode || !seal) {
         setLoading(false);
@@ -54,7 +59,7 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
       }
     }
     load();
-  }, [invoiceCode, seal]);
+  }, [invoiceCode, seal, initialData]);
 
   const invoice = data?.invoice;
   const order = data?.order;
@@ -77,7 +82,8 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
       if (!order) return;
       // Hitung order aktif (PROSES, MENUNGGU, WAITING_DP) yang masuk sebelum order ini
       const activeStatuses = ["MENUNGGU", "WAITING_DP", "PROSES"];
-      const ahead = (orders || []).filter((o) => 
+      const businessOrders = (business?.orders || []) as Order[];
+      const ahead = businessOrders.filter((o) => 
         activeStatuses.includes(o.status) && 
         new Date(o.createdAt).getTime() < new Date(order.createdAt).getTime()
       );
@@ -88,7 +94,7 @@ export function PublicInvoicePage({ invoiceCode }: { invoiceCode: string }) {
     // Auto refresh setiap 30 detik (polling lokal)
     const interval = setInterval(calculateQueue, 30000); 
     return () => clearInterval(interval);
-  }, [order, orders]);
+  }, [order, business?.orders]);
   // ---------------------------
 
   if (loading) {

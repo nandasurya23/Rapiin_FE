@@ -20,6 +20,7 @@ import { CustomerStatusBadge, OrderStatusBadge } from "@/components/shared/statu
 import { ORDER_STATUS_BY_MODE } from "@/lib/constants/orders";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
 import { DashboardCalendar } from "@/features/dashboard/dashboard-calendar";
 import { getDashboardSummary, toDateKey } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
@@ -268,58 +269,47 @@ export function DashboardPage() {
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
 
       {/* ── WELCOME HERO BANNER ─────────────────────────── */}
-      <section className="animate-fade-up">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] shadow-[var(--shadow-lg)] px-6 py-6 sm:px-8 sm:py-8 text-white">
-          {/* Background decorative glows */}
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--color-accent)] opacity-15 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[var(--color-primary)] opacity-30 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            {/* Left: greeting */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-                <Sparkles className="h-3 w-3 animate-pulse" />
-                {formatDate(today)}
-              </span>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
-                Selamat Datang Kembali, {currentUser?.name ?? business.ownerName}
-              </h1>
-              <p className="max-w-xl text-sm text-white/70">
-                Berikut adalah rangkuman aktivitas operasional, penagihan, dan tugas penting bisnis Anda hari ini.
-              </p>
-              
-              <div className="mt-4 flex flex-col gap-2 rounded-2xl bg-white/[0.06] p-4.5 border border-white/[0.08] backdrop-blur-md max-w-sm">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-white/80">📈 Kuota Pemesanan Berjalan</span>
-                  <span className="text-[var(--color-gold-300)]">{currentOrderUsage.used} / {currentOrderUsage.limit} Booking</span>
-                </div>
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/10">
-                  <div 
-                    className="absolute bottom-0 left-0 top-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-300"
-                    style={{ width: `${Math.min(100, (currentOrderUsage.used / currentOrderUsage.limit) * 100)}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-white/50">
-                  Kuota diperbarui otomatis pada {formatDate(currentOrderUsage.expiresAt)}.
-                </p>
-              </div>
+      <PageHeader
+        variant="hero"
+        title={`Selamat Datang Kembali, ${currentUser?.name ?? business.ownerName}`}
+        description="Berikut adalah rangkuman aktivitas operasional, penagihan, dan tugas penting bisnis Anda hari ini."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
+            <Sparkles className="h-3 w-3 animate-pulse" />
+            {formatDate(today)}
+          </span>
+        }
+        statsCard={
+          <div className="flex flex-col gap-2 rounded-2xl bg-white/[0.06] p-4.5 border border-white/[0.08] backdrop-blur-md min-w-[280px]">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-white/80">📈 Kuota Pemesanan Berjalan</span>
+              <span className="text-[var(--color-gold-300)]">{currentOrderUsage.used} / {currentOrderUsage.limit} Booking</span>
             </div>
-
-            {/* Right: Actions */}
-            <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <LinkButton href={ROUTES.orders(business.slug)} size="sm" className="shadow-sm">
-                Tambah Order
-              </LinkButton>
-              <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
-                Tambah Customer
-              </LinkButton>
-              <LinkButton href={ROUTES.messages(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20">
-                Pesan Cepat
-              </LinkButton>
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/10">
+              <div 
+                className="absolute bottom-0 left-0 top-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-300"
+                style={{ width: `${Math.min(100, (currentOrderUsage.used / currentOrderUsage.limit) * 100)}%` }}
+              />
             </div>
+            <p className="text-[10px] text-white/50">
+              Kuota diperbarui otomatis pada {formatDate(currentOrderUsage.expiresAt)}.
+            </p>
           </div>
-        </div>
-      </section>
+        }
+        action={
+          <div className="flex flex-wrap gap-2.5 xl:shrink-0">
+            <LinkButton href={ROUTES.orders(business.slug)} variant="accent" size="sm" className="shadow-sm">
+              Tambah Order
+            </LinkButton>
+            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20 hover:text-white">
+              Tambah Customer
+            </LinkButton>
+            <LinkButton href={ROUTES.messages(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20 hover:text-white">
+              Pesan Cepat
+            </LinkButton>
+          </div>
+        }
+      />
 
       {/* ── STANDALONE METRICS GRID ──────────────────────── */}
       <section className="grid gap-4 sm:grid-cols-3 animate-fade-up-delay-1">
@@ -459,7 +449,7 @@ export function DashboardPage() {
                                 const isWaitingDp = item.status === "WAITING_DP";
                                 void handleMarkOrderPaid(item.id, isWaitingDp ? "DP" : "FULL");
                               }}
-                              className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                              className="font-bold border-[var(--color-border)]"
                             >
                               {item.status === "WAITING_DP" ? "DP Lunas" : "Bayar Lunas"}
                             </Button>
@@ -470,7 +460,7 @@ export function DashboardPage() {
                                 size="sm"
                                 onClick={() => void handleMarkOrderDone(item.id)}
                                 title="Tandai order selesai"
-                                className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                                className="font-bold border-[var(--color-border)]"
                               >
                                 Tandai Selesai
                               </Button>
@@ -479,7 +469,7 @@ export function DashboardPage() {
                         )}
                         {item.type === "customer" && (
                           <>
-                            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold">
+                            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="font-bold border-[var(--color-border)]">
                               Detail Customer
                             </LinkButton>
                             <Button
@@ -488,7 +478,7 @@ export function DashboardPage() {
                               size="sm"
                               onClick={() => void handleMarkCustomerDone(item.id)}
                               title="Tandai follow-up selesai"
-                              className="h-9 px-3.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                              className="font-bold border-[var(--color-border)]"
                             >
                               Tandai Beres
                             </Button>
@@ -513,11 +503,11 @@ export function DashboardPage() {
 
       {/* ── QUICK LINKS ───────────────────────────────── */}
       <section className="animate-fade-up-delay-3 flex flex-wrap gap-2">
-        <LinkButton href={ROUTES.orders(business.slug)} variant="secondary" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] rounded-xl font-bold">
+        <LinkButton href={ROUTES.orders(business.slug)} variant="secondary" size="sm" className="font-bold border-[var(--color-border)]">
           Lihat Semua Order
           <ChevronRight className="h-4 w-4" />
         </LinkButton>
-        <LinkButton href={ROUTES.reports(business.slug)} variant="secondary" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] rounded-xl font-bold">
+        <LinkButton href={ROUTES.reports(business.slug)} variant="secondary" size="sm" className="font-bold border-[var(--color-border)]">
           Lihat Laporan
           <ChevronRight className="h-4 w-4" />
         </LinkButton>

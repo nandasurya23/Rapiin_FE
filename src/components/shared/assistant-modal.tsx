@@ -22,7 +22,7 @@ import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { parseAssistantCommand, type ParsedCommandResult } from "@/lib/assistant-parser";
+import { parseAssistantCommand, renderFormattedExplanation, type ParsedCommandResult } from "@/lib/assistant-parser";
 import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
 import {
   checkDailyCommandLimit,
@@ -618,9 +618,10 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
 
                   <div className="space-y-4 max-h-[42vh] overflow-y-auto pr-1 no-scrollbar">
                     {/* Expose explanation */}
-                    <p className="text-xs text-white/80 leading-relaxed bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-2xl">
-                      💡 {parsed.explanation}
-                    </p>
+                    <p
+                      className="text-xs text-white/80 leading-relaxed bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-2xl"
+                      dangerouslySetInnerHTML={{ __html: `💡 ${renderFormattedExplanation(parsed.explanation)}` }}
+                    />
 
                     {/* UPDATE_ORDER_PAYMENT Form */}
                     {parsed.type === "UPDATE_ORDER_PAYMENT" && draftData && (
