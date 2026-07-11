@@ -36,6 +36,9 @@ export async function apiFetch<T>(path: string, options?: RequestInit & { rawRes
     if (response.status === 401 && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("rapiin-unauthorized"));
     }
+    if (response.status === 401 && path === "/api/auth/me") {
+      return { user: null } as unknown as T;
+    }
     let message = `API request failed with status ${response.status}`;
     try {
       const data = await response.json();

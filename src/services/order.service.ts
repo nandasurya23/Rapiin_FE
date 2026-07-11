@@ -3,6 +3,7 @@ import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
 import type { BusinessMode } from "@/types/business";
 import type { CustomerStatus } from "@/types/customer";
 import { apiFetch } from "@/lib/api-client";
+import { logServiceError } from "./utils";
 
 // DTO representing the payload structure we expect from/to Backend
 export interface OrderDTO {
@@ -60,7 +61,7 @@ export class ApiOrderService implements OrderService {
       const response = await apiFetch<OrderDTO[]>("/api/orders?limit=100");
       return response.map((item) => this.mapper.toDomain(item));
     } catch (err) {
-      console.error("Failed to fetch orders", err);
+      logServiceError("Failed to fetch orders", err);
       return [];
     }
   }
@@ -70,7 +71,7 @@ export class ApiOrderService implements OrderService {
       const orders = await this.getOrders("");
       return orders.find((o) => o.id === id) || null;
     } catch (err) {
-      console.error("Failed to fetch order by ID", err);
+      logServiceError("Failed to fetch order by ID", err);
       return null;
     }
   }
@@ -86,7 +87,7 @@ export class ApiOrderService implements OrderService {
       }
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to create order", err);
+      logServiceError("Failed to create order", err);
       throw err;
     }
   }
@@ -116,7 +117,7 @@ export class ApiOrderService implements OrderService {
       }
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to update order", err);
+      logServiceError("Failed to update order", err);
       return null;
     }
   }
@@ -130,7 +131,7 @@ export class ApiOrderService implements OrderService {
         window.dispatchEvent(new Event("rapiin-storage-sync"));
       }
     } catch (err) {
-      console.error("Failed to delete order", err);
+      logServiceError("Failed to delete order", err);
     }
   }
 }

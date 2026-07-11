@@ -3,7 +3,6 @@
 import { Download, Send, Share2, CheckCircle2, Clock, MapPin, Package, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import * as htmlToImage from "html-to-image";
 import Image from "next/image";
 import { Button, LinkButton } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
@@ -132,6 +131,7 @@ export function PublicInvoicePage({
 
     setLoadingAction("share-image");
     try {
+      const htmlToImage = await import("html-to-image");
       const dataUrl = await htmlToImage.toPng(node, {
         backgroundColor: "#ffffff",
         style: {
@@ -174,6 +174,7 @@ export function PublicInvoicePage({
 
     setLoadingAction("download-image");
     try {
+      const htmlToImage = await import("html-to-image");
       const dataUrl = await htmlToImage.toPng(node, {
         backgroundColor: "#ffffff",
       });

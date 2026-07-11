@@ -1,6 +1,7 @@
 import type { Mapper } from "./mapper";
 import type { Business, BusinessMode, OperationalModel, NicheTemplate, BusinessResource, PublicCatalogItem } from "@/types/business";
 import { apiFetch } from "@/lib/api-client";
+import { logServiceError } from "./utils";
 
 export interface BusinessDTO {
   id: string;
@@ -54,7 +55,7 @@ export class ApiBusinessService implements BusinessService {
       const response = await apiFetch<BusinessDTO>("/api/business");
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to fetch business by ID", err);
+      logServiceError("Failed to fetch business by ID", err);
       return null;
     }
   }
@@ -64,7 +65,7 @@ export class ApiBusinessService implements BusinessService {
       const response = await apiFetch<BusinessDTO>(`/api/public/b/${slug}`);
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to fetch public business profile by slug", err);
+      logServiceError("Failed to fetch public business profile by slug", err);
       return null;
     }
   }
@@ -81,7 +82,7 @@ export class ApiBusinessService implements BusinessService {
       }
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to update business settings", err);
+      logServiceError("Failed to update business settings", err);
       return null;
     }
   }

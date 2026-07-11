@@ -1,6 +1,7 @@
 import type { Mapper } from "./mapper";
 import type { Customer, CustomerStatus } from "@/types/customer";
 import { apiFetch } from "@/lib/api-client";
+import { logServiceError } from "./utils";
 
 export interface CustomerDTO {
   id: string;
@@ -43,7 +44,7 @@ export class ApiCustomerService implements CustomerService {
       const response = await apiFetch<CustomerDTO[]>("/api/customers?limit=100");
       return response.map((item) => this.mapper.toDomain(item));
     } catch (err) {
-      console.error("Failed to fetch customers", err);
+      logServiceError("Failed to fetch customers", err);
       return [];
     }
   }
@@ -53,7 +54,7 @@ export class ApiCustomerService implements CustomerService {
       const customers = await this.getCustomers("");
       return customers.find((c) => c.id === id) || null;
     } catch (err) {
-      console.error("Failed to fetch customer by ID", err);
+      logServiceError("Failed to fetch customer by ID", err);
       return null;
     }
   }
@@ -69,7 +70,7 @@ export class ApiCustomerService implements CustomerService {
       }
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to create customer", err);
+      logServiceError("Failed to create customer", err);
       throw err;
     }
   }
@@ -85,7 +86,7 @@ export class ApiCustomerService implements CustomerService {
       }
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to update customer", err);
+      logServiceError("Failed to update customer", err);
       return null;
     }
   }
@@ -99,7 +100,7 @@ export class ApiCustomerService implements CustomerService {
         window.dispatchEvent(new Event("rapiin-storage-sync"));
       }
     } catch (err) {
-      console.error("Failed to delete customer", err);
+      logServiceError("Failed to delete customer", err);
     }
   }
 }

@@ -76,9 +76,7 @@ export type AppStorageState = {
     superAdminUserIds: ID[];
     planCatalog: PlanDefinition[];
   };
-  ui: {
-    messageComposer: MessageComposerDraft;
-  };
+
   businessDirectory?: Array<{
     business: Business;
     owner: AuthUser | null;

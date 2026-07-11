@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api-client";
+import { logServiceError } from "./utils";
 import type { MessageTemplate, MessageCategory } from "@/types/message";
 
 export interface MessageTemplateDTO {
@@ -28,7 +29,7 @@ export class ApiMessageTemplateService implements MessageTemplateService {
         variables: (item.content.match(/\{\{([^}]+)\}\}/g) || []).map((v) => v.slice(2, -2).trim()),
       }));
     } catch (err) {
-      console.error("Failed to fetch templates", err);
+      logServiceError("Failed to fetch templates", err);
       return [];
     }
   }
