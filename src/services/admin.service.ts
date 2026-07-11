@@ -57,8 +57,8 @@ export class ApiAdminService {
     search: string,
     planFilter: string,
     statusFilter: string
-  ): Promise<PaginatedResponse<unknown>> {
-    return apiFetch<PaginatedResponse<unknown>>(
+  ): Promise<PaginatedResponse<AdminBusinessDetail>> {
+    return apiFetch<PaginatedResponse<AdminBusinessDetail>>(
       `/api/admin/businesses?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&planCode=${planFilter}&status=${statusFilter}`,
       { rawResponse: true }
     );

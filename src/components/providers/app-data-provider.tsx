@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, type ReactNode } from "react";
@@ -8,28 +7,17 @@ import { ApiCustomerService } from "@/services/customer.service";
 import { ApiOrderService } from "@/services/order.service";
 import { ApiInvoiceService } from "@/services/invoice.service";
 import { ApiMessageTemplateService } from "@/services/message-template.service";
-import { ApiAdminService } from "@/services/admin.service";
+import { ApiAdminService, type AdminBusinessDetail } from "@/services/admin.service";
 import type { MessageTemplate } from "@/types/message";
 import { apiFetch } from "@/lib/api-client";
 import { BusinessDTO } from "@/services/business.service";
 import {
-  createAuthUser,
   createBackupRecord,
-  createBusinessSubscriptionRecord,
-  createCustomerRecord,
   createInitialAppStorageState,
-  createInvoiceRecord,
-  createMessageTemplateRecord,
-  createOrderRecord,
-  createPublicSubmissionRecord,
   createSuperAdminActionLog,
-  createUpgradeRequestRecord,
-  getDefaultOrderStatusForMode,
   writeAppStorageState,
 } from "@/lib/storage-service";
-import { createBusinessResources, doesOperationalModelUseResources } from "@/lib/constants/business";
-import { PREMIUM_CUSTOMER_LIMIT, PRO_CUSTOMER_LIMIT } from "@/lib/constants/subscription";
-import { canCreateCustomer as canCreateCustomerByState, canCreateInvoice, canCreateOrder as canCreateOrderByState, canAccessWriteMode as canWriteMode, getCustomerUsage, getReadOnlyReason, getSubscriptionForBusiness, getSubscriptionStatus, getOrderUsage } from "@/lib/subscription";
+import { canCreateCustomer as canCreateCustomerByState, canCreateInvoice, canCreateOrder as canCreateOrderByState, canAccessWriteMode as canWriteMode, getCustomerUsage, getReadOnlyReason, getSubscriptionForBusiness, getOrderUsage } from "@/lib/subscription";
 import type { AppStorageState, AuthUser, MessageComposerDraft } from "@/types/app-state";
 import type { Business, BusinessMode, BusinessResource, NicheTemplate, OperationalModel } from "@/types/business";
 import type { Customer, CustomerStatus } from "@/types/customer";
@@ -167,94 +155,18 @@ type AppDataContextValue = AppStorageState & {
   createBackup: () => BackupRecord;
   restoreBackup: (backupPayload: string) => boolean;
   requestUpgrade: (toPlan: PlanCode, paymentNote?: string) => Promise<UpgradeRequest>;
-  approveUpgrade: (requestId: string, adminNote?: string) => Promise<any>;
-  rejectUpgrade: (requestId: string, adminNote?: string) => Promise<any>;
-  extendTrial: (businessId: string, extraDays: number) => any;
-  suspendBusiness: (businessId: string, reason?: string) => Promise<any>;
-  reactivateBusiness: (businessId: string) => Promise<any>;
-  downloadBusinessBackup: (businessId: string, businessSlug: string) => Promise<any>;
-  deleteBusiness: (businessId: string) => Promise<any>;
+  approveUpgrade: (requestId: string, adminNote?: string) => Promise<null>;
+  rejectUpgrade: (requestId: string, adminNote?: string) => Promise<null>;
+  extendTrial: (businessId: string, extraDays: number) => Promise<null>;
+  suspendBusiness: (businessId: string, reason?: string) => Promise<null>;
+  reactivateBusiness: (businessId: string) => Promise<null>;
+  downloadBusinessBackup: (businessId: string, businessSlug: string) => Promise<void>;
+  deleteBusiness: (businessId: string) => Promise<null>;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
-function createInvoiceCode(orderId: string, sequence: number) {
-  return `INV-${orderId.toUpperCase()}-${String(sequence).padStart(3, "0")}`;
-}
 
-function normalizeBusinessNameToSlug(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function getCustomerStatusFromOrderStatus(status: OrderStatus): CustomerStatus {
-  if (status === "SELESAI") {
-    return "DONE";
-  }
-
-  if (status === "BATAL") {
-    return "CANCELLED";
-  }
-
-  if (status === "DEAL" || status === "CONFIRMED") {
-    return "DEAL";
-  }
-
-  return "NEED_FOLLOW_UP";
-}
-
-function getPublicOrderTitle(mode: BusinessMode, payload: Record<string, string>) {
-  if (mode === "BOOKING_SERVICE") {
-    return payload.service?.trim() || "Booking baru";
-  }
-
-  if (mode === "PRODUCT_ORDER") {
-    return payload.product?.trim() || "Order produk";
-  }
-
-  return payload.requestDetail?.trim() || "Request custom";
-}
-
-function normalizeBusinessPayload(current: Business, payload: Partial<BusinessSettingsInput>) {
-  const mode = payload.mode ?? current.mode;
-  const operationalModel = payload.operationalModel ?? current.operationalModel;
-  const usesResources =
-    typeof payload.usesResources === "boolean" ? payload.usesResources : doesOperationalModelUseResources(operationalModel);
-  const resourceLabel = usesResources ? payload.resourceLabel?.trim() || current.resourceLabel?.trim() || "Slot" : undefined;
-  const resourceCount = usesResources ? Math.max(1, payload.resourceCount ?? current.resourceCount ?? current.resources?.length ?? 1) : undefined;
-  const resources = usesResources
-    ? (payload.resources?.length ? payload.resources : current.resources?.length ? current.resources : createBusinessResources(resourceLabel ?? "Slot", resourceCount ?? 1)).map(
-        (resource, index) => ({
-          id: resource.id || `res_${index + 1}`,
-          name: resource.name.trim() || `${resourceLabel} ${index + 1}`,
-          isActive: resource.isActive,
-        })
-      )
-    : current.resources?.map((resource) => ({ ...resource, isActive: false })) ?? [];
-
-  return {
-    ...current,
-    ...payload,
-    mode,
-    operationalModel,
-    usesResources,
-    resourceLabel,
-    resourceCount,
-    resources,
-    services: payload.services !== undefined ? payload.services : current.services,
-    bookingCapacity: payload.bookingCapacity !== undefined ? payload.bookingCapacity : current.bookingCapacity,
-    defaultBookingDurationMinutes:
-      payload.defaultBookingDurationMinutes ?? current.defaultBookingDurationMinutes,
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function normalizeIdentifier(value: string) {
-  return value.trim().toLowerCase();
-}
 
 function withUpdatedTimestamp<T extends { updatedAt: string }>(value: T): T {
   return { ...value, updatedAt: new Date().toISOString() };
@@ -271,7 +183,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppStorageState>(createInitialAppStorageState);
   const [hydrated, setHydrated] = useState(false);
 
-  const fetchAllData = useCallback(async (userId: string) => {
+  const fetchAllData = useCallback(async () => {
     try {
       const user = await authService.getCurrentUser();
       if (!user) return;
@@ -282,9 +194,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           ApiAdminService.fetchUpgradeRequests(1, 100)
         ]);
 
-        const mappedBusinesses = (businessesResponse.data || []).map((b: any) => ({
+        const mappedBusinesses = (businessesResponse.data || []).map((b: AdminBusinessDetail) => ({
           business: b,
-          owner: b.users?.find((u: any) => u.role === "OWNER") ?? null,
+          owner: (b.users?.find((u) => u.role === "OWNER") ?? null) as AuthUser | null,
           subscription: b.subscriptions?.[0] ?? null,
           customerCount: b._count?.customers ?? 0,
           backupCount: 0,
@@ -293,7 +205,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
         setState((prev) => ({
           ...prev,
-          businessDirectory: mappedBusinesses as any,
+          businessDirectory: mappedBusinesses,
           upgradeRequests: upgradesResponse.data || [],
         }));
       } else {
@@ -314,10 +226,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           customers,
           invoices,
           messageTemplates,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          subscriptions: (business as any).subscriptions || prev.subscriptions,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          upgradeRequests: (business as any).upgradeRequests || prev.upgradeRequests,
+          subscriptions: (business as Business & { subscriptions?: BusinessSubscription[] }).subscriptions || prev.subscriptions,
+          upgradeRequests: (business as Business & { upgradeRequests?: UpgradeRequest[] }).upgradeRequests || prev.upgradeRequests,
         }));
       }
     } catch (err) {
@@ -336,17 +246,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           try {
             businessData = await businessService.getBusinessById("");
           } catch {
-            // Not critical — business may not exist yet for brand-new users
           }
         }
 
         setState((prev) => ({
           ...prev,
           business: businessData || prev.business,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          subscriptions: businessData ? (businessData as any).subscriptions || prev.subscriptions : prev.subscriptions,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          upgradeRequests: businessData ? (businessData as any).upgradeRequests || prev.upgradeRequests : prev.upgradeRequests,
+          subscriptions: businessData ? (businessData as Business & { subscriptions?: BusinessSubscription[] }).subscriptions || prev.subscriptions : prev.subscriptions,
+          upgradeRequests: businessData ? (businessData as Business & { upgradeRequests?: UpgradeRequest[] }).upgradeRequests || prev.upgradeRequests : prev.upgradeRequests,
           auth: {
             ...prev.auth,
             currentUserId: user.id,
@@ -355,7 +262,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           },
         }));
         if (onboardingCompleted) {
-          await fetchAllData(user.id);
+          await fetchAllData();
         }
       }
       setHydrated(true);
@@ -370,7 +277,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Persist local state preferences to localStorage
     writeAppStorageState({
       ...state,
       business: state.business,
@@ -407,7 +313,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const businessDirectory = useMemo(
     () => {
       if (currentUserRole === "SUPER_ADMIN") {
-        return (state as any).businessDirectory || [];
+        return state.businessDirectory || [];
       }
       return [
         {
@@ -423,7 +329,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         },
       ];
     },
-    [currentUserRole, (state as any).businessDirectory, state.auth.users, state.backupRecords, state.business, state.customers.length, subscriptionForCurrentBusiness]
+    [currentUserRole, state, subscriptionForCurrentBusiness]
   );
 
   const updateBusiness = useCallback(async (payload: Partial<Business>) => {
@@ -466,9 +372,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           onboardingCompleted: true,
         },
       }));
-      await fetchAllData(state.auth.currentUserId || "");
+      await fetchAllData();
     }
-  }, [state.auth.currentUserId, fetchAllData]);
+  }, [fetchAllData]);
 
   const registerOwner = useCallback(async (payload: RegisterOwnerInput) => {
     const result = await authService.register(payload);
@@ -508,7 +414,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         },
       }));
       if (onboardingCompleted) {
-        await fetchAllData(result.user.id);
+        await fetchAllData();
       }
     }
     return result;
@@ -552,26 +458,37 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...payload,
       businessId: state.business.id,
     });
-    await fetchAllData(state.auth.currentUserId || "");
+    setState((current) => ({
+      ...current,
+      customers: [...current.customers, customer],
+    }));
     return customer;
-  }, [canAccessWriteMode, readOnlyReason, canCreateCustomer, currentBusinessUsage, state.business.id, state.auth.currentUserId, fetchAllData]);
+  }, [canAccessWriteMode, readOnlyReason, canCreateCustomer, currentBusinessUsage, state.business.id]);
 
   const updateCustomer = useCallback(async (id: string, payload: CustomerInput) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     const customer = await customerService.updateCustomer(id, payload);
-    await fetchAllData(state.auth.currentUserId || "");
+    if (customer) {
+      setState((current) => ({
+        ...current,
+        customers: current.customers.map((c) => (c.id === id ? customer : c)),
+      }));
+    }
     return customer;
-  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+  }, [canAccessWriteMode, readOnlyReason]);
 
   const deleteCustomer = useCallback(async (id: string) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     await customerService.deleteCustomer(id);
-    await fetchAllData(state.auth.currentUserId || "");
-  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+    setState((current) => ({
+      ...current,
+      customers: current.customers.filter((c) => c.id !== id),
+    }));
+  }, [canAccessWriteMode, readOnlyReason]);
 
   const createOrder = useCallback(async (payload: OrderInput) => {
     if (!canCreateOrder) {
@@ -581,61 +498,93 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...payload,
       businessId: state.business.id,
     });
-    await fetchAllData(state.auth.currentUserId || "");
+    setState((current) => ({
+      ...current,
+      orders: [...current.orders, order],
+    }));
     return order;
-  }, [canCreateOrder, readOnlyReason, state.business.id, state.auth.currentUserId, fetchAllData]);
+  }, [canCreateOrder, readOnlyReason, state.business.id]);
 
   const updateOrder = useCallback(async (id: string, payload: OrderInput) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     const order = await orderService.updateOrder(id, payload);
-    await fetchAllData(state.auth.currentUserId || "");
+    if (order) {
+      setState((current) => ({
+        ...current,
+        orders: current.orders.map((o) => (o.id === id ? order : o)),
+      }));
+    }
     return order;
-  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+  }, [canAccessWriteMode, readOnlyReason]);
 
   const deleteOrder = useCallback(async (id: string) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     await orderService.deleteOrder(id);
-    await fetchAllData(state.auth.currentUserId || "");
-  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+    setState((current) => ({
+      ...current,
+      orders: current.orders.filter((o) => o.id !== id),
+    }));
+  }, [canAccessWriteMode, readOnlyReason]);
 
   const createInvoiceFromOrder = useCallback(async (orderId: string, notes?: string) => {
     if (!canCreateInvoiceValue) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     const invoice = await invoiceService.createInvoiceFromOrder(orderId, notes);
-    await fetchAllData(state.auth.currentUserId || "");
+    if (invoice) {
+      const [orders, invoices] = await Promise.all([
+        orderService.getOrders(state.business.id),
+        invoiceService.getInvoices(state.business.id),
+      ]);
+      setState((current) => ({
+        ...current,
+        orders,
+        invoices,
+      }));
+    }
     return invoice;
-  }, [canCreateInvoiceValue, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+  }, [canCreateInvoiceValue, readOnlyReason, state.business.id]);
 
   const createMessageTemplate = useCallback(async (payload: { category: string; title: string; content: string }) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     const newTemplate = await messageTemplateService.createTemplate(payload);
-    await fetchAllData(state.auth.currentUserId || "");
+    setState((current) => ({
+      ...current,
+      messageTemplates: [...current.messageTemplates, newTemplate],
+    }));
     return newTemplate;
-  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+  }, [canAccessWriteMode, readOnlyReason]);
 
   const updateMessageTemplate = useCallback(async (id: string, payload: { title: string; content: string }) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     const updated = await messageTemplateService.updateTemplate(id, payload);
-    await fetchAllData(state.auth.currentUserId || "");
+    if (updated) {
+      setState((current) => ({
+        ...current,
+        messageTemplates: current.messageTemplates.map((t) => (t.id === id ? updated : t)),
+      }));
+    }
     return updated;
-  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+  }, [canAccessWriteMode, readOnlyReason]);
 
   const deleteMessageTemplate = useCallback(async (id: string) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
     await messageTemplateService.deleteTemplate(id);
-    await fetchAllData(state.auth.currentUserId || "");
-  }, [canAccessWriteMode, readOnlyReason, state.auth.currentUserId, fetchAllData]);
+    setState((current) => ({
+      ...current,
+      messageTemplates: current.messageTemplates.filter((t) => t.id !== id),
+    }));
+  }, [canAccessWriteMode, readOnlyReason]);
 
   const updateMessageComposer = useCallback((payload: Partial<MessageComposerDraft>) => {
     setAppState((current) => ({
@@ -763,7 +712,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }),
     });
 
-    await fetchAllData(currentUserId);
+    await fetchAllData();
     return nextRequest;
   }, [state.auth.currentUserId, state.business.id, state.upgradeRequests, fetchAllData]);
 
@@ -771,10 +720,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       await ApiAdminService.approveUpgrade(requestId, adminNote);
       if (state.auth.currentUserId) {
-        await fetchAllData(state.auth.currentUserId);
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Failed to approve upgrade request", err);
+      throw err;
     }
     return null;
   }, [state.auth.currentUserId, fetchAllData]);
@@ -783,10 +733,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       await ApiAdminService.rejectUpgrade(requestId, adminNote);
       if (state.auth.currentUserId) {
-        await fetchAllData(state.auth.currentUserId);
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Failed to reject upgrade request", err);
+      throw err;
     }
     return null;
   }, [state.auth.currentUserId, fetchAllData]);
@@ -795,10 +746,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       await ApiAdminService.extendTrial(businessId, extraDays);
       if (state.auth.currentUserId) {
-        await fetchAllData(state.auth.currentUserId);
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Failed to extend trial", err);
+      throw err;
     }
     return null;
   }, [state.auth.currentUserId, fetchAllData]);
@@ -807,10 +759,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       await ApiAdminService.suspendBusiness(businessId, reason);
       if (state.auth.currentUserId) {
-        await fetchAllData(state.auth.currentUserId);
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Failed to suspend business", err);
+      throw err;
     }
     return null;
   }, [state.auth.currentUserId, fetchAllData]);
@@ -819,10 +772,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       await ApiAdminService.reactivateBusiness(businessId);
       if (state.auth.currentUserId) {
-        await fetchAllData(state.auth.currentUserId);
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Failed to reactivate business", err);
+      throw err;
     }
     return null;
   }, [state.auth.currentUserId, fetchAllData]);
@@ -842,7 +796,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         URL.revokeObjectURL(url);
       }
       if (state.auth.currentUserId) {
-        await fetchAllData(state.auth.currentUserId);
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Failed to download business backup", err);
@@ -854,7 +808,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       await ApiAdminService.deleteBusiness(businessId);
       if (state.auth.currentUserId) {
-        await fetchAllData(state.auth.currentUserId);
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Failed to delete business", err);

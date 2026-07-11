@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Sparkles, AlertTriangle, Check, User, Phone, ShoppingBag, DollarSign, CalendarRange, StickyNote } from "lucide-react";
+import { X, Sparkles, AlertTriangle, Check, User, ShoppingBag, DollarSign, CalendarRange, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -143,7 +143,7 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
     }
   }
 
-  function handleClose() {
+  const handleClose = useCallback(() => {
     setChatText("");
     setCustomerName("");
     setWhatsappNumber("");
@@ -157,7 +157,7 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
     setBookingDurationMinutes("60");
     setError("");
     onClose();
-  }
+  }, [business.mode, onClose]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -167,7 +167,7 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   if (!isOpen) return null;
 

@@ -57,16 +57,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        // Layout — hidden/flex-none are now on the parent wrapper in app-shell
         "flex flex-col flex-none lg:sticky lg:top-0",
         "h-screen overflow-hidden",
         "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
         collapsed ? "w-[72px]" : "w-[240px]",
-        // Brand navy background
         "bg-[var(--color-navy-900)]",
-        // Right border separator
         "border-r border-white/[0.06]",
-        // Sidebar shadow
         "shadow-[var(--shadow-sidebar)]"
       )}
     >
@@ -147,21 +143,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 aria-label={item.label}
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  // Base
                   "group flex items-center gap-3 rounded-[var(--radius-md)]",
                   "text-sm font-medium",
                   "transition-all duration-[var(--transition-fast)]",
                   "outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold-300)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-navy-900)]",
 
-                  // Layout
                   collapsed ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto" : "px-3 py-2.5",
 
-                  // Active vs Inactive
                   active
                     ? [
                         "bg-[var(--color-navy-800)]",
                         "text-white",
-                        // Gold left border accent
                         !collapsed && "border-l-2 border-[var(--color-gold-500)] pl-[10px]",
                       ]
                     : [

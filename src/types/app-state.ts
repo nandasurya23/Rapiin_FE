@@ -79,4 +79,12 @@ export type AppStorageState = {
   ui: {
     messageComposer: MessageComposerDraft;
   };
+  businessDirectory?: Array<{
+    business: Business;
+    owner: AuthUser | null;
+    subscription: BusinessSubscription | null;
+    customerCount: number;
+    backupCount: number;
+    latestBackup: BackupRecord | null;
+  }>;
 };

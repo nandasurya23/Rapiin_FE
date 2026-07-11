@@ -314,7 +314,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
 
   const bookingAvailability = useMemo(
     () => business ? getBookingAvailability(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, undefined, undefined, business.bookingCapacity) : { isFull: false, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: 0 },
-    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business?.bookingCapacity]
+    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business]
   );
 
   const resourceBookingAvailability = useMemo(
@@ -326,7 +326,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
         form.scheduledTime,
         bookingDurationMinutes
       ) : { isFull: false, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: 0 },
-    [bookingDurationMinutes, business?.resources, form.scheduledDate, form.scheduledTime, orders]
+    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business]
   );
 
   const specificResourceAvailability = useMemo(() => {
@@ -341,7 +341,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
   const resourceDetailsForDate = useMemo(() => {
     if (!business || business.operationalModel !== "RESOURCE_BOOKING" || !form.scheduledDate) return [];
     return getResourceBookingDetailsForDate(orders, business.resources ?? [], form.scheduledDate);
-  }, [business?.operationalModel, business?.resources, form.scheduledDate, orders]);
+  }, [business, form.scheduledDate, orders]);
 
   const slotHint = useMemo(() => {
     if (!business || business.mode !== "BOOKING_SERVICE") {
@@ -375,12 +375,12 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
     }
 
     return activeAvailability.remaining === 1 ? "Sisa 1 jadwal tersedia" : `Sisa ${activeAvailability.remaining} jadwal tersedia`;
-  }, [activeAvailability.count, activeAvailability.earliestHoldExpiresAt, activeAvailability.hasHold, activeAvailability.isFull, activeAvailability.remaining, business?.mode, business?.operationalModel, form.scheduledDate, form.scheduledTime]);
+  }, [activeAvailability, business, form.scheduledDate, form.scheduledTime]);
 
   const waMessage = useMemo(() => business ? createPublicWhatsAppMessage(business, form) : "", [business, form]);
   const waLink = useMemo(
     () => business ? buildWhatsAppUrl(business.whatsappNumber, waMessage) : "",
-    [business?.whatsappNumber, waMessage]
+    [business, waMessage]
   );
 
   function updateField(name: string, value: string) {
@@ -517,12 +517,12 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
       }
     }
     return fullDates;
-  }, [business?.mode, business?.closedDates, business?.operationalModel, business?.resources, business?.bookingCapacity, orders, bookingDurationMinutes, timeCandidates]);
+  }, [business, orders, bookingDurationMinutes, timeCandidates]);
 
   const disabledDates = useMemo(() => {
     if (!business) return [];
     return [...Object.keys(business.closedDates || {}), ...fullyBookedDates];
-  }, [business?.closedDates, fullyBookedDates]);
+  }, [business, fullyBookedDates]);
 
   const getCandidateAvailability = (time: string) => {
     if (!business) return { isFull: false, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: 0 };

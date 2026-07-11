@@ -16,12 +16,10 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
   const pathname = usePathname();
   const { business, currentUser, isSuperAdmin, canAccessWriteMode, subscriptionForCurrentBusiness } = useAppData();
 
-  // Derive current page label from nav items
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : getAppNavItems(business.slug);
   const currentNav = navItems.find((item: { href: string }) => pathname.startsWith(item.href));
   const pageLabel = currentNav?.label ?? "Rapiin";
 
-  // User initials for avatar
   const name = currentUser?.name ?? business.ownerName ?? "U";
   const initials = name
     .split(" ")

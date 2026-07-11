@@ -1,4 +1,4 @@
-import { LayoutDashboard, MessageSquareText, NotebookPen, PhoneCall, Receipt, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles } from "lucide-react";
+import { LayoutDashboard, MessageSquareText, NotebookPen, Receipt, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles } from "lucide-react";
 import type { ComponentType } from "react";
 import { ROUTES } from "@/lib/routes";
 

@@ -13,11 +13,8 @@ import {
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { ROUTES } from "@/lib/routes";
 import { CustomerStatusBadge, OrderStatusBadge } from "@/components/shared/status-badge";
-import { ORDER_STATUS_BY_MODE } from "@/lib/constants/orders";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
