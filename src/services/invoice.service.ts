@@ -2,6 +2,7 @@ import type { Mapper } from "./mapper";
 import type { Invoice } from "@/types/invoice";
 import type { PaymentStatus } from "@/types/order";
 import { apiFetch } from "@/lib/api-client";
+import { logServiceError } from "./utils";
 
 export interface InvoiceDTO {
   id: string;
@@ -43,7 +44,7 @@ export class ApiInvoiceService implements InvoiceService {
       const response = await apiFetch<InvoiceDTO[]>("/api/invoices?limit=100");
       return response.map((item) => this.mapper.toDomain(item));
     } catch (err) {
-      console.error("Failed to fetch invoices", err);
+      logServiceError("Failed to fetch invoices", err);
       return [];
     }
   }
@@ -53,7 +54,7 @@ export class ApiInvoiceService implements InvoiceService {
       const invoices = await this.getInvoices("");
       return invoices.find((item) => item.id === id) || null;
     } catch (err) {
-      console.error("Failed to fetch invoice by ID", err);
+      logServiceError("Failed to fetch invoice by ID", err);
       return null;
     }
   }
@@ -69,7 +70,7 @@ export class ApiInvoiceService implements InvoiceService {
       }
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to create invoice", err);
+      logServiceError("Failed to create invoice", err);
       throw err;
     }
   }
@@ -85,7 +86,7 @@ export class ApiInvoiceService implements InvoiceService {
       }
       return this.mapper.toDomain(response);
     } catch (err) {
-      console.error("Failed to create invoice from order", err);
+      logServiceError("Failed to create invoice from order", err);
       return null;
     }
   }

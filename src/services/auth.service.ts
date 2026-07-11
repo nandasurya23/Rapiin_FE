@@ -46,7 +46,8 @@ export class ApiAuthService implements AuthService {
   async getCurrentUser(): Promise<AuthUser | null> {
     if (typeof window === "undefined") return null;
     try {
-      const response = await apiFetch<{ user: AuthUserDTO }>("/api/auth/me");
+      const response = await apiFetch<{ user: AuthUserDTO | null }>("/api/auth/me");
+      if (!response || !response.user) return null;
       return this.mapper.toDomain(response.user);
     } catch {
       return null;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 export const metadata: Metadata = {
   title: "Rapiin",
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body>
-        <ToastProvider>{children}</ToastProvider>
+        <QueryProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </QueryProvider>
       </body>
     </html>
   );

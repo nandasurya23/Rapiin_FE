@@ -3,7 +3,7 @@
 import { PLAN_DEFINITIONS, PRO_CUSTOMER_LIMIT, TRIAL_CUSTOMER_LIMIT, TRIAL_DURATION_DAYS } from "@/lib/constants/subscription";
 import { buildInvoiceIntegritySeal, buildInvoiceVerificationCode, normalizeInvoiceVerification } from "@/lib/invoice";
 import { createBusinessResources, doesOperationalModelUseResources, getDefaultBusinessConfigForMode, getDefaultOperationalModel } from "@/lib/constants/business";
-import type { AppStorageState, AuthUser, MessageComposerDraft, PublicSubmission } from "@/types/app-state";
+import type { AppStorageState, AuthUser, PublicSubmission } from "@/types/app-state";
 import type { Business, BusinessMode, OperationalModel } from "@/types/business";
 import type { Customer, CustomerStatus } from "@/types/customer";
 import type { Invoice } from "@/types/invoice";
@@ -44,18 +44,6 @@ function addDays(dateValue: string, days: number) {
   const nextDate = new Date(dateValue);
   nextDate.setDate(nextDate.getDate() + days);
   return nextDate.toISOString();
-}
-
-function createDefaultMessageComposer(messageTemplates: MessageTemplate[], customers: Customer[], orders: Order[]): MessageComposerDraft {
-  const followUpTemplate = messageTemplates.find((template) => template.category === "FOLLOW_UP") ?? messageTemplates[0] ?? null;
-
-  return {
-    activeCategory: "FOLLOW_UP",
-    selectedCustomerId: customers[0]?.id ?? null,
-    selectedOrderId: orders[0]?.id ?? null,
-    selectedTemplateId: followUpTemplate?.id ?? null,
-    drafts: {},
-  };
 }
 
 
@@ -217,9 +205,6 @@ export function createInitialAppStorageState(): AppStorageState {
       superAdminUserIds: [],
       planCatalog: clone(PLAN_DEFINITIONS),
     },
-    ui: {
-      messageComposer: createDefaultMessageComposer([], [], []),
-    },
   };
 }
 
@@ -267,13 +252,6 @@ export function readAppStorageState() {
           Array.isArray(parsed.system?.planCatalog) && parsed.system?.planCatalog.length
             ? parsed.system.planCatalog
             : initial.system.planCatalog,
-      },
-      ui: {
-        messageComposer: {
-          ...initial.ui.messageComposer,
-          ...(parsed.ui?.messageComposer ?? {}),
-          drafts: parsed.ui?.messageComposer?.drafts ?? initial.ui.messageComposer.drafts,
-        },
       },
     } satisfies AppStorageState;
   } catch {

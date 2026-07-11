@@ -23,6 +23,7 @@ import { getEntityById } from "@/lib/domain";
 import { cn } from "@/lib/cn";
 import type { MessageCategory } from "@/types/message";
 import { Sheet } from "@/components/ui/sheet";
+import { useMessageComposerStore } from "@/stores/message-composer-store";
 
 const categoryOrder = ["INQUIRY", "BOOKING_ORDER", "PEMBAYARAN", "FOLLOW_UP", "REVIEW", "ALAMAT", "SELESAI"] as const;
 
@@ -37,18 +38,21 @@ export function MessagesPage() {
     customers,
     orders,
     messageTemplates,
-    ui,
-    updateMessageComposer,
-    saveMessageDraft,
     createMessageTemplate,
     updateMessageTemplate,
     deleteMessageTemplate,
   } = useAppData();
 
-  const [activeCategory, setActiveCategory] = useState<(typeof categoryOrder)[number]>("FOLLOW_UP");
-  const [selectedTemplateId, setSelectedTemplateId] = useState(messageTemplates[1]?.id ?? messageTemplates[0]?.id ?? "");
-  const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id ?? "");
-  const [selectedOrderId, setSelectedOrderId] = useState(orders[0]?.id ?? "");
+  const {
+    activeCategory,
+    selectedCustomerId,
+    selectedOrderId,
+    selectedTemplateId,
+    drafts,
+    updateMessageComposer,
+    saveMessageDraft,
+  } = useMessageComposerStore();
+
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -82,43 +86,31 @@ export function MessagesPage() {
     [activeCategory, messageTemplates]
   );
 
-  useEffect(() => {
-    const composer = ui.messageComposer;
-    if (composer.activeCategory) {
-      setActiveCategory(composer.activeCategory);
-    }
-    if (composer.selectedTemplateId) {
-      setSelectedTemplateId(composer.selectedTemplateId);
-    }
-    if (composer.selectedCustomerId) {
-      setSelectedCustomerId(composer.selectedCustomerId);
-    }
-    if (composer.selectedOrderId) {
-      setSelectedOrderId(composer.selectedOrderId);
-    }
-  }, [ui.messageComposer]);
+  const currentTemplateId = selectedTemplateId ?? templatesInCategory[0]?.id ?? messageTemplates[0]?.id ?? "";
+  const currentCustomerId = selectedCustomerId ?? customers[0]?.id ?? "";
+
+  const selectedTemplate =
+    templatesInCategory.find((template) => template.id === currentTemplateId) ?? templatesInCategory[0] ?? messageTemplates[0];
+
+  const selectedCustomer = getEntityById(customers, currentCustomerId) ?? customers[0];
+
+  const selectedOrder = useMemo(() => {
+    if (!selectedCustomer) return undefined;
+    const activeCustomerOrders = orders.filter((o) => o.customerId === selectedCustomer.id);
+    const currentOrderId = selectedOrderId ?? activeCustomerOrders[0]?.id ?? "";
+    return activeCustomerOrders.find((o) => o.id === currentOrderId) ?? activeCustomerOrders[0] ?? undefined;
+  }, [selectedCustomer, selectedOrderId, orders]);
 
   useEffect(() => {
     if (!templatesInCategory.length) {
       return;
     }
 
-    const selectedExists = templatesInCategory.some((template) => template.id === selectedTemplateId);
+    const selectedExists = templatesInCategory.some((template) => template.id === currentTemplateId);
     if (!selectedExists) {
-      setSelectedTemplateId(templatesInCategory[0].id);
+      updateMessageComposer({ selectedTemplateId: templatesInCategory[0].id });
     }
-  }, [activeCategory, selectedTemplateId, templatesInCategory]);
-
-  const selectedTemplate =
-    templatesInCategory.find((template) => template.id === selectedTemplateId) ?? templatesInCategory[0] ?? messageTemplates[0];
-
-  const selectedCustomer = getEntityById(customers, selectedCustomerId) ?? customers[0];
-
-  const selectedOrder = useMemo(() => {
-    if (!selectedCustomer) return undefined;
-    const activeCustomerOrders = orders.filter((o) => o.customerId === selectedCustomer.id);
-    return activeCustomerOrders.find((o) => o.id === selectedOrderId) ?? activeCustomerOrders[0] ?? undefined;
-  }, [selectedCustomer, selectedOrderId, orders]);
+  }, [activeCategory, currentTemplateId, templatesInCategory, updateMessageComposer]);
 
   const sampleValues = useMemo(
     () => ({
@@ -138,14 +130,14 @@ export function MessagesPage() {
       return;
     }
 
-    const savedDraft = ui.messageComposer.drafts[selectedTemplate.id];
+    const savedDraft = drafts[selectedTemplate.id];
     setDraftTitle(savedDraft?.title ?? selectedTemplate.title);
     setDraftContent(savedDraft?.content ?? renderTemplate(selectedTemplate.content, sampleValues));
 
     // Also load raw template values
     setTemplateRawTitle(selectedTemplate.title);
     setTemplateRawContent(selectedTemplate.content);
-  }, [sampleValues, selectedTemplate, ui.messageComposer.drafts]);
+  }, [sampleValues, selectedTemplate, drafts]);
 
   const renderedPreview = draftContent;
   const variablesDetected = extractTemplateVariables(selectedTemplate?.content ?? "");
@@ -246,7 +238,7 @@ export function MessagesPage() {
     try {
       await deleteMessageTemplate(selectedTemplate.id);
       toast.success("Template berhasil dihapus!");
-      setSelectedTemplateId(messageTemplates[0]?.id ?? "");
+      updateMessageComposer({ selectedTemplateId: messageTemplates[0]?.id ?? null });
     } catch (err) {
       toast.error("Gagal menghapus template", err instanceof Error ? err.message : "Terjadi kesalahan.");
     } finally {
@@ -264,7 +256,7 @@ export function MessagesPage() {
 
       if (targetId === "message-content-textarea") {
         setDraftContent(nextContent);
-        saveMessageDraft(selectedTemplateId, { title: draftTitle, content: nextContent });
+        saveMessageDraft(currentTemplateId, { title: draftTitle, content: nextContent });
       } else if (targetId === "template-raw-content-textarea") {
         setTemplateRawContent(nextContent);
       } else if (targetId === "template-new-content-textarea") {
@@ -472,7 +464,6 @@ export function MessagesPage() {
                   <FilterChipGroup
                     value={activeCategory}
                     onChange={(key: string) => {
-                      setActiveCategory(key as MessageCategory);
                       updateMessageComposer({ activeCategory: key as MessageCategory });
                     }}
                     options={categoryOrder.map((cat) => ({
@@ -484,13 +475,12 @@ export function MessagesPage() {
 
                   <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                     {templatesInCategory.map((template) => {
-                      const isSelected = template.id === selectedTemplateId;
+                      const isSelected = template.id === currentTemplateId;
                       return (
                         <button
                           key={template.id}
                           type="button"
                           onClick={() => {
-                            setSelectedTemplateId(template.id);
                             updateMessageComposer({ selectedTemplateId: template.id });
                           }}
                           className={cn(
@@ -523,7 +513,6 @@ export function MessagesPage() {
                       <Select
                         value={selectedCustomer?.id ?? ""}
                         onValueChange={(value) => {
-                          setSelectedCustomerId(value);
                           updateMessageComposer({ selectedCustomerId: value });
                         }}
                         options={customers.map((customer) => ({ value: customer.id, label: customer.name }))}
@@ -534,7 +523,6 @@ export function MessagesPage() {
                       <Select
                         value={selectedOrder?.id ?? ""}
                         onValueChange={(value) => {
-                          setSelectedOrderId(value);
                           updateMessageComposer({ selectedOrderId: value });
                         }}
                         options={
@@ -554,7 +542,7 @@ export function MessagesPage() {
                       value={draftTitle}
                       onChange={(event) => {
                         setDraftTitle(event.target.value);
-                        saveMessageDraft(selectedTemplateId, { title: event.target.value, content: draftContent });
+                        saveMessageDraft(currentTemplateId, { title: event.target.value, content: draftContent });
                       }}
                     />
                   </label>
@@ -571,7 +559,7 @@ export function MessagesPage() {
                       value={draftContent}
                       onChange={(event) => {
                         setDraftContent(event.target.value);
-                        saveMessageDraft(selectedTemplateId, { title: draftTitle, content: event.target.value });
+                        saveMessageDraft(currentTemplateId, { title: draftTitle, content: event.target.value });
                       }}
                     />
                   </label>
