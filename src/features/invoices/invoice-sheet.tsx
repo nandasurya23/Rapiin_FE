@@ -1,8 +1,7 @@
 import Image from "next/image";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { PaymentStatusBadge } from "@/components/shared/status-badge";
-import { INVOICE_AUTH_COPY, INVOICE_LEGAL_COPY, isInvoiceIntegrityValid } from "@/lib/invoice";
+import { INVOICE_LEGAL_COPY, isInvoiceIntegrityValid } from "@/lib/invoice";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { Business } from "@/types/business";
 import type { Invoice } from "@/types/invoice";

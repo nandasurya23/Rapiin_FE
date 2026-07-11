@@ -1,7 +1,7 @@
 import { toDateKey } from "@/lib/domain";
 import { parseWhatsAppChatText } from "@/lib/validation";
 import type { Customer } from "@/types/customer";
-import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
+import type { Order, OrderStatus } from "@/types/order";
 import type { BusinessMode } from "@/types/business";
 
 export type AssistantActionType =

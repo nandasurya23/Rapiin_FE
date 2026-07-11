@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCopy, Link2, QrCode, Share2, ExternalLink, PhoneCall, MapPinned, Sparkles, Clock, Phone, MapPin, Activity } from "lucide-react";
+import { ClipboardCopy, Link2, QrCode, Share2, ExternalLink, PhoneCall, MapPinned, Sparkles, Clock, Phone, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button, LinkButton } from "@/components/ui/button";

@@ -81,7 +81,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [currentUser, currentUserRole, hydrated, pathname, router, auth.onboardingCompleted, business.slug]);
 
-  // 1. Show loading screen while hydration is in progress
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
@@ -93,7 +92,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  // 2. Prevent rendering layout and children during authorization redirection checks
   if (!currentUser) {
     return null;
   }

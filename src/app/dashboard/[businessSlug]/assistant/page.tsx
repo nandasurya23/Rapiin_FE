@@ -128,7 +128,6 @@ export default function AssistantPage() {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync settings if plan changes
   useEffect(() => {
     setSettings(getHelperSettings(planCode));
   }, [planCode]);
@@ -139,12 +138,10 @@ export default function AssistantPage() {
     }
   }, [planCode, router, business.slug]);
 
-  // Sync daily usage initially
   useEffect(() => {
     setDailyUsage(getDailyCommandUsage());
   }, []);
 
-  // Load history logs if enabled
   useEffect(() => {
     if (typeof window !== "undefined" && settings.saveHistory) {
       const raw = localStorage.getItem("rapiin_helper_history");
@@ -158,26 +155,22 @@ export default function AssistantPage() {
     }
   }, [settings.saveHistory, limits.maxHistoryLogs]);
 
-  // Save history logs if enabled
   useEffect(() => {
     if (typeof window !== "undefined" && settings.saveHistory && historyLogs.length > 0) {
       localStorage.setItem("rapiin_helper_history", JSON.stringify(historyLogs));
     }
   }, [historyLogs, settings.saveHistory]);
 
-  // Focus command bar on load
   useEffect(() => {
     if (settings.autoFocus) {
       inputRef.current?.focus();
     }
   }, [settings.autoFocus]);
 
-  // Command parser hook
   const parsed: ParsedCommandResult = useMemo(() => {
     return parseAssistantCommand(command, customers, orders, business.mode);
   }, [command, customers, orders, business.mode]);
 
-  // Sync draft data on change
   useEffect(() => {
     if (parsed.type !== "UNKNOWN") {
       setDraftData(parsed.data);
@@ -187,7 +180,6 @@ export default function AssistantPage() {
     }
   }, [parsed.type, parsed.data]);
 
-  // Search matches
   const searchResults = useMemo(() => {
     if (parsed.type !== "SEARCH" || !parsed.data.query) {
       return { customers: [], orders: [] };
@@ -354,7 +346,6 @@ export default function AssistantPage() {
     }
   }
 
-  // Keyboard shortcut inside full page: Ctrl+Enter or Cmd+Enter to execute
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {

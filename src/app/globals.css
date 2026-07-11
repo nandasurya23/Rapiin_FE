@@ -4,11 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   RAPIIN DESIGN SYSTEM — Brand Design Tokens
-   Single source of truth for all UI decisions.
-   ============================================================ */
-
 :root {
   color-scheme: light;
 
