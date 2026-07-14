@@ -32,11 +32,21 @@ export async function apiFetch<T>(path: string, options?: RequestInit & { rawRes
     credentials: "include", // Required for HttpOnly cookie exchange (same-site/cross-port)
   });
 
+  const cleanPath = path.split("?")[0];
+  const authPaths = [
+    "/api/auth/me",
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/register",
+    "/api/auth/reset-password",
+    "/api/auth/forgot-password",
+  ];
+
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    if (response.status === 401 && typeof window !== "undefined" && !authPaths.includes(cleanPath)) {
       window.dispatchEvent(new CustomEvent("rapiin-unauthorized"));
     }
-    if (response.status === 401 && path === "/api/auth/me") {
+    if (response.status === 401 && cleanPath === "/api/auth/me") {
       return { user: null } as unknown as T;
     }
     let message = `API request failed with status ${response.status}`;
