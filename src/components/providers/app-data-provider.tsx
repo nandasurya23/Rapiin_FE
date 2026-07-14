@@ -296,7 +296,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const { data: queryOrders } = useQuery({
     queryKey: ["orders", business?.id],
     queryFn: () => orderService.getOrders(business?.id || ""),
-    enabled: !!business?.id,
+    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
   });
 
   const orders = queryOrders || state.orders;
@@ -304,7 +304,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const { data: queryCustomers } = useQuery({
     queryKey: ["customers", business?.id],
     queryFn: () => customerService.getCustomers(business?.id || ""),
-    enabled: !!business?.id,
+    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
   });
 
   const customers = queryCustomers || state.customers;
@@ -312,7 +312,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const { data: queryInvoices } = useQuery({
     queryKey: ["invoices", business?.id],
     queryFn: () => invoiceService.getInvoices(business?.id || ""),
-    enabled: !!business?.id,
+    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
   });
 
   const invoices = queryInvoices || state.invoices;
@@ -320,7 +320,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const { data: queryMessageTemplates } = useQuery({
     queryKey: ["messageTemplates", business?.id],
     queryFn: () => messageTemplateService.getTemplates(business?.id || ""),
-    enabled: !!business?.id,
+    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
   });
 
   const messageTemplates = queryMessageTemplates || state.messageTemplates;

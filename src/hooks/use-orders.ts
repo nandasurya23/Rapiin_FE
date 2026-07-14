@@ -11,7 +11,7 @@ export function useOrders() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", business?.id],
     queryFn: () => orderService.getOrders(business?.id || ""),
-    enabled: !!business?.id,
+    enabled: !!business?.id && business.id !== "biz_default",
   });
 
   const createMutation = useMutation({
