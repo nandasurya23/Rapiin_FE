@@ -12,7 +12,7 @@ export function useBusiness() {
   const { data: queryBusiness, isLoading } = useQuery({
     queryKey: ["business", initialBusiness?.id],
     queryFn: () => businessService.getBusinessById(initialBusiness?.id || ""),
-    enabled: !!initialBusiness?.id,
+    enabled: !!initialBusiness?.id && initialBusiness.id !== "biz_default",
     initialData: initialBusiness || undefined,
   });
 

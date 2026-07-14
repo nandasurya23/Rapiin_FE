@@ -11,7 +11,7 @@ export function useInvoices() {
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices", business?.id],
     queryFn: () => invoiceService.getInvoices(business?.id || ""),
-    enabled: !!business?.id,
+    enabled: !!business?.id && business.id !== "biz_default",
   });
 
   const createInvoiceFromOrderMutation = useMutation({

@@ -11,7 +11,7 @@ export function useCustomers() {
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers", business?.id],
     queryFn: () => customerService.getCustomers(business?.id || ""),
-    enabled: !!business?.id,
+    enabled: !!business?.id && business.id !== "biz_default",
   });
 
   const createMutation = useMutation({
