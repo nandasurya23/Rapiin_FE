@@ -420,11 +420,12 @@ export function DashboardPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-wrap gap-2 shrink-0 items-center">
+                      <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto sm:justify-end">
                         <WhatsAppButton
                           phoneNumber={item.phone}
                           message={item.message}
                           label="Hubungi via WA"
+                          className="h-9 px-3 text-xs font-bold rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] flex-1 sm:flex-none justify-center"
                         />
                         <Button
                           type="button"
@@ -432,7 +433,7 @@ export function DashboardPage() {
                           size="sm"
                           onClick={() => void handleCopyMessage(item.message)}
                           title="Salin draf pesan WA"
-                          className="h-9 px-3 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)]"
+                          className="h-9 px-3 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] flex-none"
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
@@ -446,7 +447,7 @@ export function DashboardPage() {
                                 const isWaitingDp = item.status === "WAITING_DP";
                                 void handleMarkOrderPaid(item.id, isWaitingDp ? "DP" : "FULL");
                               }}
-                              className="font-bold border-[var(--color-border)]"
+                              className="font-bold border-[var(--color-border)] h-9 px-3 text-xs rounded-xl flex-1 sm:flex-none justify-center"
                             >
                               {item.status === "WAITING_DP" ? "DP Lunas" : "Bayar Lunas"}
                             </Button>
@@ -457,7 +458,7 @@ export function DashboardPage() {
                                 size="sm"
                                 onClick={() => void handleMarkOrderDone(item.id)}
                                 title="Tandai order selesai"
-                                className="font-bold border-[var(--color-border)]"
+                                className="font-bold border-[var(--color-border)] h-9 px-3 text-xs rounded-xl flex-1 sm:flex-none justify-center"
                               >
                                 Tandai Selesai
                               </Button>
@@ -466,7 +467,7 @@ export function DashboardPage() {
                         )}
                         {item.type === "customer" && (
                           <>
-                            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="font-bold border-[var(--color-border)]">
+                            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="font-bold border-[var(--color-border)] h-9 px-3 text-xs rounded-xl flex-1 sm:flex-none justify-center">
                               Detail Customer
                             </LinkButton>
                             <Button
@@ -475,7 +476,7 @@ export function DashboardPage() {
                               size="sm"
                               onClick={() => void handleMarkCustomerDone(item.id)}
                               title="Tandai follow-up selesai"
-                              className="font-bold border-[var(--color-border)]"
+                              className="font-bold border-[var(--color-border)] h-9 px-3 text-xs rounded-xl flex-1 sm:flex-none justify-center"
                             >
                               Tandai Beres
                             </Button>

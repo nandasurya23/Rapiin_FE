@@ -50,7 +50,8 @@ export interface BusinessService {
 export class ApiBusinessService implements BusinessService {
   private mapper = new BusinessMapper();
 
-  async getBusinessById(id: string): Promise<Business | null> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getBusinessById(_id: string): Promise<Business | null> {
     try {
       const response = await apiFetch<BusinessDTO>("/api/business");
       return this.mapper.toDomain(response);

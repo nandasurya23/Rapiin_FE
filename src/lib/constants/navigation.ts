@@ -26,12 +26,20 @@ export function getAppNavItems(slug: string): NavItem[] {
 export function getMobileNavItems(slug: string): NavItem[] {
   return [
     { label: "Hari Ini", href: ROUTES.dashboard(slug), icon: LayoutDashboard },
-    { label: "Asisten Pintar", href: ROUTES.assistant(slug), icon: Sparkles },
     { label: "Order", href: ROUTES.orders(slug), icon: NotebookPen },
-    { label: "Customer", href: ROUTES.customers(slug), icon: UsersRound },
     { label: "Pesan", href: ROUTES.messages(slug), icon: MessageSquareText },
-    { label: "Link", href: ROUTES.businessLink(slug), icon: Link2 },
-    { label: "Atur", href: ROUTES.settings(slug), icon: Settings2 },
+    { label: "Customer", href: ROUTES.customers(slug), icon: UsersRound },
+  ];
+}
+
+export function getMobileMoreItems(slug: string): NavItem[] {
+  return [
+    { label: "Asisten Pintar", href: ROUTES.assistant(slug), icon: Sparkles },
+    { label: "Link Bisnis", href: ROUTES.businessLink(slug), icon: Link2 },
+    { label: "Nota", href: ROUTES.invoices(slug), icon: Receipt },
+    { label: "Laporan", href: ROUTES.reports(slug), icon: ChartColumn },
+    { label: "Plan", href: ROUTES.plan(slug), icon: WalletCards },
+    { label: "Pengaturan", href: ROUTES.settings(slug), icon: Settings2 },
   ];
 }
 

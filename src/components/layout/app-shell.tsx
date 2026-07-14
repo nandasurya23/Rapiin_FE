@@ -46,32 +46,53 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
 
+    const adminUrl = (process.env.NEXT_PUBLIC_ADMIN_URL || "").replace(/\/$/, "");
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+    const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
+    const isMultiDomain = adminUrl && appUrl && adminUrl !== appUrl;
+    const isAdminDomain = isMultiDomain && currentOrigin === adminUrl;
+
     if (!currentUser) {
-      if (pathname.startsWith("/dashboard/super-admin")) {
-        router.replace(ROUTES.superAdminLogin);
+      if (isAdminDomain || pathname.startsWith("/dashboard/super-admin")) {
+        if (isMultiDomain && !isAdminDomain) {
+          window.location.href = `${adminUrl}${ROUTES.superAdminLogin}`;
+        } else {
+          router.replace(ROUTES.superAdminLogin);
+        }
       } else {
-        router.replace(ROUTES.login);
+        if (isMultiDomain && isAdminDomain) {
+          window.location.href = `${appUrl}${ROUTES.login}`;
+        } else {
+          router.replace(ROUTES.login);
+        }
       }
       return;
     }
 
-    if (currentUserRole === "SUPER_ADMIN" && !pathname.startsWith("/dashboard/super-admin")) {
-      router.replace(ROUTES.superAdminBusinesses);
-      return;
+    if (currentUserRole === "SUPER_ADMIN") {
+      if (isMultiDomain && !isAdminDomain) {
+        window.location.href = `${adminUrl}${ROUTES.superAdminBusinesses}`;
+        return;
+      }
+      if (!pathname.startsWith("/dashboard/super-admin")) {
+        router.replace(ROUTES.superAdminBusinesses);
+        return;
+      }
     }
 
-    if (currentUserRole === "OWNER" && pathname.startsWith("/dashboard/super-admin")) {
-      // Force redirect to their actual dashboard
-      router.replace(ROUTES.dashboard(business.slug));
-      return;
-    }
-
-    if (currentUserRole === "OWNER" && !auth.onboardingCompleted) {
-      router.replace(ROUTES.onboarding);
-      return;
-    }
-
-    if (currentUserRole === "OWNER" && auth.onboardingCompleted) {
+    if (currentUserRole === "OWNER") {
+      if (isMultiDomain && isAdminDomain) {
+        window.location.href = `${appUrl}${ROUTES.dashboard(business.slug)}`;
+        return;
+      }
+      if (pathname.startsWith("/dashboard/super-admin")) {
+        router.replace(ROUTES.dashboard(business.slug));
+        return;
+      }
+      if (!auth.onboardingCompleted) {
+        router.replace(ROUTES.onboarding);
+        return;
+      }
       const expectedPrefix = `/dashboard/${business.slug}`;
       if (!pathname.startsWith(expectedPrefix)) {
         const subPath = pathname.replace(/^\/dashboard\/?/, "");

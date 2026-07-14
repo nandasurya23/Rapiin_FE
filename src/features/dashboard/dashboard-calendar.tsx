@@ -451,7 +451,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
             <div className="inline-flex rounded-[var(--radius-md)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] border border-[var(--color-info-border)] px-3 py-1 text-xs font-medium">Kalender Jadwal</div>
             <div>
               <h2 className="text-lg font-semibold text-[var(--color-text)]">Pantau booking dan order secara real-time</h2>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Lihat jadwal harian timeline (Google Calendar style) atau bulanan.</p>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Lihat jadwal harian timeline atau bulanan.</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -479,7 +479,8 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                     : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] font-semibold"
                 )}
               >
-                Timeline Harian (G-Cal)
+                <span className="md:hidden">Daftar</span>
+                <span className="hidden md:inline">Timeline Harian</span>
               </button>
             </div>
 
@@ -601,7 +602,53 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                 )}
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Mobile Daily List View */}
+              <div className="block md:hidden p-4 space-y-3">
+                {selectedOrders.length > 0 ? (
+                  selectedOrders.map((order) => {
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => {
+                          onDateSelect(selectedDate);
+                          setIsDetailOpen(true);
+                        }}
+                        className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] p-4 shadow-sm bg-[var(--color-surface)] hover:border-[var(--color-border-strong)] transition-all cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-[var(--color-primary)]">{order.scheduledTime ?? "Jadwal bebas"}</span>
+                              <span className="text-[10px] text-[var(--color-text-muted)]">• {order.bookingDurationMinutes ?? 60}m</span>
+                            </div>
+                            <p className="font-extrabold text-sm text-[var(--color-text)] truncate">{order.customerName}</p>
+                            <p className="text-xs text-[var(--color-text-secondary)] font-medium truncate">{order.title}</p>
+                            {order.resourceNameSnapshot && (
+                              <Badge tone="info" className="text-[9px] py-0.5 px-1.5">{order.resourceNameSnapshot}</Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <Badge tone={order.status === "SELESAI" ? "neutral" : order.status === "BATAL" ? "danger" : "success"} className="text-[9px] uppercase tracking-wider font-extrabold">
+                              {order.status}
+                            </Badge>
+                            <Badge tone={order.paymentStatus === "PAID" ? "success" : order.paymentStatus === "DP_PAID" ? "info" : "warning"} className="text-[9px] uppercase tracking-wider font-extrabold">
+                              {order.paymentStatus}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[var(--color-border-strong)] p-8 text-center space-y-2 bg-[var(--color-surface)]">
+                    <p className="font-bold text-sm text-[var(--color-text)]">Tidak Ada Jadwal</p>
+                    <p className="text-xs text-[var(--color-text-secondary)]">Belum ada booking atau order terdaftar untuk tanggal ini.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop/Tablet G-Cal Timeline View */}
+              <div className="hidden md:block overflow-x-auto">
                 <div className="min-w-[600px] select-none">
                   {isResourceMode && activeResources.length > 0 ? (
                     // ── RESOURCE TIMELINE VIEW (G-CAL STYLE) ──
