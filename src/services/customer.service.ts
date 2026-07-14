@@ -38,7 +38,8 @@ export interface CustomerService {
 export class ApiCustomerService implements CustomerService {
   private mapper = new CustomerMapper();
 
-  async getCustomers(businessId: string): Promise<Customer[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getCustomers(_businessId: string): Promise<Customer[]> {
     try {
       // Use large limit to load all customers for dashboard/lists
       const response = await apiFetch<CustomerDTO[]>("/api/customers?limit=100");

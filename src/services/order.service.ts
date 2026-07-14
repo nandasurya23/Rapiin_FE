@@ -56,7 +56,8 @@ export interface OrderService {
 export class ApiOrderService implements OrderService {
   private mapper = new OrderMapper();
 
-  async getOrders(businessId: string): Promise<Order[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getOrders(_businessId: string): Promise<Order[]> {
     try {
       const response = await apiFetch<OrderDTO[]>("/api/orders?limit=100");
       return response.map((item) => this.mapper.toDomain(item));

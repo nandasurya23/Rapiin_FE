@@ -23,6 +23,7 @@ describe("ApiCustomerService", () => {
     mockApiFetch.mockResolvedValueOnce(mockCustomer);
 
     const payload = {
+      businessId: "biz_123",
       name: "John Doe",
       whatsappNumber: "628987654321",
       status: "NEW" as const,

@@ -39,7 +39,8 @@ export interface InvoiceService {
 export class ApiInvoiceService implements InvoiceService {
   private mapper = new InvoiceMapper();
 
-  async getInvoices(businessId: string): Promise<Invoice[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getInvoices(_businessId: string): Promise<Invoice[]> {
     try {
       const response = await apiFetch<InvoiceDTO[]>("/api/invoices?limit=100");
       return response.map((item) => this.mapper.toDomain(item));

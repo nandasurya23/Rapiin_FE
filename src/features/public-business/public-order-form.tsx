@@ -734,12 +734,12 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                       {idx + 1}
                     </div>
                     <span className={cn(
-                      "text-xs font-bold transition",
+                      "text-xs font-bold transition hidden sm:inline",
                       currentStep === s.num ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
                     )}>
                       {s.label}
                     </span>
-                    {idx < steps.length - 1 && <span className="text-[var(--color-border)] text-xs mx-1">➔</span>}
+                    {idx < steps.length - 1 && <span className="text-[var(--color-border)] text-xs mx-1 hidden sm:inline">➔</span>}
                   </div>
                 ))}
               </div>

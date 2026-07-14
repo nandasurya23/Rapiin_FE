@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiAuthService } from "@/services/auth.service";
 import { ApiBusinessService } from "@/services/business.service";
 import { ApiCustomerService } from "@/services/customer.service";
@@ -181,6 +181,7 @@ const messageTemplateService = new ApiMessageTemplateService();
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppStorageState>(createInitialAppStorageState);
   const [hydrated, setHydrated] = useState(false);
+  const queryClient = useQueryClient();
 
   const fetchAllData = useCallback(async () => {
     try {
@@ -377,8 +378,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ...current,
         business: updated,
       }));
+      queryClient.invalidateQueries({ queryKey: ["business"] });
     }
-  }, [canAccessWriteMode, readOnlyReason, state.business.id]);
+  }, [canAccessWriteMode, readOnlyReason, state.business.id, queryClient]);
 
   const saveBusinessSettings = useCallback(async (payload: BusinessSettingsInput) => {
     if (!canAccessWriteMode) {
@@ -390,8 +392,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ...current,
         business: updated,
       }));
+      queryClient.invalidateQueries({ queryKey: ["business"] });
     }
-  }, [canAccessWriteMode, readOnlyReason, state.business.id]);
+  }, [canAccessWriteMode, readOnlyReason, state.business.id, queryClient]);
 
   const completeOnboarding = useCallback(async (payload: OnboardingPayload) => {
     const response = await apiFetch<BusinessDTO>("/api/business/onboarding", {
@@ -497,8 +500,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...current,
       customers: [...current.customers, customer],
     }));
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
     return customer;
-  }, [canAccessWriteMode, readOnlyReason, canCreateCustomer, currentBusinessUsage, state.business.id]);
+  }, [canAccessWriteMode, readOnlyReason, canCreateCustomer, currentBusinessUsage, state.business.id, queryClient]);
 
   const updateCustomer = useCallback(async (id: string, payload: CustomerInput) => {
     if (!canAccessWriteMode) {
@@ -510,9 +514,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ...current,
         customers: current.customers.map((c) => (c.id === id ? customer : c)),
       }));
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
     }
     return customer;
-  }, [canAccessWriteMode, readOnlyReason]);
+  }, [canAccessWriteMode, readOnlyReason, queryClient]);
 
   const deleteCustomer = useCallback(async (id: string) => {
     if (!canAccessWriteMode) {
@@ -523,7 +528,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...current,
       customers: current.customers.filter((c) => c.id !== id),
     }));
-  }, [canAccessWriteMode, readOnlyReason]);
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
+  }, [canAccessWriteMode, readOnlyReason, queryClient]);
 
   const createOrder = useCallback(async (payload: OrderInput) => {
     if (!canCreateOrder) {
@@ -537,8 +543,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...current,
       orders: [...current.orders, order],
     }));
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
     return order;
-  }, [canCreateOrder, readOnlyReason, state.business.id]);
+  }, [canCreateOrder, readOnlyReason, state.business.id, queryClient]);
 
   const updateOrder = useCallback(async (id: string, payload: OrderInput) => {
     if (!canAccessWriteMode) {
@@ -550,9 +557,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ...current,
         orders: current.orders.map((o) => (o.id === id ? order : o)),
       }));
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     }
     return order;
-  }, [canAccessWriteMode, readOnlyReason]);
+  }, [canAccessWriteMode, readOnlyReason, queryClient]);
 
   const deleteOrder = useCallback(async (id: string) => {
     if (!canAccessWriteMode) {
@@ -563,7 +571,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...current,
       orders: current.orders.filter((o) => o.id !== id),
     }));
-  }, [canAccessWriteMode, readOnlyReason]);
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+  }, [canAccessWriteMode, readOnlyReason, queryClient]);
 
   const createInvoiceFromOrder = useCallback(async (orderId: string, notes?: string) => {
     if (!canCreateInvoiceValue) {
@@ -580,9 +589,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         orders,
         invoices,
       }));
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     }
     return invoice;
-  }, [canCreateInvoiceValue, readOnlyReason, state.business.id]);
+  }, [canCreateInvoiceValue, readOnlyReason, state.business.id, queryClient]);
 
   const createMessageTemplate = useCallback(async (payload: { category: string; title: string; content: string }) => {
     if (!canAccessWriteMode) {
@@ -593,8 +604,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...current,
       messageTemplates: [...current.messageTemplates, newTemplate],
     }));
+    queryClient.invalidateQueries({ queryKey: ["messageTemplates"] });
     return newTemplate;
-  }, [canAccessWriteMode, readOnlyReason]);
+  }, [canAccessWriteMode, readOnlyReason, queryClient]);
 
   const updateMessageTemplate = useCallback(async (id: string, payload: { title: string; content: string }) => {
     if (!canAccessWriteMode) {
@@ -606,9 +618,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ...current,
         messageTemplates: current.messageTemplates.map((t) => (t.id === id ? updated : t)),
       }));
+      queryClient.invalidateQueries({ queryKey: ["messageTemplates"] });
     }
     return updated;
-  }, [canAccessWriteMode, readOnlyReason]);
+  }, [canAccessWriteMode, readOnlyReason, queryClient]);
 
   const deleteMessageTemplate = useCallback(async (id: string) => {
     if (!canAccessWriteMode) {
@@ -619,7 +632,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ...current,
       messageTemplates: current.messageTemplates.filter((t) => t.id !== id),
     }));
-  }, [canAccessWriteMode, readOnlyReason]);
+    queryClient.invalidateQueries({ queryKey: ["messageTemplates"] });
+  }, [canAccessWriteMode, readOnlyReason, queryClient]);
 
 
 

@@ -111,7 +111,7 @@ export class ApiAuthService implements AuthService {
         ? `/auth/reset-password?token=${encodeURIComponent(response.devRawToken)}`
         : undefined;
 
-      if (devResetUrl) {
+      if (devResetUrl && process.env.NODE_ENV === "development") {
         console.info("[DEV] Reset URL (klik atau copy ke browser):", devResetUrl);
       }
       return { ok: true, message: response.message, devResetUrl };

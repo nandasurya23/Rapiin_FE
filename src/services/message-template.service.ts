@@ -20,7 +20,8 @@ export interface MessageTemplateService {
 }
 
 export class ApiMessageTemplateService implements MessageTemplateService {
-  async getTemplates(businessId: string): Promise<MessageTemplate[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getTemplates(_businessId: string): Promise<MessageTemplate[]> {
     try {
       const response = await apiFetch<MessageTemplateDTO[]>("/api/message-templates");
       return response.map((item) => ({
