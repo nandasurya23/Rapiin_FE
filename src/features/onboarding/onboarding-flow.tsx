@@ -151,6 +151,7 @@ export function OnboardingFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function finish() {
+    if (isSubmitting) return;
     if (!validateStep(3)) {
       return;
     }

@@ -242,7 +242,9 @@ export function parseAssistantCommand(
       candidates = orders.filter((o) => o.customerId === customerId);
     }
     
-    const sortedCandidates = [...candidates].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    const sortedCandidates = [...candidates].sort((a, b) => 
+      (b.updatedAt || b.createdAt || "").localeCompare(a.updatedAt || a.createdAt || "")
+    );
 
     for (const o of sortedCandidates) {
       if (inputText.includes(o.title.toLowerCase())) {

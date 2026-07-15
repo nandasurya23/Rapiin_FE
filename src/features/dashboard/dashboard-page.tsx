@@ -208,7 +208,7 @@ export function DashboardPage() {
     const reviewItems = orders
       .filter((order) => {
         if (order.status !== "SELESAI") return false;
-        const askDate = new Date(new Date(order.updatedAt).getTime() + 24 * 60 * 60 * 1000);
+        const askDate = new Date(new Date(order.updatedAt || order.createdAt).getTime() + 24 * 60 * 60 * 1000);
         return toDateKey(askDate) === selectedDate;
       })
       .map((order) => ({
@@ -217,7 +217,7 @@ export function DashboardPage() {
         title: order.customerName,
         reason: "Minta ulasan (Order selesai)",
         status: order.status,
-        due: formatDateTime(order.updatedAt),
+        due: formatDateTime(order.updatedAt || order.createdAt),
         phone: order.whatsappNumber,
         message: getMessageFromTemplate(
           "REVIEW",

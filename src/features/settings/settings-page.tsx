@@ -239,6 +239,7 @@ export function SettingsPage() {
   }
 
   async function handleSave() {
+    if (isSaving) return;
     const nextErrors = validateForm();
     const errorKeys = Object.keys(nextErrors);
 

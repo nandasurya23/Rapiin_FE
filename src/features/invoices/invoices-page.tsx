@@ -20,6 +20,7 @@ import { useInvoices } from "@/hooks/use-invoices";
 import { Pagination } from "@/components/ui/pagination";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
 import { cn } from "@/lib/cn";
+import { SkeletonCard } from "@/components/shared/loading";
 
 type InvoiceFilter = "ALL" | "PAID" | "DP_PAID" | "UNPAID" | "REFUNDED" | "CANCELLED";
 
@@ -41,7 +42,7 @@ async function copyToClipboard(text: string) {
 export function InvoicesPage() {
   const toast = useToast();
   const { business, orders, canCreateInvoice, readOnlyReason } = useAppData();
-  const { invoices, createInvoiceFromOrder } = useInvoices();
+  const { invoices, isLoading, createInvoiceFromOrder } = useInvoices();
   const [filter, setFilter] = useState<InvoiceFilter>("ALL");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(invoices[0]?.id ?? "");
   const [selectedOrderId, setSelectedOrderId] = useState(
@@ -97,6 +98,7 @@ export function InvoicesPage() {
   const selectedOrderLink = selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug);
 
   async function createFromOrder() {
+    if (loadingAction === "create-invoice") return;
     if (!selectedOrder) {
       return;
     }
@@ -227,7 +229,12 @@ export function InvoicesPage() {
             />
 
             <div className="space-y-3 pt-1">
-              {paginatedInvoices.map((invoice) => {
+              {isLoading ? (
+                <>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </>
+              ) : paginatedInvoices.map((invoice) => {
                 const active = selectedInvoice?.id === invoice.id;
                 
                 // Indicator border stripe based on payment status
@@ -393,7 +400,7 @@ export function InvoicesPage() {
                   type="button"
                   isLoading={loadingAction === "create-invoice"}
                   onClick={() => void createFromOrder()}
-                  disabled={!canCreateInvoice}
+                  disabled={!canCreateInvoice || loadingAction === "create-invoice"}
                   className="shadow-sm font-bold text-sm px-5 py-2 rounded-xl flex items-center gap-1.5"
                 >
                   <FileSpreadsheet className="h-4 w-4" />
