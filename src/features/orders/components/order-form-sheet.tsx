@@ -294,6 +294,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
   }
 
   async function handleSubmit() {
+    if (isSubmitting) return;
     if (!form.customerName.trim() || !form.whatsappNumber.trim() || !form.title.trim()) {
       setError("Lengkapi nama, nomor WhatsApp, dan kebutuhan order dulu.");
       return;

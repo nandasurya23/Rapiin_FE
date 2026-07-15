@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { useOrders } from "@/hooks/use-orders";
 import { PageHeader } from "@/components/shared/page-header";
+import { SkeletonCard } from "@/components/shared/loading";
 
 import { ORDER_STATUS_BY_MODE, PAYMENT_FILTER_OPTIONS } from "@/lib/constants/orders";
 import { renderTemplate } from "@/lib/messages";
@@ -29,7 +30,7 @@ type PaymentFilterValue = "ALL" | PaymentStatus;
 export function OrderManager() {
   const toast = useToast();
   const { business, canCreateOrder, messageTemplates } = useAppData();
-  const { orders, updateOrder } = useOrders();
+  const { orders, isLoading, updateOrder } = useOrders();
   
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterValue>("ALL");
@@ -261,13 +262,21 @@ export function OrderManager() {
 
       {/* SECTION 3: KANBAN BOARD */}
       <section className="animate-fade-up-delay-2">
-        <OrderBoard
-          orders={filteredOrders}
-          statusOptions={statusOptions}
-          onUpdateStatus={onStatusChangeRequest}
-          onEdit={handleEditOrder}
-          getWhatsAppConfig={getWhatsAppButtonConfig}
-        />
+        {isLoading ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            <SkeletonCard className="h-64" />
+            <SkeletonCard className="h-64" />
+            <SkeletonCard className="h-64" />
+          </div>
+        ) : (
+          <OrderBoard
+            orders={filteredOrders}
+            statusOptions={statusOptions}
+            onUpdateStatus={onStatusChangeRequest}
+            onEdit={handleEditOrder}
+            getWhatsAppConfig={getWhatsAppButtonConfig}
+          />
+        )}
       </section>
 
       {/* SECTION 4: SLIDE OVER FORM */}

@@ -23,6 +23,7 @@ import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from 
 import { Pagination } from "@/components/ui/pagination";
 import { Sheet } from "@/components/ui/sheet";
 import { cn } from "@/lib/cn";
+import { SkeletonCard } from "@/components/shared/loading";
 
 type FilterValue = "ALL" | CustomerStatus;
 
@@ -39,7 +40,7 @@ const CUSTOMER_PAGE_SIZE = 6;
 export function CustomerManager() {
   const toast = useToast();
   const { canCreateCustomer, currentBusinessUsage, readOnlyReason } = useAppData();
-  const { customers, createCustomer, updateCustomer } = useCustomers();
+  const { customers, isLoading, createCustomer, updateCustomer } = useCustomers();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterValue>("ALL");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -124,6 +125,7 @@ export function CustomerManager() {
   }
 
   async function handleSubmit() {
+    if (isSubmitting) return;
     if (!form.name.trim() || !form.whatsappNumber.trim()) {
       setError("Nama customer dan nomor WhatsApp wajib diisi.");
       return;
@@ -276,7 +278,13 @@ export function CustomerManager() {
 
       {/* SECTION 4: CUSTOMERS CRM LIST */}
       <section className="space-y-3 animate-fade-up-delay-3">
-        {paginatedCustomers.length ? (
+        {isLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : paginatedCustomers.length ? (
           paginatedCustomers.map((customer) => {
             // Color indicators and left borders for statuses
             let leftBorderStripe = "border-l-4 border-l-[var(--color-primary)]";
@@ -491,7 +499,7 @@ export function CustomerManager() {
               type="button"
               isLoading={isSubmitting}
               onClick={() => void handleSubmit()}
-              disabled={!editingId && !canCreateCustomer}
+              disabled={isSubmitting || (!editingId && !canCreateCustomer)}
               className="w-full shadow-sm font-bold text-sm h-11 rounded-xl"
             >
               {editingId ? "Simpan Perubahan" : "Simpan Pelanggan"}

@@ -261,14 +261,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             users: [user],
           },
         }));
-        if (onboardingCompleted) {
-          await fetchAllData();
-        }
       }
       setHydrated(true);
     }
     init();
-  }, [fetchAllData]);
+  }, []);
 
 
 
@@ -289,6 +286,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     queryKey: ["business", state.auth.currentUserId],
     queryFn: () => businessService.getBusinessById(""),
     enabled: hydrated && !!state.auth.currentUserId && state.auth.users.find(u => u.id === state.auth.currentUserId)?.role !== "SUPER_ADMIN",
+    staleTime: 5 * 60 * 1000, // 5 minutes stale time for business settings
   });
 
   const business = queryBusiness || state.business;
@@ -321,6 +319,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     queryKey: ["messageTemplates", business?.id],
     queryFn: () => messageTemplateService.getTemplates(business?.id || ""),
     enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
+    staleTime: 5 * 60 * 1000, // 5 minutes stale time for message templates
   });
 
   const messageTemplates = queryMessageTemplates || state.messageTemplates;
@@ -461,7 +460,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await authService.logout();
     setState(createInitialAppStorageState());
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   useEffect(() => {
     const handleUnauthorized = () => {

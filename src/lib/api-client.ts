@@ -11,7 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, options?: RequestInit & { rawResponse?: boolean }): Promise<T> {
+export async function apiFetch<T>(path: string, options?: RequestInit & { rawResponse?: boolean; signal?: AbortSignal }): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const defaultHeaders: Record<string, string> = {};
 
@@ -23,14 +23,23 @@ export async function apiFetch<T>(path: string, options?: RequestInit & { rawRes
     defaultHeaders["X-Rapiin-Path"] = window.location.pathname;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options?.headers,
-    },
-    credentials: "include", // Required for HttpOnly cookie exchange (same-site/cross-port)
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        ...defaultHeaders,
+        ...options?.headers,
+      },
+      signal: options?.signal,
+      credentials: "include", // Required for HttpOnly cookie exchange (same-site/cross-port)
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw error;
+    }
+    throw new ApiError("Koneksi gagal. Periksa koneksi internet Anda atau coba beberapa saat lagi.", 0);
+  }
 
   const cleanPath = path.split("?")[0];
   const authPaths = [
@@ -49,18 +58,23 @@ export async function apiFetch<T>(path: string, options?: RequestInit & { rawRes
     if (response.status === 401 && cleanPath === "/api/auth/me") {
       return { user: null } as unknown as T;
     }
-    let message = `API request failed with status ${response.status}`;
-    try {
-      const data = await response.json();
-      if (data.error?.details && Array.isArray(data.error.details)) {
-        message = data.error.details
-          .map((detail: { path: string; message: string }) => `${detail.path}: ${detail.message}`)
-          .join(" | ");
-      } else {
-        message = data.message || data.error?.message || message;
+    let message = "";
+    if (response.status >= 500) {
+      message = "Terjadi gangguan pada server. Silakan coba lagi beberapa saat lagi.";
+    } else {
+      message = `API request failed with status ${response.status}`;
+      try {
+        const data = await response.json();
+        if (data.error?.details && Array.isArray(data.error.details)) {
+          message = data.error.details
+            .map((detail: { path: string; message: string }) => `${detail.path}: ${detail.message}`)
+            .join(" | ");
+        } else {
+          message = data.message || data.error?.message || message;
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
     throw new ApiError(message, response.status);
   }
