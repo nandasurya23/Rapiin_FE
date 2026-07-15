@@ -87,7 +87,9 @@ export function getDashboardSummary(orders: Order[], customers: Customer[], refe
   const revenue = orders
     .filter((order) => order.status === "SELESAI")
     .reduce((sum, order) => sum + (order.totalAmount ?? 0), 0);
-  const recentOrders = [...orders].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)).slice(0, 3);
+  const recentOrders = [...orders]
+    .sort((left, right) => (right.createdAt || "").localeCompare(left.createdAt || ""))
+    .slice(0, 3);
 
   return {
     todayOrders,
