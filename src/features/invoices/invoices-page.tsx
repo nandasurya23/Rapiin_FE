@@ -46,7 +46,8 @@ export function InvoicesPage() {
   const [filter, setFilter] = useState<InvoiceFilter>("ALL");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(invoices[0]?.id ?? "");
   const [selectedOrderId, setSelectedOrderId] = useState(
-    orders.find((order) => order.status !== "BATAL")?.id ?? orders[0]?.id ?? ""
+    orders.find((order) => order.status !== "BATAL" && order.totalAmount !== null && order.totalAmount !== undefined && order.totalAmount > 0)?.id ?? 
+    orders.find((order) => order.totalAmount !== null && order.totalAmount !== undefined && order.totalAmount > 0)?.id ?? ""
   );
   const [notes, setNotes] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
