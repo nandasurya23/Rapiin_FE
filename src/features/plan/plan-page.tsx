@@ -207,12 +207,14 @@ export function PlanPage() {
               <div
                 key={plan.code}
                 onClick={() => {
-                  if (plan.code !== "FREE_TRIAL") {
+                  if (plan.code !== "FREE_TRIAL" && plan.code !== "PREMIUM") {
                     setSelectedPlan(plan.code);
                   }
                 }}
-                className={`group relative flex flex-col justify-between rounded-3xl border bg-[var(--color-surface)] p-6 transition-all duration-300 hover:shadow-lg cursor-pointer ${cardBorder} ${
-                  !isCurrent && plan.code !== "FREE_TRIAL" ? "hover:-translate-y-1" : ""
+                className={`group relative flex flex-col justify-between rounded-3xl border bg-[var(--color-surface)] p-6 transition-all duration-300 hover:shadow-lg ${
+                  plan.code === "PREMIUM" ? "opacity-65 cursor-not-allowed" : "cursor-pointer"
+                } ${cardBorder} ${
+                  !isCurrent && plan.code !== "FREE_TRIAL" && plan.code !== "PREMIUM" ? "hover:-translate-y-1" : ""
                 }`}
               >
                 {/* Popular Badge */}
@@ -268,7 +270,15 @@ export function PlanPage() {
 
                 {/* CTA Button */}
                 <div className="mt-8">
-                  {plan.code === "FREE_TRIAL" ? (
+                  {plan.code === "PREMIUM" ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full rounded-xl border border-sky-500/20 bg-sky-500/5 py-2.5 text-xs font-bold text-sky-400 cursor-not-allowed"
+                    >
+                      Coming Soon
+                    </button>
+                  ) : plan.code === "FREE_TRIAL" ? (
                     <button
                       type="button"
                       disabled
@@ -515,14 +525,16 @@ function SummaryStat({
   description?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md px-5 py-4 transition-all duration-300 hover:border-white/[0.15] hover:bg-white/[0.05] group">
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-5 py-4 transition-all duration-300 hover:border-[var(--color-border-strong)] hover:shadow-md group">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-extrabold tracking-wider text-white/50 uppercase">{label}</p>
-        <Icon className="h-4 w-4 text-[var(--color-accent)] opacity-70 group-hover:scale-110 transition-transform duration-300" />
+        <p className="text-[10px] font-extrabold tracking-wider text-[var(--color-text-muted)] uppercase">{label}</p>
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-primary-surface)] text-[var(--color-primary)] transition-transform duration-300 group-hover:scale-110">
+          <Icon className="h-4 w-4" />
+        </div>
       </div>
-      <p className="mt-2.5 text-xl font-extrabold tracking-tight text-white">{value}</p>
-      {description && <p className="mt-1 text-[11px] text-white/40">{description}</p>}
-      <div className="absolute -right-6 -bottom-6 h-12 w-12 rounded-full bg-white/[0.02] group-hover:scale-150 transition-transform duration-500 animate-pulse" />
+      <p className="mt-2.5 text-lg font-black tracking-tight text-[var(--color-text)]">{value}</p>
+      {description && <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{description}</p>}
+      <div className="absolute -right-6 -bottom-6 h-12 w-12 rounded-full bg-[var(--color-border)]/20 group-hover:scale-150 transition-transform duration-500" />
     </div>
   );
 }
