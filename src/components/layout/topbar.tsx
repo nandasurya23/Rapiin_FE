@@ -93,7 +93,7 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
           </button>
 
           {/* ⚡ Asisten Pintar Rapiin — standalone prominent CTA (non-superadmin only) */}
-          {!isSuperAdmin && subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL" ? (
+          {!isSuperAdmin && subscriptionForCurrentBusiness?.planCode === "PREMIUM" ? (
             <button
               type="button"
               disabled={!canAccessWriteMode}

@@ -33,7 +33,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const navItems = isSuperAdmin 
     ? SUPER_ADMIN_NAV_ITEMS 
     : getAppNavItems(business.slug).filter(item => 
-        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
+        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM"
       );
 
   const planLabel = PLAN_LABELS[subscriptionForCurrentBusiness?.planCode ?? "FREE_TRIAL"];
