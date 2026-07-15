@@ -21,7 +21,7 @@ export function MobileBottomNav() {
   const moreItems = isSuperAdmin 
     ? [] 
     : getMobileMoreItems(business.slug).filter(item => 
-        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL"
+        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM"
       );
 
   // Close drawer if pathname changes
@@ -49,7 +49,9 @@ export function MobileBottomNav() {
           )}
         >
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = item.href === ROUTES.dashboard(business?.slug || "")
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
             const Icon = item.icon;
 
             return (

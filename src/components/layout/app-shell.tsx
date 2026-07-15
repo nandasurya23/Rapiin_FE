@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (currentUserRole === "SUPER_ADMIN") return;
-      if (subscriptionForCurrentBusiness?.planCode === "FREE_TRIAL") return;
+      if (subscriptionForCurrentBusiness?.planCode !== "PREMIUM") return;
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
