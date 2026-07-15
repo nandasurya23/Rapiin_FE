@@ -378,9 +378,9 @@ export function InvoicesPage() {
                 <Select
                   value={selectedOrderId}
                   onValueChange={setSelectedOrderId}
-                  options={orders.filter(order => order.status !== "BATAL").map((order) => ({
+                  options={orders.filter(order => order.status !== "BATAL" && order.totalAmount !== null && order.totalAmount !== undefined && order.totalAmount > 0).map((order) => ({
                     value: order.id,
-                    label: `${order.customerName} - ${order.title}`,
+                    label: `${order.customerName} - ${order.title} (${formatCurrency(order.totalAmount)})`,
                   }))}
                 />
               </label>

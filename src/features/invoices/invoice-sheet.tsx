@@ -17,7 +17,6 @@ type InvoiceSheetProps = {
 
 export function InvoiceSheet({ business, invoice, order, compact = false }: InvoiceSheetProps) {
   const toast = useToast();
-  console.log("INVOICE_IN_SHEET:", invoice);
   const isValid = isInvoiceIntegrityValid(invoice);
 
   return (
