@@ -209,62 +209,11 @@ export function createInitialAppStorageState(): AppStorageState {
 }
 
 export function readAppStorageState() {
-  if (typeof window === "undefined") {
-    return createInitialAppStorageState();
-  }
-
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    return createInitialAppStorageState();
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<AppStorageState>;
-    const initial = createInitialAppStorageState();
-    const business = normalizeBusinessConfig(parsed.business ?? initial.business);
-    const users = normalizeAuthUsers(parsed.auth?.users ?? initial.auth.users, business.id);
-
-    return {
-      ...initial,
-      ...parsed,
-      business,
-      customers: Array.isArray(parsed.customers) ? parsed.customers : initial.customers,
-      orders: Array.isArray(parsed.orders) ? parsed.orders : initial.orders,
-      invoices: normalizeInvoices(Array.isArray(parsed.invoices) ? parsed.invoices : initial.invoices),
-      subscriptions: normalizeSubscriptions(parsed.subscriptions ?? initial.subscriptions, business),
-      upgradeRequests: Array.isArray(parsed.upgradeRequests) ? parsed.upgradeRequests : initial.upgradeRequests,
-      backupRecords: normalizeBackupRecords(parsed.backupRecords ?? initial.backupRecords),
-      superAdminLogs: Array.isArray(parsed.superAdminLogs) ? parsed.superAdminLogs : initial.superAdminLogs,
-      messageTemplates: Array.isArray(parsed.messageTemplates) ? parsed.messageTemplates : initial.messageTemplates,
-      publicSubmissions: Array.isArray(parsed.publicSubmissions) ? parsed.publicSubmissions : initial.publicSubmissions,
-      auth: {
-        ...initial.auth,
-        ...(parsed.auth ?? {}),
-        users,
-        currentUserId: users.some((user) => user.id === parsed.auth?.currentUserId) ? parsed.auth?.currentUserId ?? null : null,
-      },
-      system: {
-        superAdminUserIds:
-          Array.isArray(parsed.system?.superAdminUserIds) && parsed.system?.superAdminUserIds.length
-            ? parsed.system.superAdminUserIds
-            : initial.system.superAdminUserIds,
-        planCatalog:
-          Array.isArray(parsed.system?.planCatalog) && parsed.system?.planCatalog.length
-            ? parsed.system.planCatalog
-            : initial.system.planCatalog,
-      },
-    } satisfies AppStorageState;
-  } catch {
-    return createInitialAppStorageState();
-  }
+  return createInitialAppStorageState();
 }
 
 export function writeAppStorageState(state: AppStorageState) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Disallowed: No localStorage usage for sensitive application state to avoid local manipulation
 }
 
 export function clearAppStorageState() {

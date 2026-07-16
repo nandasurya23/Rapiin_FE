@@ -15,6 +15,22 @@ export interface AdminBusinessDetail extends Business {
   users?: AdminUser[];
   subscriptions?: BusinessSubscription[];
   upgradeRequests?: UpgradeRequest[];
+  teamMembers?: Array<{
+    id: string;
+    userId: string;
+    staffRole: "MANAGER" | "STAFF";
+    status: "PENDING" | "ACTIVE" | "SUSPENDED";
+    joinedAt: string | null;
+    createdAt: string;
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      phoneNumber: string | null;
+      isActive: boolean;
+      lastLoginAt: string | null;
+    };
+  }>;
   _count?: {
     customers: number;
     orders: number;

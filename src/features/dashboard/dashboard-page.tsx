@@ -28,7 +28,10 @@ import { cn } from "@/lib/cn";
 
 export function DashboardPage() {
   const toast = useToast();
-  const { business, orders, customers, currentUser, messageTemplates, updateOrder, updateCustomer, currentOrderUsage } = useAppData();
+  const { business, orders, customers, currentUser, messageTemplates, updateOrder, updateCustomer, currentOrderUsage, currentBusinessUsage, subscriptionForCurrentBusiness } = useAppData();
+
+  const isNearCustomerLimit = currentBusinessUsage 
+    && currentBusinessUsage.used >= currentBusinessUsage.limit - 5;
   const { todayOrders, unpaidOrders, revenue } = getDashboardSummary(orders, customers);
   const today = toDateKey(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
@@ -264,6 +267,29 @@ export function DashboardPage() {
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      {isNearCustomerLimit && (
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4.5 text-xs sm:text-sm text-[var(--color-text)] flex items-start gap-3.5 shadow-sm animate-in slide-in-from-top-4 duration-300 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-1 bg-amber-500" />
+          <AlertCircle className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
+          <div className="flex-1 space-y-1">
+            <p className="font-bold flex items-center gap-2">
+              <span>Batas Kapasitas Pelanggan Hampir Penuh!</span>
+              <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-extrabold text-amber-500 uppercase tracking-wider">
+                {currentBusinessUsage.used} / {currentBusinessUsage.limit} Customer
+              </span>
+            </p>
+            <p className="text-[var(--color-text-secondary)] leading-relaxed text-xs">
+              Kontak customer terdaftar untuk paket <strong>{subscriptionForCurrentBusiness?.planCode === "FREE_TRIAL" ? "Free Trial" : "Pro"}</strong> Anda tersisa <strong>{currentBusinessUsage.limit - currentBusinessUsage.used}</strong> slot lagi. 
+              Segera ajukan upgrade plan Anda agar pendaftaran pelanggan baru dan transaksi tidak terhambat.
+            </p>
+            <div className="pt-2">
+              <LinkButton href={ROUTES.plan(business.slug)} size="sm" variant="accent" className="border-none font-bold text-xs px-4">
+                Upgrade Plan Sekarang &rarr;
+              </LinkButton>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── WELCOME HERO BANNER ─────────────────────────── */}
       <PageHeader

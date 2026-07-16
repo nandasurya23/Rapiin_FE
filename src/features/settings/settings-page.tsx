@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import NextImage from "next/image";
 import { AlertTriangle, PlusCircle, Upload, X, Sparkles, Settings, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -12,6 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { usePermission } from "@/hooks/use-permission";
+import { TeamList } from "@/features/team/components/team-list";
+import { InviteMemberSheet } from "@/features/team/components/invite-member-sheet";
+import { EditMemberSheet } from "@/features/team/components/edit-member-sheet";
+import { cn } from "@/lib/cn";
 import { useBusiness } from "@/hooks/use-business";
 import {
   BUSINESS_MODE_OPTIONS,
@@ -25,6 +31,9 @@ import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 import { getPublicCatalog } from "@/lib/public-business";
 import { RoleGate } from "@/components/shared/role-gate";
 import type { BusinessResource, OperationalModel, PublicCatalogItem } from "@/types/business";
+import type { TeamMember, StaffRole, TeamMemberStatus } from "@/types/team";
+import { teamService } from "@/services/team.service";
+
 
 function formatRupiahInput(value: string) {
   const numericValue = value.replace(/[^\d]/g, "");
@@ -154,11 +163,36 @@ function buildResources(resourceLabel: string, resourceCount: string, currentRes
 
 export function SettingsPage() {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { orders, currentUser } = useAppData();
   const { business, saveBusinessSettings } = useBusiness();
   const [form, setForm] = useState<SettingsFormState>(createFormStateFromBusiness(business, currentUser));
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"operational" | "team">("operational");
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const { hasPermission } = usePermission();
+
+  // Fetch team members from BE API
+  const { data: teamMembers = [], refetch: refetchTeam } = useQuery({
+    queryKey: ["team", "members"],
+    queryFn: () => teamService.getMembers(),
+    // Only fetch when team tab is active
+    enabled: activeTab === "team",
+    staleTime: 30_000,
+  });
+
+
+  const canWriteSettings = hasPermission("settings:write");
+
+  useEffect(() => {
+    if (!canWriteSettings) {
+      setActiveTab("team");
+    }
+  }, [canWriteSettings]);
 
   useEffect(() => {
     setForm(createFormStateFromBusiness(business, currentUser));
@@ -285,12 +319,12 @@ export function SettingsPage() {
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <RoleGate 
-        allowedRoles={["OWNER"]} 
+        allowedRoles={["OWNER", "MANAGER"]} 
         fallback={
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <AlertTriangle className="h-12 w-12 text-[var(--color-warning-text)] mb-4" />
             <h2 className="text-xl font-bold text-[var(--color-text)]">Akses Ditolak</h2>
-            <p className="mt-2 text-[var(--color-text-secondary)]">Anda tidak memiliki izin untuk melihat atau mengubah pengaturan bisnis. Halaman ini hanya untuk Pemilik (Owner).</p>
+            <p className="mt-2 text-[var(--color-text-secondary)]">Anda tidak memiliki izin untuk melihat halaman pengaturan bisnis ini.</p>
           </div>
         }
       >
@@ -316,7 +350,39 @@ export function SettingsPage() {
         }
       />
 
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] animate-fade-up-delay-1">
+      {/* Tabs Navigation */}
+      {canWriteSettings && (
+        <div className="flex border-b border-[var(--color-border)] gap-2 animate-fade-up">
+          <button
+            type="button"
+            onClick={() => setActiveTab("operational")}
+            className={cn(
+              "px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all duration-200 focus:outline-none",
+              activeTab === "operational"
+                ? "border-[var(--color-primary)] text-[var(--color-primary)] font-extrabold"
+                : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+            )}
+          >
+            Operasional Bisnis
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("team")}
+            className={cn(
+              "px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all duration-200 focus:outline-none",
+              activeTab === "team"
+                ? "border-[var(--color-primary)] text-[var(--color-primary)] font-extrabold"
+                : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+            )}
+          >
+            Manajemen Tim
+          </button>
+        </div>
+      )}
+
+      {activeTab === "operational" && (
+        <>
+          <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] animate-fade-up-delay-1">
         {/* Left Column: Profil Bisnis */}
         <Card className="border-[var(--color-border)] shadow-none">
           <CardBody className="space-y-5 p-5">
@@ -912,6 +978,60 @@ export function SettingsPage() {
           </CardBody>
         </Card>
       </section>
+      </>
+      )}
+
+      {activeTab === "team" && (
+        <div className="animate-fade-up space-y-6">
+          <TeamList
+            members={teamMembers}
+            onEdit={(member) => {
+              setEditingMember(member);
+              setIsEditOpen(true);
+            }}
+            onOpenInvite={() => setIsInviteOpen(true)}
+            showActions={hasPermission("team:manage")}
+          />
+        </div>
+      )}
+
+      <InviteMemberSheet
+        isOpen={isInviteOpen}
+        onClose={() => setIsInviteOpen(false)}
+        onInvited={() => {
+          refetchTeam();
+          toast.success("Undangan dibuat", "Link undangan berhasil dibuat. Kirimkan ke karyawan via WhatsApp.");
+        }}
+        businessName={business.name}
+      />
+
+      <EditMemberSheet
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        member={editingMember}
+        onUpdate={async (memberId, updates) => {
+          try {
+            await teamService.updateMember(memberId, updates);
+            refetchTeam();
+            toast.success("Perubahan disimpan", "Data anggota tim berhasil diperbarui.");
+          } catch (e) {
+            const error = e as Error;
+            toast.error("Gagal menyimpan", error.message || "Terjadi kesalahan.");
+            throw error;
+          }
+        }}
+        onDelete={async (memberId) => {
+          try {
+            await teamService.deleteMember(memberId);
+            refetchTeam();
+            toast.success("Karyawan dihapus", "Anggota tim berhasil dikeluarkan.");
+          } catch (e) {
+            const error = e as Error;
+            toast.error("Gagal menghapus", error.message || "Terjadi kesalahan.");
+            throw error;
+          }
+        }}
+      />
       </RoleGate>
     </main>
   );

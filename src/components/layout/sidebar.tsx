@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { useToast } from "@/components/ui/toast-provider";
 import { ROUTES } from "@/lib/routes";
+import { usePermission } from "@/hooks/use-permission";
 
 type SidebarProps = {
   collapsed: boolean;
@@ -30,11 +31,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     subscriptionForCurrentBusiness,
   } = useAppData();
   const { logout } = useAuth();
+  const { canAccessRoute } = usePermission();
   const navItems = isSuperAdmin 
     ? SUPER_ADMIN_NAV_ITEMS 
-    : getAppNavItems(business.slug).filter(item => 
-        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM"
-      );
+    : getAppNavItems(business.slug).filter(item => {
+        const matchesPlan = item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM";
+        const hasAccess = canAccessRoute(item.href, business.slug);
+        return matchesPlan && hasAccess;
+      });
 
   const planLabel = PLAN_LABELS[subscriptionForCurrentBusiness?.planCode ?? "FREE_TRIAL"];
 

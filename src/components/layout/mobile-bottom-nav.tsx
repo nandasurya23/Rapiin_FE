@@ -4,25 +4,37 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { getMobileNavItems, getMobileMoreItems, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
+import { useToast } from "@/components/ui/toast-provider";
+import { usePermission } from "@/hooks/use-permission";
 
 import { ROUTES } from "@/lib/routes";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { isSuperAdmin, subscriptionForCurrentBusiness, business } = useAppData();
+  const { isSuperAdmin, subscriptionForCurrentBusiness, business, logout } = useAppData();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const toast = useToast();
 
+  async function handleLogout() {
+    setIsMoreOpen(false);
+    await logout();
+    toast.info("Logout berhasil", "Kamu keluar dari sesi admin.");
+  }
+
+  const { canAccessRoute } = usePermission();
   const navItems = isSuperAdmin 
     ? SUPER_ADMIN_NAV_ITEMS 
     : getMobileNavItems(business.slug);
 
   const moreItems = isSuperAdmin 
     ? [] 
-    : getMobileMoreItems(business.slug).filter(item => 
-        item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM"
-      );
+    : getMobileMoreItems(business.slug).filter(item => {
+        const matchesPlan = item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM";
+        const hasAccess = canAccessRoute(item.href, business.slug);
+        return matchesPlan && hasAccess;
+      });
 
   // Close drawer if pathname changes
   useEffect(() => {
@@ -159,6 +171,19 @@ export function MobileBottomNav() {
                 </Link>
               );
             })}
+
+            {/* Logout button */}
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className={cn(
+                "col-span-2 flex items-center justify-center gap-2.5 p-4.5 mt-2 rounded-2xl border text-center transition-all duration-200 font-bold active:scale-[0.99]",
+                "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/15"
+              )}
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="text-xs">Keluar (Logout)</span>
+            </button>
           </div>
         </Sheet>
       )}
