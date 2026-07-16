@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, ShieldCheck, ShieldX, ShieldAlert, Building2, User, CreditCard, Trash2, Download, Clock, ArrowRight } from "lucide-react";
+import { ArrowLeft, ShieldCheck, ShieldX, ShieldAlert, Building2, User, CreditCard, Trash2, Download, Clock, ArrowRight, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -262,6 +262,64 @@ export function SuperAdminBusinessDetailPage({ businessId }: { businessId: strin
                 Tidak ada data user owner yang terikat pada tenant ini.
               </div>
             )}
+          </div>
+
+          {/* TEAM MEMBERS SECTION FOR SUPER ADMIN */}
+          <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Daftar Anggota Tim & Staf ({businessDetail.teamMembers?.length || 0})
+            </h3>
+            <div className="border-t border-[var(--color-border)] pt-4">
+              {businessDetail.teamMembers && businessDetail.teamMembers.length > 0 ? (
+                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] font-extrabold uppercase tracking-wider">
+                        <th className="p-3.5">Nama / Kontak</th>
+                        <th className="p-3.5">Peran</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5">Bergabung Pada</th>
+                        <th className="p-3.5">Aktif Terakhir</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-border)] text-[var(--color-text)] font-semibold">
+                      {businessDetail.teamMembers.map((member) => (
+                        <tr key={member.id} className="hover:bg-[var(--color-surface)]/50 transition-colors">
+                          <td className="p-3.5 space-y-0.5">
+                            <p className="font-bold text-sm">{member.user?.name || "Karyawan"}</p>
+                            <p className="text-[10px] text-[var(--color-text-secondary)]">{member.user?.email}</p>
+                            {member.user?.phoneNumber && (
+                              <p className="text-[10px] text-[var(--color-text-secondary)]">WA: {member.user.phoneNumber}</p>
+                            )}
+                          </td>
+                          <td className="p-3.5">
+                            <Badge tone={member.staffRole === "MANAGER" ? "warning" : "success"} className="font-extrabold text-[9px] uppercase tracking-wider px-2 py-0.5">
+                              {member.staffRole === "MANAGER" ? "Manager" : "Staff"}
+                            </Badge>
+                          </td>
+                          <td className="p-3.5">
+                            <Badge tone={member.status === "ACTIVE" ? "success" : member.status === "PENDING" ? "warning" : "danger"} className="font-extrabold text-[9px] uppercase tracking-wider px-2 py-0.5">
+                              {member.status === "ACTIVE" ? "Aktif" : member.status === "PENDING" ? "Menunggu" : "Dinonaktifkan"}
+                            </Badge>
+                          </td>
+                          <td className="p-3.5 text-[11px] text-[var(--color-text-secondary)]">
+                            {member.joinedAt ? formatDateTime(member.joinedAt) : "-"}
+                          </td>
+                          <td className="p-3.5 text-[11px] text-[var(--color-text-secondary)]">
+                            {member.user?.lastLoginAt ? formatDateTime(member.user.lastLoginAt) : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-sm text-[var(--color-text-secondary)] py-2">
+                  Belum ada anggota tim atau staf yang terdaftar di bisnis ini.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -9,11 +9,15 @@ import { SubscriptionBanner } from "@/components/shared/subscription-banner";
 import { AssistantModal } from "@/components/shared/assistant-modal";
 import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { usePermission } from "@/hooks/use-permission";
+import { useAuth } from "@/hooks/use-auth";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { hydrated, currentUser, currentUserRole, auth, subscriptionForCurrentBusiness, business } = useAppData();
+  const { canAccessRoute } = usePermission();
+  const { logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
@@ -42,6 +46,27 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentUserRole, subscriptionForCurrentBusiness?.planCode]);
+
+  useEffect(() => {
+    function handleForbidden() {
+      if (currentUserRole === "OWNER") {
+        router.replace(ROUTES.plan(business.slug));
+      } else if (currentUserRole === "MANAGER" || currentUserRole === "STAFF") {
+        logout().then(() => {
+          router.replace(`${ROUTES.login}?reason=expired`);
+        });
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("rapiin-forbidden", handleForbidden);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("rapiin-forbidden", handleForbidden);
+      }
+    };
+  }, [currentUserRole, business.slug, router, logout]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -80,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       }
     }
 
-    if (currentUserRole === "OWNER") {
+    if (currentUserRole && currentUserRole !== "SUPER_ADMIN") {
       if (isMultiDomain && isAdminDomain) {
         window.location.href = `${appUrl}${ROUTES.dashboard(business.slug)}`;
         return;
@@ -98,9 +123,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         const subPath = pathname.replace(/^\/dashboard\/?/, "");
         const targetSubPath = subPath && !subPath.startsWith("super-admin") && subPath !== business.slug ? `/${subPath}` : "";
         router.replace(`/dashboard/${business.slug}${targetSubPath}`);
+        return;
+      }
+
+      // Check route permission
+      if (!canAccessRoute(pathname, business.slug)) {
+        router.replace(ROUTES.dashboard(business.slug));
       }
     }
-  }, [currentUser, currentUserRole, hydrated, pathname, router, auth.onboardingCompleted, business.slug]);
+  }, [currentUser, currentUserRole, hydrated, pathname, router, auth.onboardingCompleted, business.slug, canAccessRoute]);
 
   if (!hydrated) {
     return (
@@ -121,15 +152,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     return null;
   }
 
-  if (currentUserRole === "OWNER" && pathname.startsWith("/dashboard/super-admin")) {
+  if (currentUserRole && currentUserRole !== "SUPER_ADMIN" && pathname.startsWith("/dashboard/super-admin")) {
     return null;
   }
 
-  if (currentUserRole === "OWNER" && !auth.onboardingCompleted) {
+  if (currentUserRole && currentUserRole !== "SUPER_ADMIN" && !auth.onboardingCompleted) {
     return null;
   }
 
-  if (currentUserRole === "OWNER" && auth.onboardingCompleted) {
+  if (currentUserRole && currentUserRole !== "SUPER_ADMIN" && auth.onboardingCompleted) {
     const expectedPrefix = `/dashboard/${business.slug}`;
     if (!pathname.startsWith(expectedPrefix)) {
       return null;

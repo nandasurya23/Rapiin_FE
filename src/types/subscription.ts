@@ -1,6 +1,6 @@
 import type { ID, Timestamped } from "@/types/common";
 
-export type UserRole = "OWNER" | "SUPER_ADMIN";
+export type UserRole = "OWNER" | "SUPER_ADMIN" | "MANAGER" | "STAFF";
 
 export type PlanCode = "FREE_TRIAL" | "PRO" | "PREMIUM";
 

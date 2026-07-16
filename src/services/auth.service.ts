@@ -2,6 +2,7 @@ import type { Mapper } from "./mapper";
 import type { AuthUser } from "@/types/app-state";
 import type { UserRole } from "@/types/subscription";
 import { apiFetch } from "@/lib/api-client";
+import type { AppPermission } from "@/types/permission";
 
 export interface AuthUserDTO {
   id: string;
@@ -15,6 +16,10 @@ export interface AuthUserDTO {
   onboardingCompleted?: boolean;
   createdAt: string;
   updatedAt: string;
+  status?: "ACTIVE" | "PENDING" | "SUSPENDED";
+  joinedAt?: string;
+  lastActiveAt?: string;
+  permissions?: AppPermission[];
 }
 
 export class AuthUserMapper implements Mapper<AuthUserDTO, AuthUser> {

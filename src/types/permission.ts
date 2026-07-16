@@ -1,0 +1,15 @@
+export type AppPermission =
+  | "orders:create"
+  | "orders:view"
+  | "orders:update"
+  | "orders:cancel"
+  | "orders:delete"
+  | "customers:view"
+  | "customers:manage"
+  | "reports:view"
+  | "settings:write"
+  | "invoices:view"
+  | "invoices:create"
+  | "team:view"
+  | "team:manage"
+  | "billing:write";

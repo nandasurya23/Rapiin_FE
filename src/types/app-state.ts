@@ -13,6 +13,8 @@ import type {
   UserRole,
 } from "@/types/subscription";
 
+import type { AppPermission } from "@/types/permission";
+
 export type AuthUser = {
   id: ID;
   name: string;
@@ -25,6 +27,10 @@ export type AuthUser = {
   onboardingCompleted?: boolean;
   createdAt: string;
   updatedAt: string;
+  status?: "ACTIVE" | "PENDING" | "SUSPENDED";
+  joinedAt?: string;
+  lastActiveAt?: string;
+  permissions?: AppPermission[];
 };
 
 export type AuthState = {
