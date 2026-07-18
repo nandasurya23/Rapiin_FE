@@ -14,7 +14,7 @@ interface InviteMemberSheetProps {
   businessName: string;
 }
 
-export function InviteMemberSheet({ isOpen, onClose, onInvited, businessName }: InviteMemberSheetProps) {
+export function InviteMemberSheet({ isOpen, onClose, onInvited, businessName: _businessName }: InviteMemberSheetProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const [label, setLabel] = useState("");
   const [staffRole, setStaffRole] = useState<StaffRole>("STAFF");
   const [isLoading, setIsLoading] = useState(false);

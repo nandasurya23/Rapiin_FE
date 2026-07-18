@@ -4,7 +4,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Key, Copy, MessageSquare, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -69,7 +68,7 @@ export function SuperAdminResetRequestsPage() {
       await ApiAdminService.deleteResetRequest(requestId);
       toast.success("Permintaan reset berhasil dihapus.");
       fetchRequests();
-    } catch (err) {
+    } catch {
       toast.error("Gagal menghapus permintaan reset.");
     }
   };

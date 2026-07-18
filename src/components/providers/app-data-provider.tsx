@@ -135,7 +135,7 @@ type AppDataContextValue = AppStorageState & {
   }>;
   updateBusiness: (payload: Partial<Business>) => Promise<void>;
   saveBusinessSettings: (payload: BusinessSettingsInput) => Promise<void>;
-  completeOnboarding: (payload: OnboardingPayload) => Promise<any>;
+  completeOnboarding: (payload: OnboardingPayload) => Promise<BusinessDTO | undefined>;
   registerOwner: (payload: RegisterOwnerInput) => Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }>;
   login: (payload: LoginInput) => Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }>;
   requestForgotPassword: (email: string) => Promise<{ ok: true; message: string } | { ok: false; message: string }>;

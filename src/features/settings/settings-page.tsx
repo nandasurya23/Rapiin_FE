@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import NextImage from "next/image";
 import { AlertTriangle, PlusCircle, Upload, X, Sparkles, Settings, Trash2 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -31,7 +31,7 @@ import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 import { getPublicCatalog } from "@/lib/public-business";
 import { RoleGate } from "@/components/shared/role-gate";
 import type { BusinessResource, OperationalModel, PublicCatalogItem } from "@/types/business";
-import type { TeamMember, StaffRole, TeamMemberStatus } from "@/types/team";
+import type { TeamMember } from "@/types/team";
 import { teamService } from "@/services/team.service";
 
 
@@ -163,7 +163,6 @@ function buildResources(resourceLabel: string, resourceCount: string, currentRes
 
 export function SettingsPage() {
   const toast = useToast();
-  const queryClient = useQueryClient();
   const { orders, currentUser } = useAppData();
   const { business, saveBusinessSettings } = useBusiness();
   const [form, setForm] = useState<SettingsFormState>(createFormStateFromBusiness(business, currentUser));

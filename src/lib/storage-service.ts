@@ -47,6 +47,7 @@ function addDays(dateValue: string, days: number) {
 }
 
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function normalizeBusinessConfig(business: Business): Business {
   const modeConfig = getDefaultBusinessConfigForMode(business.mode);
   const operationalModel = business.operationalModel ?? getDefaultOperationalModel(business.mode);
@@ -75,10 +76,12 @@ function normalizeBusinessConfig(business: Business): Business {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function normalizeInvoices(invoices: Invoice[]) {
   return invoices.map((invoice) => normalizeInvoiceVerification(invoice));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function normalizeAuthUsers(users: AppStorageState["auth"]["users"] | unknown, businessId: string) {
   if (!Array.isArray(users)) {
     return [];
@@ -119,6 +122,7 @@ function resolveSubscriptionStatus(status: SubscriptionStatus, planCode: PlanCod
   return "TRIAL_ACTIVE";
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function normalizeSubscriptions(subscriptions: BusinessSubscription[] | unknown, business: Business) {
   if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
     return [createBusinessSubscriptionRecord({ businessId: business.id, planCode: "FREE_TRIAL", startedAt: now() })];
@@ -149,6 +153,7 @@ function normalizeSubscriptions(subscriptions: BusinessSubscription[] | unknown,
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function normalizeBackupRecords(backupRecords: BackupRecord[] | unknown) {
   if (!Array.isArray(backupRecords)) {
     return [];
@@ -212,7 +217,7 @@ export function readAppStorageState() {
   return createInitialAppStorageState();
 }
 
-export function writeAppStorageState(state: AppStorageState) {
+export function writeAppStorageState(_state: AppStorageState) { // eslint-disable-line @typescript-eslint/no-unused-vars
   // Disallowed: No localStorage usage for sensitive application state to avoid local manipulation
 }
 

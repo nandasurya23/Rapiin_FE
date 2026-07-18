@@ -1,8 +1,7 @@
 "use client";
 
-import { AlertTriangle, CloudUpload, WalletCards, X } from "lucide-react";
-import { Button, LinkButton } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast-provider";
+import { AlertTriangle, WalletCards, X } from "lucide-react";
+import { LinkButton } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { getDaysUntilExpiry, isTrialWarningActive } from "@/lib/subscription";
@@ -11,12 +10,10 @@ import { cn } from "@/lib/cn";
 import { useState, useEffect } from "react";
 
 export function SubscriptionBanner() {
-  const toast = useToast();
   const {
     isSuperAdmin,
     subscriptionForCurrentBusiness,
     currentBusinessUsage,
-    createBackup,
     readOnlyReason,
     business,
   } = useAppData();

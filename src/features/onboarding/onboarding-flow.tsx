@@ -9,17 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast-provider";
 import { PageHeader } from "@/components/shared/page-header";
-import {
-  BUSINESS_MODE_OPTIONS,
-  createBusinessResources,
-  doesOperationalModelUseResources,
-  getDefaultOperationalModel,
-  OPERATIONAL_MODEL_OPTIONS,
-} from "@/lib/constants/business";
+import { createBusinessResources } from "@/lib/constants/business";
+import type { BusinessResource } from "@/types/business";
 import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { normalizePhoneNumber } from "@/lib/validation";
-import type { OperationalModel } from "@/types/business";
 import { Select } from "@/components/ui/select";
 
 type Step = 1 | 2 | 3;
@@ -185,30 +179,6 @@ export function OnboardingFlow() {
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  function handleModeChange(nextMode: typeof form.mode) {
-    const nextOperationalModel = nextMode === "BOOKING_SERVICE" ? form.operationalModel : getDefaultOperationalModel(nextMode);
-    const nextUsesResources = nextMode === "BOOKING_SERVICE" && doesOperationalModelUseResources(nextOperationalModel);
-    const nextResources = nextUsesResources ? updateResources(form.resourceLabel, form.resourceCount) : [];
-
-    setForm((current) => ({
-      ...current,
-      mode: nextMode,
-      operationalModel: nextOperationalModel,
-      usesResources: nextUsesResources,
-      resources: nextResources,
-    }));
-  }
-
-  function handleOperationalModelChange(nextOperationalModel: OperationalModel) {
-    const nextUsesResources = doesOperationalModelUseResources(nextOperationalModel);
-    setForm((current) => ({
-      ...current,
-      operationalModel: nextOperationalModel,
-      usesResources: nextUsesResources,
-      resources: nextUsesResources ? updateResources(current.resourceLabel, current.resourceCount) : [],
-    }));
   }
 
 
@@ -411,7 +381,7 @@ export function OnboardingFlow() {
                       <span className="font-bold">Cara kerja:</span>{" "}
                       {form.usesResources ? `Booking per ${form.resourceLabel}` : "Jadwal kosong langsung"}
                     </p>
-                    {form.usesResources ? <p className="text-[var(--color-text)]"><span className="font-bold">Unit aktif:</span> {form.resources.map((resource: any) => resource.name).join(", ")}</p> : null}
+                    {form.usesResources ? <p className="text-[var(--color-text)]"><span className="font-bold">Unit aktif:</span> {form.resources.map((resource: BusinessResource) => resource.name).join(", ")}</p> : null}
                   </div>
                 </div>
               </div>
