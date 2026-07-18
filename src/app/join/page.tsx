@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertCircle, ShieldAlert, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, AlertCircle, ShieldAlert, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

@@ -38,7 +38,7 @@ export interface AuthService {
   logout(): Promise<void>;
   register(payload: { name: string; email: string; phoneNumber: string; password: string }): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }>;
   requestForgotPassword(email: string): Promise<{ ok: true; message: string } | { ok: false; message: string }>;
-  resetPassword(token: string, newPassword: string): Promise<{ ok: true } | { ok: false; message: string }>;
+  resetPassword(email: string, token: string, newPassword: string): Promise<{ ok: true } | { ok: false; message: string }>;
 }
 
 export class ApiAuthService implements AuthService {
@@ -99,27 +99,17 @@ export class ApiAuthService implements AuthService {
   }
 
   /**
-   * Request password reset email.
-   * Sends a reset token to the registered email address.
-   *
-   * Production (RESEND_API_KEY set): sends real email with clickable link.
-   * Development (no API key): returns devRawToken so FE can show a direct link button.
+   * Request password reset.
+   * OTP 6-digit dibuat di server dan disimpan di DB.
+   * Admin akan mengirimkan kode ke user via WhatsApp dari Super Admin Dashboard.
    */
-  async requestForgotPassword(email: string): Promise<{ ok: true; message: string; devResetUrl?: string } | { ok: false; message: string }> {
+  async requestForgotPassword(email: string): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
     try {
-      const response = await apiFetch<{ message: string; devRawToken?: string }>("/api/auth/forgot-password", {
+      const response = await apiFetch<{ message: string }>("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({ email }),
       });
-      // Build the dev reset URL from the raw token so FE can render a direct button
-      const devResetUrl = response.devRawToken
-        ? `/auth/reset-password?token=${encodeURIComponent(response.devRawToken)}`
-        : undefined;
-
-      if (devResetUrl && process.env.NODE_ENV === "development") {
-        console.info("[DEV] Reset URL (klik atau copy ke browser):", devResetUrl);
-      }
-      return { ok: true, message: response.message, devResetUrl };
+      return { ok: true, message: response.message };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal mengirim permintaan reset password.";
       return { ok: false, message: msg };
@@ -127,13 +117,13 @@ export class ApiAuthService implements AuthService {
   }
 
   /**
-   * Reset password using the token received via email (or dev console).
+   * Reset password using the token/OTP and user's email.
    */
-  async resetPassword(token: string, newPassword: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  async resetPassword(email: string, token: string, newPassword: string): Promise<{ ok: true } | { ok: false; message: string }> {
     try {
       await apiFetch("/api/auth/reset-password", {
         method: "POST",
-        body: JSON.stringify({ token, newPassword }),
+        body: JSON.stringify({ email, token, newPassword }),
       });
       return { ok: true };
     } catch (err: unknown) {

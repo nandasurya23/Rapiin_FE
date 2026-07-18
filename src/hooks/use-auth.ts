@@ -18,8 +18,8 @@ export function useAuth() {
     return appRequestForgot(email);
   };
 
-  const resetPassword = async (token: string, newPassword: string) => {
-    return appResetPassword({ token, newPassword });
+  const resetPassword = async (email: string, token: string, newPassword: string) => {
+    return appResetPassword({ email, token, newPassword });
   };
 
   return {

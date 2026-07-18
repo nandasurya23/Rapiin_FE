@@ -18,6 +18,7 @@ export const ROUTES = {
   superAdminBusinesses: "/dashboard/super-admin/businesses",
   superAdminBusinessDetail: (businessId: string) => `/dashboard/super-admin/businesses/${businessId}`,
   superAdminUpgradeRequests: "/dashboard/super-admin/upgrade-requests",
+  superAdminResetRequests: "/dashboard/super-admin/reset-requests",
   publicBusiness: (slug: string) => `/b/${slug}`,
   publicBusinessOrder: (slug: string) => `/b/${slug}/order`,
   invoice: (code: string) => `/invoice/${code}`,

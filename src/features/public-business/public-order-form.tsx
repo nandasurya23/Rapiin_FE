@@ -290,7 +290,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
     });
   }, [business, orders]);
 
-  const submitPublicOrder = async (input: { payload: Record<string, string> }) => {
+  const submitPublicOrder = async (input: { payload: Record<string, unknown> }) => {
     if (!business) return;
     await apiFetch<unknown>(`/api/public/b/${business.slug}/submit`, {
       method: "POST",
@@ -445,6 +445,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
         await submitPublicOrder({
           payload: {
             ...form,
+            resourceId: form.resourceId === "ANY" ? undefined : form.resourceId || undefined,
             whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
           },
         });

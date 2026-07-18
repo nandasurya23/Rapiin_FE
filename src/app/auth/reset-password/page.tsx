@@ -8,8 +8,9 @@ import { AuthPanel } from "@/features/auth/auth-panel";
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const email = searchParams.get("email") ?? "";
 
-  return <AuthPanel mode="reset-password" resetToken={token} />;
+  return <AuthPanel mode="reset-password" resetToken={token} initialEmail={email} />;
 }
 
 export default function ResetPasswordPage() {

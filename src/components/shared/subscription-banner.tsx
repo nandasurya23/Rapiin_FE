@@ -1,8 +1,7 @@
 "use client";
 
-import { AlertTriangle, CloudUpload, WalletCards, X } from "lucide-react";
-import { Button, LinkButton } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast-provider";
+import { AlertTriangle, WalletCards, X } from "lucide-react";
+import { LinkButton } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { getDaysUntilExpiry, isTrialWarningActive } from "@/lib/subscription";
@@ -11,12 +10,10 @@ import { cn } from "@/lib/cn";
 import { useState, useEffect } from "react";
 
 export function SubscriptionBanner() {
-  const toast = useToast();
   const {
     isSuperAdmin,
     subscriptionForCurrentBusiness,
     currentBusinessUsage,
-    createBackup,
     readOnlyReason,
     business,
   } = useAppData();
@@ -47,8 +44,7 @@ export function SubscriptionBanner() {
   if (
     !isReadOnly &&
     !showWarning &&
-    !isAlmostFull &&
-    subscriptionForCurrentBusiness.hasCompletedRequiredBackup
+    !isAlmostFull
   ) {
     return null;
   }
@@ -108,29 +104,13 @@ export function SubscriptionBanner() {
                 isReadOnly ? "text-[var(--color-danger-text)]/70" : "text-[var(--color-warning-text)]/70"
               )}
             >
-              {!subscriptionForCurrentBusiness.hasCompletedRequiredBackup
-                ? "Lakukan backup database untuk mengamankan data Anda sebelum melanjutkan upgrade."
-                : "Silakan ajukan upgrade plan untuk meningkatkan limit dan menjaga kelancaran operasional bisnis."}
+              Silakan ajukan upgrade plan untuk meningkatkan limit dan menjaga kelancaran operasional bisnis.
             </p>
           </div>
         </div>
 
         {/* Right: actions */}
         <div className="flex flex-wrap items-center gap-2">
-          {!subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                createBackup();
-                toast.success("Backup berhasil dibuat", "Snapshot lokal tersimpan.");
-              }}
-            >
-              <CloudUpload className="h-4 w-4" />
-              Backup Sekarang
-            </Button>
-          ) : null}
           <LinkButton href={ROUTES.plan(business.slug)} size="sm">
             <WalletCards className="h-4 w-4" />
             Upgrade Plan

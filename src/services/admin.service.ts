@@ -66,7 +66,37 @@ export interface AdminUpgradeRequestRow extends UpgradeRequest {
   };
 }
 
+export interface AdminResetRequestRow {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  plainToken: string | null;
+  expiresAt: string;
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    phoneNumber: string | null;
+    role: string;
+    isActive: boolean;
+  };
+}
+
 export class ApiAdminService {
+  static async fetchResetRequests(page: number, limit: number): Promise<PaginatedResponse<AdminResetRequestRow>> {
+    return apiFetch<PaginatedResponse<AdminResetRequestRow>>(
+      `/api/admin/reset-requests?page=${page}&limit=${limit}`,
+      { rawResponse: true }
+    );
+  }
+
+  static async deleteResetRequest(requestId: string): Promise<unknown> {
+    return apiFetch<unknown>(`/api/admin/reset-requests/${requestId}`, {
+      method: "DELETE",
+    });
+  }
+
   static async fetchBusinesses(
     page: number,
     limit: number,

@@ -177,7 +177,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         />
       </div>
       <div className="min-w-0 flex-1 pb-[var(--mobile-nav-height)] lg:pb-0">
-        <Topbar sidebarCollapsed={sidebarCollapsed} onOpenAssistant={() => setIsAssistantOpen(true)} />
+        <Topbar sidebarCollapsed={sidebarCollapsed} onOpenAssistant={() => setIsAssistantOpen(true)} onToggleSidebar={() => setSidebarCollapsed((v) => !v)} />
         <SubscriptionBanner />
         {children}
       </div>

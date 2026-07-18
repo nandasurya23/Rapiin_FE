@@ -80,7 +80,12 @@ export function OrderBoard({
       <div className="overflow-x-auto pb-2 no-scrollbar">
         <div className="flex gap-4">
           {statusOptions.map((option) => {
-            const laneOrders = orders.filter((order) => order.status === option.value);
+            const laneOrders = orders.filter((order) => {
+              if (option.value === "WAITING_DP") {
+                return order.status === "WAITING_DP" || order.status === "INQUIRY";
+              }
+              return order.status === option.value;
+            });
             const isValidDropTarget = draggedOrder && (
               draggedOrder.status === option.value || 
               getValidStatusOptions(draggedOrder.status, draggedOrder.mode).some(opt => opt.value === option.value)

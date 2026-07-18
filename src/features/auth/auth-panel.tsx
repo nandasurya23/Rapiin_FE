@@ -25,6 +25,7 @@ type AuthPanelProps = {
   mode: "login" | "register" | "request-reset" | "reset-password";
   /** Token dari URL query param untuk mode "reset-password" */
   resetToken?: string;
+  initialEmail?: string;
   roleFilter?: "OWNER" | "SUPER_ADMIN";
 };
 
@@ -35,7 +36,7 @@ const benefits = [
   "Kalender booking bawaan tanpa integrasi lain",
 ];
 
-export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthPanelProps) {
+export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter = "OWNER" }: AuthPanelProps) {
   const router = useRouter();
   const toast = useToast();
   const { currentUser, login, registerOwner, requestForgotPassword, resetPassword, logout } = useAuth();
@@ -44,8 +45,8 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
   const [pwdValue, setPwdValue] = useState("");
   // For request-reset: show success state after sending email
   const [requestResetSent, setRequestResetSent] = useState(false);
-  // Dev only: direct URL to reset page so user doesn't need to copy token
-  const [devResetUrl, setDevResetUrl] = useState<string | undefined>();
+  const [resetEmail, setResetEmail] = useState(initialEmail);
+  const [tokenValue, setTokenValue] = useState(resetToken);
 
   useEffect(() => {
     if (currentUser) {
@@ -106,7 +107,11 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
       if (!value.trim()) err = "Email atau nomor HP wajib diisi.";
       else if (!isValidEmailOrPhone(value)) err = "Format tidak valid. Gunakan email atau nomor HP.";
     } else if (name === "token") {
-      if (!value.trim()) err = "Token reset password wajib diisi.";
+      if (!value.trim()) err = "Kode reset password wajib diisi.";
+      else if (value.trim().length !== 6) err = "Kode reset harus berupa 6 digit angka.";
+    } else if (name === "confirmPassword") {
+      if (!value) err = "Ulangi password baru.";
+      else if (value !== pwdValue) err = "Konfirmasi password tidak cocok.";
     }
     setFieldErrors((prev) => ({ ...prev, [name]: err }));
     return !err;
@@ -228,8 +233,7 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
         await new Promise((resolve) => setTimeout(resolve, 250));
         const result = await requestForgotPassword(email);
         if (!result.ok) { setError(result.message); return; }
-        // Show success state — always generic message (prevents email enumeration)
-        if (result.devResetUrl) setDevResetUrl(result.devResetUrl);
+        setResetEmail(email);
         setRequestResetSent(true);
       } finally {
         setIsSubmitting(false);
@@ -237,24 +241,26 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
       return;
     }
 
-    // ── RESET PASSWORD (Step 2 — gunakan token) ───────────────────────────
+    // ── RESET PASSWORD (Step 2 — gunakan token/OTP) ───────────────────────────
     if (mode === "reset-password") {
+      const email = String(formData.get("email") ?? "").trim().toLowerCase();
       const token = String(formData.get("token") ?? "").trim();
       const newPassword = String(formData.get("newPassword") ?? "");
       const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-      const newTouched: Record<string, boolean> = { token: true, newPassword: true };
+      const newTouched: Record<string, boolean> = { email: true, token: true, newPassword: true, confirmPassword: true };
       let isValid = true;
+      isValid = validateField("email", email) && isValid;
       isValid = validateField("token", token) && isValid;
       isValid = validateField("newPassword", newPassword) && isValid;
+      isValid = validateField("confirmPassword", confirmPassword) && isValid;
       setTouchedFields(newTouched);
-      if (!isValid) { setError("Harap lengkapi semua input."); return; }
-      if (newPassword !== confirmPassword) { setError("Konfirmasi password harus sama."); return; }
+      if (!isValid) { setError("Harap lengkapi semua input dengan benar."); return; }
 
       setIsSubmitting(true);
       try {
         await new Promise((resolve) => setTimeout(resolve, 250));
-        const result = await resetPassword(token, newPassword);
+        const result = await resetPassword(email, token, newPassword);
         if (!result.ok) { setError(result.message); return; }
         toast.success("Password berhasil diperbarui! Silakan login kembali.");
         await new Promise((resolve) => setTimeout(resolve, 180));
@@ -276,8 +282,8 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
   const subCopyMap = {
     login: "Gunakan akun yang sudah kamu daftarkan.",
     register: "Buat akun dan dapatkan akses buku admin WA-first.",
-    "request-reset": "Masukkan email yang terdaftar. Kami akan mengirimkan instruksi reset password.",
-    "reset-password": "Masukkan token reset yang kamu terima, lalu buat password baru.",
+    "request-reset": "Masukkan email yang terdaftar. Admin akan mengirimkan kode OTP 6-digit via WhatsApp.",
+    "reset-password": "Masukkan email akun dan kode OTP 6-digit yang kamu terima dari Admin, lalu buat password baru.",
   };
 
   return (
@@ -359,36 +365,35 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-800">Instruksi dikirim!</p>
+                    <p className="text-sm font-semibold text-emerald-800">Permintaan Terdaftar!</p>
                     <p className="text-xs text-emerald-700 mt-0.5">
-                      Jika email tersebut terdaftar di sistem kami, instruksi reset password telah dikirim.
-                      Periksa inbox atau folder spam kamu.
+                      Permintaan reset password berhasil dikirim. Admin akan segera menghubungi kamu via WhatsApp dengan kode OTP 6-digit.
                     </p>
                   </div>
                 </div>
 
-                {/* Dev mode: show direct button — no copy-paste needed */}
-                {devResetUrl ? (
-                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-3">
-                    <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">⚙ Mode Development</p>
-                    <p className="text-xs text-amber-700">
-                      Email service belum dikonfigurasi. Gunakan link di bawah untuk melanjutkan reset:
-                    </p>
-                    <a
-                      href={devResetUrl}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-600 transition-colors px-4 py-2.5 text-sm font-bold text-white"
-                    >
-                      Lanjutkan Reset Password →
-                    </a>
-                  </div>
-                ) : (
-                  <p className="text-xs text-[var(--color-text-muted)] text-center">
-                    Sudah dapat token?{" "}
-                    <LinkButton href={ROUTES.resetPassword} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-primary)] font-bold text-xs">
-                      Masukkan token reset
-                    </LinkButton>
-                  </p>
-                )}
+                {/* Langkah selanjutnya */}
+                <div className="rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] p-4 space-y-2.5">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Langkah Selanjutnya:</p>
+                  <ol className="space-y-1.5 text-xs text-[var(--color-text-secondary)] list-none">
+                    <li className="flex items-start gap-2"><span className="flex-shrink-0 font-bold text-[var(--color-primary)]">1.</span>Tunggu Admin mengirim kode OTP 6-digit via WhatsApp</li>
+                    <li className="flex items-start gap-2"><span className="flex-shrink-0 font-bold text-[var(--color-primary)]">2.</span>Buka halaman reset password di bawah ini</li>
+                    <li className="flex items-start gap-2"><span className="flex-shrink-0 font-bold text-[var(--color-primary)]">3.</span>Masukkan email + kode OTP + password baru</li>
+                  </ol>
+                </div>
+
+                <a
+                  href={`https://wa.me/628123456789?text=Halo%20Admin%20Rapiin%2C%20saya%20meminta%20bantuan%20reset%20password%20untuk%20akun%20saya%20dengan%20email%3A%20${encodeURIComponent(resetEmail)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm py-3 transition-colors shadow-sm"
+                >
+                  Hubungi Admin via WhatsApp
+                </a>
+
+                <LinkButton href={ROUTES.resetPassword} variant="ghost" className="w-full h-10 text-sm font-semibold">
+                  Sudah punya kode? Reset Password →
+                </LinkButton>
 
                 <LinkButton href={ROUTES.login} variant="ghost" className="w-full h-10 text-sm font-semibold">
                   ← Kembali ke halaman login
@@ -523,10 +528,62 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
                     </label>
                   ) : null}
 
-                  {/* ─── RESET-PASSWORD: token + new password ─── */}
+                  {/* ─── RESET-PASSWORD: email + OTP + new password ─── */}
                   {mode === "reset-password" ? (
                     <>
-                      <input type="hidden" name="token" value={resetToken} />
+                      <label className="block">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Email Akun</span>
+                          {touchedFields.email && !fieldErrors.email && (
+                            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
+                          )}
+                        </div>
+                        <Input
+                          name="email"
+                          type="email"
+                          placeholder="email@bisnis.com"
+                          required
+                          value={resetEmail}
+                          hasError={touchedFields.email && !!fieldErrors.email}
+                          onBlur={(e) => handleBlur("email", e.target.value)}
+                          onChange={(e) => {
+                            setResetEmail(e.target.value);
+                            handleChange("email", e.target.value);
+                          }}
+                        />
+                        {touchedFields.email && fieldErrors.email ? (
+                          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.email}</span>
+                        ) : null}
+                      </label>
+
+                      <label className="block">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Kode Reset (OTP 6-Digit)</span>
+                          {touchedFields.token && !fieldErrors.token && (
+                            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
+                          )}
+                        </div>
+                        <Input
+                          name="token"
+                          type="text"
+                          maxLength={6}
+                          placeholder="Contoh: 123456"
+                          required
+                          value={tokenValue}
+                          hasError={touchedFields.token && !!fieldErrors.token}
+                          onBlur={(e) => handleBlur("token", e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            setTokenValue(val);
+                            handleChange("token", val);
+                          }}
+                        />
+                        {touchedFields.token && fieldErrors.token ? (
+                          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.token}</span>
+                        ) : (
+                          <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">Masukkan 6 digit kode OTP yang dikirim ke email atau diberikan Admin.</span>
+                        )}
+                      </label>
 
                       <label className="block">
                         <div className="flex justify-between items-center mb-1.5">
@@ -571,7 +628,17 @@ export function AuthPanel({ mode, resetToken = "", roleFilter = "OWNER" }: AuthP
 
                       <label className="block">
                         <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Konfirmasi Password Baru</span>
-                        <PasswordInput name="confirmPassword" placeholder="Ulangi password baru" required />
+                        <PasswordInput
+                          name="confirmPassword"
+                          placeholder="Ulangi password baru"
+                          required
+                          hasError={touchedFields.confirmPassword && !!fieldErrors.confirmPassword}
+                          onBlur={(e) => handleBlur("confirmPassword", e.target.value)}
+                          onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                        />
+                        {touchedFields.confirmPassword && fieldErrors.confirmPassword ? (
+                          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.confirmPassword}</span>
+                        ) : null}
                       </label>
                     </>
                   ) : null}
