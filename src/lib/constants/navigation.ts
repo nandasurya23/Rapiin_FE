@@ -1,4 +1,4 @@
-import { LayoutDashboard, MessageSquareText, NotebookPen, Receipt, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles } from "lucide-react";
+import { LayoutDashboard, MessageSquareText, NotebookPen, Receipt, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles, Key } from "lucide-react";
 import type { ComponentType } from "react";
 import { ROUTES } from "@/lib/routes";
 
@@ -46,4 +46,5 @@ export function getMobileMoreItems(slug: string): NavItem[] {
 export const SUPER_ADMIN_NAV_ITEMS: NavItem[] = [
   { label: "Bisnis", href: ROUTES.superAdminBusinesses, icon: ShieldCheck },
   { label: "Upgrade", href: ROUTES.superAdminUpgradeRequests, icon: WalletCards },
+  { label: "Reset Password", href: ROUTES.superAdminResetRequests, icon: Key },
 ];

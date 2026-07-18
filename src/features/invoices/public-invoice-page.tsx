@@ -107,7 +107,7 @@ export function PublicInvoicePage({
   if (!invoice || !business || !order) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] p-4">
-        <div className="w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-lg text-center space-y-4">
+        <div className="w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg text-center space-y-4">
           <Badge tone="danger">Nota Tidak Ditemukan</Badge>
           <h1 className="text-xl font-semibold text-[var(--color-text)]">Nota tidak valid atau segel tidak cocok</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">

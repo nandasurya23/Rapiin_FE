@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Sheet } from "@/components/ui/sheet";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Copy, Check, Info } from "lucide-react";
 import type { StaffRole } from "@/types/team";
@@ -96,12 +97,12 @@ export function InviteMemberSheet({ isOpen, onClose, onInvited, businessName }: 
             <label className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
               Label Undangan (Opsional)
             </label>
-            <input
+            <Input
               type="text"
               placeholder="cth: Untuk Ahmad - Kasir"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              className="w-full p-3 text-sm rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-colors"
+              hasError={!!error}
             />
             <p className="text-[10px] text-[var(--color-text-muted)]">
               Label hanya untuk penanda Anda. Tidak ditampilkan ke staf.

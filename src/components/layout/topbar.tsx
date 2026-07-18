@@ -10,9 +10,10 @@ import { getAppNavItems, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigatio
 type TopbarProps = {
   sidebarCollapsed: boolean;
   onOpenAssistant: () => void;
+  onToggleSidebar?: () => void;
 };
 
-export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
+export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: TopbarProps) {
   const pathname = usePathname();
   const { business, currentUser, isSuperAdmin, canAccessWriteMode, subscriptionForCurrentBusiness } = useAppData();
 
@@ -44,6 +45,7 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant }: TopbarProps) {
         <button
           type="button"
           aria-label={sidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
+          onClick={onToggleSidebar}
           className={cn(
             "hidden lg:flex items-center justify-center",
             "h-8 w-8 rounded-[var(--radius-md)]",

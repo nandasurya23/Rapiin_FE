@@ -365,18 +365,20 @@ export function SettingsPage() {
           >
             Operasional Bisnis
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("team")}
-            className={cn(
-              "px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all duration-200 focus:outline-none",
-              activeTab === "team"
-                ? "border-[var(--color-primary)] text-[var(--color-primary)] font-extrabold"
-                : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-            )}
-          >
-            Manajemen Tim
-          </button>
+          {hasPermission("team:view") && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("team")}
+              className={cn(
+                "px-5 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all duration-200 focus:outline-none",
+                activeTab === "team"
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)] font-extrabold"
+                  : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+              )}
+            >
+              Manajemen Tim
+            </button>
+          )}
         </div>
       )}
 
@@ -981,7 +983,7 @@ export function SettingsPage() {
       </>
       )}
 
-      {activeTab === "team" && (
+      {activeTab === "team" && hasPermission("team:view") && (
         <div className="animate-fade-up space-y-6">
           <TeamList
             members={teamMembers}

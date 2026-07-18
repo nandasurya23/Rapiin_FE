@@ -50,10 +50,16 @@ const ROLE_PERMISSIONS: Record<UserRole, AppPermission[]> = {
 };
 
 export function usePermission() {
-  const { currentUserRole } = useAppData();
+  const { currentUserRole, subscriptionForCurrentBusiness } = useAppData();
 
   function hasPermission(permission: AppPermission): boolean {
     if (!currentUserRole) return false;
+    
+    // Team management is PRO & PREMIUM feature, disabled on FREE_TRIAL
+    if (permission.startsWith("team:") && subscriptionForCurrentBusiness?.planCode === "FREE_TRIAL") {
+      return false;
+    }
+
     const permissions = ROLE_PERMISSIONS[currentUserRole];
     return permissions ? permissions.includes(permission) : false;
   }
