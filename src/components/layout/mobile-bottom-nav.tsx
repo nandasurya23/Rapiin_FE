@@ -57,7 +57,7 @@ export function MobileBottomNav() {
         <div
           className={cn(
             "grid px-1 py-1",
-            isSuperAdmin ? "grid-cols-2" : "grid-cols-5"
+            isSuperAdmin ? "grid-cols-3" : "grid-cols-5"
           )}
         >
           {navItems.map((item) => {

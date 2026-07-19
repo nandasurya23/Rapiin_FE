@@ -50,6 +50,7 @@ type CalendarDetailContentProps = {
   creatingInvoiceOrderId: string | null;
   onCreateInvoice: (order: Order) => Promise<void>;
   onOpenInvoice: (invoiceCode: string) => void;
+  onDeleteOrder: (orderId: string) => void;
   savingOrderId: string | null;
   onToggleClosedDate: (date: string, reason?: string, endDate?: string) => void;
   viewMode: "MONTH" | "DAY_TIMELINE";
@@ -99,6 +100,7 @@ export function CalendarDetailContent({
   creatingInvoiceOrderId,
   onCreateInvoice,
   onOpenInvoice,
+  onDeleteOrder,
   savingOrderId,
   onToggleClosedDate,
   viewMode,
@@ -306,6 +308,15 @@ export function CalendarDetailContent({
                         Buat Nota
                       </Button>
                     )}
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      onClick={() => onDeleteOrder(order.id)}
+                      className="text-[11px] h-8 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border border-red-500/20 font-bold rounded-xl"
+                    >
+                      Hapus
+                    </Button>
                   </div>
                 </div>
               );
@@ -364,6 +375,15 @@ export function CalendarDetailContent({
                       Buat Nota
                     </Button>
                   )}
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={() => onDeleteOrder(order.id)}
+                    className="text-[11px] h-8 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border border-red-500/20 font-bold rounded-xl"
+                  >
+                    Hapus
+                  </Button>
 
                   <button
                     type="button"

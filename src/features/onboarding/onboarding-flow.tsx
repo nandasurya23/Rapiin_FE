@@ -21,13 +21,38 @@ type Step = 1 | 2 | 3;
 const NICHE_OPTIONS = [
   { value: "BARBERSHOP", label: "Barbershop" },
   { value: "SALON", label: "Salon / Studio Kecantikan" },
+  { value: "NAIL_ART", label: "Nail Art / Kuku" },
   { value: "STUDIO_FOTO", label: "Studio Foto" },
+  { value: "STUDIO_MUSIK", label: "Studio Musik / Rekaman" },
   { value: "SERVICE_AC", label: "Servis AC / Elektronik" },
   { value: "BENGKEL", label: "Bengkel Mobil / Motor" },
   { value: "LES_PRIVAT", label: "Les Privat / Bimbel" },
   { value: "LAUNDRY", label: "Laundry (dengan booking)" },
+  { value: "FUTSAL", label: "Lapangan Futsal / Olahraga" },
+  { value: "WARNET", label: "Warnet / Game Center / PS" },
+  { value: "RENTAL", label: "Rental Alat / Kendaraan" },
+  { value: "TATTOO", label: "Tattoo & Body Art" },
+  { value: "TOUR", label: "Tour & Travel / Wisata" },
   { value: "LAINNYA", label: "Jasa Lainnya" },
 ];
+
+const NICHE_RESOURCE_LABELS: Record<string, string> = {
+  BARBERSHOP: "Kapster",
+  SALON: "Terapis",
+  NAIL_ART: "Nail Artist",
+  STUDIO_FOTO: "Studio",
+  STUDIO_MUSIK: "Studio",
+  SERVICE_AC: "Teknisi",
+  BENGKEL: "Mekanik",
+  LES_PRIVAT: "Tutor",
+  LAUNDRY: "Mesin",
+  FUTSAL: "Lapangan",
+  WARNET: "PC",
+  RENTAL: "Unit",
+  TATTOO: "Artist",
+  TOUR: "Pemandu",
+  LAINNYA: "Staf",
+};
 
 export function OnboardingFlow() {
   const router = useRouter();
@@ -111,6 +136,9 @@ export function OnboardingFlow() {
       } else if (form.name.trim().length < 2) {
         nextErrors.name = "Nama bisnis minimal 2 karakter.";
       }
+      if (!form.niche.trim()) {
+        nextErrors.niche = "Kategori bisnis wajib diisi.";
+      }
     }
 
     if (currentStep === 2) {
@@ -126,14 +154,6 @@ export function OnboardingFlow() {
     }
 
     if (currentStep === 3) {
-      if (!form.niche.trim()) {
-        nextErrors.niche = "Kategori bisnis wajib diisi.";
-      } else if (form.niche.trim().length < 2) {
-        nextErrors.niche = "Kategori bisnis minimal 2 karakter.";
-      } else if (form.niche.trim().length > 100) {
-        nextErrors.niche = "Kategori bisnis maksimal 100 karakter.";
-      }
-
       if (form.description && form.description.trim().length > 500) {
         nextErrors.description = "Deskripsi maksimal 500 karakter.";
       }
@@ -156,7 +176,7 @@ export function OnboardingFlow() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function finish() {
+  async function finish(action?: "new-order" | "share-link") {
     if (isSubmitting) return;
     if (!validateStep(3)) {
       return;
@@ -168,12 +188,17 @@ export function OnboardingFlow() {
         whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
         resourceCount: form.usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
         resources: form.usesResources ? form.resources : [],
-        defaultBookingDurationMinutes:
-          form.mode === "BOOKING_SERVICE" ? Math.max(15, Number(form.defaultBookingDurationMinutes) || 60) : undefined,
+        defaultBookingDurationMinutes: undefined,
       });
       toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
       await new Promise((resolve) => setTimeout(resolve, 180));
-      window.location.href = `/dashboard/${response?.slug || business.slug}`;
+      let redirectUrl = `/dashboard/${response?.slug || business.slug}`;
+      if (action === "new-order") {
+        redirectUrl = `/dashboard/${response?.slug || business.slug}/orders?action=new-order`;
+      } else if (action === "share-link") {
+        redirectUrl = `/dashboard/${response?.slug || business.slug}/business-link`;
+      }
+      window.location.href = redirectUrl;
     } catch (err) {
       toast.error("Gagal memproses onboarding", err instanceof Error ? err.message : "Kesalahan sistem.");
     } finally {
@@ -239,6 +264,36 @@ export function OnboardingFlow() {
                 {errors.name ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.name}</p> : null}
               </label>
 
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Kategori Bisnis Jasa / Sewa</span>
+                <Select
+                  value={form.niche}
+                  options={NICHE_OPTIONS}
+                  onValueChange={(val) => {
+                    setForm((current) => {
+                      const nextLabel = NICHE_RESOURCE_LABELS[val] || "Staf";
+                      const isResourceBased = ["FUTSAL", "WARNET", "RENTAL", "STUDIO_MUSIK", "STUDIO_FOTO"].includes(val);
+                      return {
+                        ...current,
+                        niche: val,
+                        resourceLabel: nextLabel,
+                        usesResources: isResourceBased,
+                        operationalModel: isResourceBased ? "RESOURCE_BOOKING" : "APPOINTMENT",
+                        resources: isResourceBased ? updateResources(nextLabel, current.resourceCount) : [],
+                      };
+                    });
+                  }}
+                  placeholder="Pilih Kategori"
+                  hasError={!!errors.niche}
+                />
+                {errors.niche ? (
+                  <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.niche}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    💡 Membantu sistem mengatur sebutan unit/tim yang paling sesuai secara otomatis.
+                  </p>
+                )}
+              </label>
             </div>
           ) : null}
 
@@ -270,8 +325,8 @@ export function OnboardingFlow() {
                       <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
                     )}
                     <div>
-                      <div className="text-sm font-extrabold text-[var(--color-text)]">Jadwal Global (Tanpa Staf)</div>
-                      <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">Pelanggan memesan jam kosong langsung pada kalender operasional Anda.</p>
+                      <div className="text-sm font-extrabold text-[var(--color-text)]">Booking Langsung ke Jadwal</div>
+                      <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">Cocok untuk: salon, servis, klinik, konsultasi — pelanggan pilih tanggal & jam.</p>
                     </div>
                   </button>
 
@@ -296,8 +351,8 @@ export function OnboardingFlow() {
                       <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
                     )}
                     <div>
-                      <div className="text-sm font-extrabold text-[var(--color-text)]">Pilih Staf / Ruangan / Unit</div>
-                      <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">Pelanggan memesan unit atau tim tertentu secara spesifik (Contoh: Kapster, Studio, Lapangan).</p>
+                      <div className="text-sm font-extrabold text-[var(--color-text)]">Pilih Unit / Tempat / Orang Tertentu</div>
+                      <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">Cocok untuk: lapangan, warnet (PC), kapster tertentu — pelanggan pilih unit spesifik.</p>
                     </div>
                   </button>
                 </div>
@@ -337,23 +392,6 @@ export function OnboardingFlow() {
           {step === 3 ? (
             <div className="grid gap-5">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Kategori Bisnis Jasa</span>
-                <Select
-                  value={form.niche}
-                  options={NICHE_OPTIONS}
-                  onValueChange={(val) => setForm((current) => ({ ...current, niche: val }))}
-                  placeholder="Pilih Kategori Jasa"
-                  hasError={!!errors.niche}
-                />
-                {errors.niche ? (
-                  <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.niche}</p>
-                ) : (
-                  <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                    💡 Pilih jenis layanan utama yang disediakan oleh bisnis Anda.
-                  </p>
-                )}
-              </label>
-              <label className="block">
                 <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Deskripsi Singkat Bisnis</span>
                 <Textarea
                   value={form.description}
@@ -387,10 +425,10 @@ export function OnboardingFlow() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
+                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish("new-order")} isLoading={isSubmitting} disabled={isSubmitting}>
                   Tambah Order Pertama
                 </Button>
-                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
+                <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish("share-link")} isLoading={isSubmitting} disabled={isSubmitting}>
                   Bagikan Link Bisnis
                 </Button>
                 <Button type="button" className="rounded-xl h-11 font-bold" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>

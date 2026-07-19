@@ -411,7 +411,8 @@ export function isBookingSlotFull(
   now = new Date(),
   capacity = BOOKING_SLOT_CAPACITY
 ) {
-  return getBookingSlotCount(orders, date, time, durationMinutesOrExcludeOrderId, excludeOrderId, now) >= capacity;
+  const safeCapacity = capacity && capacity > 0 ? capacity : BOOKING_SLOT_CAPACITY;
+  return getBookingSlotCount(orders, date, time, durationMinutesOrExcludeOrderId, excludeOrderId, now) >= safeCapacity;
 }
 
 export function getBookingAvailability(
@@ -432,6 +433,7 @@ export function getBookingAvailability(
     orderIdToExclude = durationMinutesOrExcludeOrderId;
   }
 
+  const safeCapacity = capacity && capacity > 0 ? capacity : BOOKING_SLOT_CAPACITY;
   const overlappingOrders = getBookingOverlapOrders(orders, date, time, durationMinutes, orderIdToExclude, now);
   const holdOrders = overlappingOrders.filter((order) => isBookingHoldActive(order, now));
   const count = getBookingSlotCount(orders, date, time, durationMinutesOrExcludeOrderId, orderIdToExclude, now);
@@ -440,8 +442,8 @@ export function getBookingAvailability(
     count,
     holdCount: holdOrders.length,
     paidCount: overlappingOrders.length - holdOrders.length,
-    remaining: Math.max(capacity - count, 0),
-    isFull: count >= capacity,
+    remaining: Math.max(safeCapacity - count, 0),
+    isFull: count >= safeCapacity,
     hasHold: holdOrders.length > 0,
     overlappingOrders,
     earliestHoldExpiresAt: holdOrders.reduce<Date | null>((earliest, order) => {
@@ -628,7 +630,8 @@ export function getBookingSlotTone(count: number, capacity = BOOKING_SLOT_CAPACI
     return "neutral" as const;
   }
 
-  if (count >= capacity) {
+  const safeCapacity = capacity && capacity > 0 ? capacity : BOOKING_SLOT_CAPACITY;
+  if (count >= safeCapacity) {
     return "danger" as const;
   }
 
@@ -640,7 +643,8 @@ export function getBookingSlotLabel(count: number, capacity = BOOKING_SLOT_CAPAC
     return "Kosong";
   }
 
-  if (count >= capacity) {
+  const safeCapacity = capacity && capacity > 0 ? capacity : BOOKING_SLOT_CAPACITY;
+  if (count >= safeCapacity) {
     return "Full";
   }
 
@@ -698,10 +702,11 @@ export function getBookingSlotsForDate(orders: Order[], date?: string | null, ex
     });
   });
 
+  const safeCapacity = capacity && capacity > 0 ? capacity : BOOKING_SLOT_CAPACITY;
   return Array.from(slotMap.values())
     .map<BookingSlotSummary>((slot) => ({
       ...slot,
-      isFull: slot.count >= capacity,
+      isFull: slot.count >= safeCapacity,
     }))
     .sort((left, right) => left.time.localeCompare(right.time));
 }

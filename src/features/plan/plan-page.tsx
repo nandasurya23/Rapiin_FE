@@ -142,13 +142,15 @@ export function PlanPage() {
               <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-gold-500)]/15 text-[var(--color-gold-300)] border border-[var(--color-gold-500)]/30 px-3.5 py-1 text-xs font-extrabold uppercase tracking-widest">
                 {PLAN_LABELS[subscriptionForCurrentBusiness.planCode]}
               </span>
-              <span className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1 text-xs font-extrabold uppercase tracking-widest border ${
-                subscriptionForCurrentBusiness.hasCompletedRequiredBackup 
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" 
-                  : "bg-amber-500/15 text-amber-400 border-amber-500/30"
-              }`}>
-                {subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? "Backup Optimal" : "Backup Wajib"}
-              </span>
+              {subscriptionForCurrentBusiness.planCode !== "FREE_TRIAL" && (
+                <span className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1 text-xs font-extrabold uppercase tracking-widest border ${
+                  subscriptionForCurrentBusiness.hasCompletedRequiredBackup 
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" 
+                    : "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                }`}>
+                  {subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? "Backup Optimal" : "Backup Wajib"}
+                </span>
+              )}
             </div>
           }
         />
@@ -172,12 +174,14 @@ export function PlanPage() {
               icon={Users}
               description="Jumlah kontak terdaftar"
             />
-            <SummaryStat
-              label="Backup Terakhir"
-              value={subscriptionForCurrentBusiness.lastBackupAt ? formatDateTime(subscriptionForCurrentBusiness.lastBackupAt) : "Belum ada"}
-              icon={History}
-              description="Cadangan database lokal"
-            />
+            {subscriptionForCurrentBusiness.planCode !== "FREE_TRIAL" && (
+              <SummaryStat
+                label="Backup Terakhir"
+                value={subscriptionForCurrentBusiness.lastBackupAt ? formatDateTime(subscriptionForCurrentBusiness.lastBackupAt) : "Belum ada"}
+                icon={History}
+                description="Cadangan database lokal"
+              />
+            )}
           </div>
       </section>
 
@@ -343,172 +347,173 @@ export function PlanPage() {
         )}
       </section>
 
-      {/* SECTION 3: BACKUP CONTROL PANEL */}
-      <section className="grid gap-6 xl:grid-cols-12">
-        {/* Left Side: Backup Status Controller (cols-5) */}
-        <div className="xl:col-span-5 flex flex-col">
-          <Card className="flex-1 flex flex-col justify-between border-[var(--color-border)] shadow-none">
-            <CardBody className="p-6 flex flex-col justify-between h-full space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-bold text-[var(--color-text)]">Pencadangan Data</h2>
-                  <Server className="h-5 w-5 text-[var(--color-primary)]" />
-                </div>
-                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-                  Lakukan backup secara berkala untuk mengamankan seluruh data transaksi, katalog, dan pelanggan Anda ke dalam database snapshot lokal.
-                </p>
-
-                {/* Status Indicator Panel */}
-                <div className={`rounded-2xl border p-4 flex gap-4 items-start ${
-                  subscriptionForCurrentBusiness.hasCompletedRequiredBackup
-                    ? "bg-emerald-50/50 border-emerald-100 text-emerald-800"
-                    : "bg-amber-50/50 border-amber-100 text-amber-800"
-                }`}>
-                  <span className={`flex h-2 w-2 shrink-0 rounded-full mt-1.5 ${
-                    subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? "bg-emerald-500 animate-ping" : "bg-amber-500 animate-pulse"
-                  }`} />
-                  <div>
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-wider">
-                      {subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? "Keamanan Data: Optimal" : "Tindakan Diperlukan"}
-                    </h4>
-                    <p className="mt-1 text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                      {subscriptionForCurrentBusiness.hasCompletedRequiredBackup
-                        ? "Bisnis Anda memiliki data backup yang valid. Lakukan backup secara berkala setelah melakukan pembaruan besar."
-                        : "Akun Anda belum memiliki data backup. Buat snapshot sekarang agar data tidak hilang ketika cache browser dibersihkan."}
-                    </p>
+      {subscriptionForCurrentBusiness.planCode !== "FREE_TRIAL" && (
+        <section className="grid gap-6 xl:grid-cols-12">
+          {/* Left Side: Backup Status Controller (cols-5) */}
+          <div className="xl:col-span-5 flex flex-col">
+            <Card className="flex-1 flex flex-col justify-between border-[var(--color-border)] shadow-none">
+              <CardBody className="p-6 flex flex-col justify-between h-full space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-bold text-[var(--color-text)]">Pencadangan Data</h2>
+                    <Server className="h-5 w-5 text-[var(--color-primary)]" />
                   </div>
-                </div>
-              </div>
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                    Lakukan backup secara berkala untuk mengamankan seluruh data transaksi, katalog, dan pelanggan Anda ke dalam database snapshot lokal.
+                  </p>
 
-              <div className="space-y-4">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full py-3 text-xs font-bold rounded-xl flex items-center justify-center gap-2 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all duration-300"
-                  isLoading={loadingAction === "backup"}
-                  onClick={() => void handleCreateBackup()}
-                >
-                  <ShieldCheck className="h-4.5 w-4.5" />
-                  Cadangkan Database Sekarang
-                </Button>
-
-                <div className="border-t border-[var(--color-border)]/60 pt-4 space-y-3">
-                  <span className="block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Ekspor Laporan ke Excel</span>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all"
-                      onClick={() => {
-                        const headers = ["ID Pelanggan", "Nama", "Nomor WhatsApp", "Status", "Catatan", "Tanggal Terdaftar"];
-                        const rows = customers.map((c) => [
-                          c.id,
-                          c.name,
-                          c.whatsappNumber,
-                          c.status,
-                          c.notes || "",
-                          formatDateTime(c.createdAt),
-                        ]);
-                        exportToCsv(headers, rows, `laporan-pelanggan-${new Date().toISOString().slice(0, 10)}.csv`);
-                      }}
-                    >
-                      <Download className="h-4 w-4" />
-                      Ekspor Kontak Pelanggan (Excel)
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all"
-                      onClick={() => {
-                        const headers = [
-                          "ID Order",
-                          "Nama Pelanggan",
-                          "Nomor WhatsApp",
-                          "Layanan / Produk",
-                          "Tanggal Jadwal",
-                          "Jam Jadwal",
-                          "Durasi (Menit)",
-                          "Total Harga",
-                          "DP Masuk",
-                          "Status Pembayaran",
-                          "Status Pesanan",
-                          "Catatan",
-                        ];
-                        const rows = orders.map((o) => [
-                          o.id,
-                          o.customerName,
-                          o.whatsappNumber,
-                          o.title,
-                          o.scheduledDate || "-",
-                          o.scheduledTime || "-",
-                          String(o.bookingDurationMinutes || 0),
-                          String(o.totalAmount || 0),
-                          String(o.dpAmount || 0),
-                          o.paymentStatus,
-                          o.status,
-                          o.notes || "",
-                        ]);
-                        exportToCsv(headers, rows, `laporan-pemesanan-${new Date().toISOString().slice(0, 10)}.csv`);
-                      }}
-                    >
-                      <Download className="h-4 w-4" />
-                      Ekspor Riwayat Pemesanan (Excel)
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-
-        {/* Right Side: Snapshot History Logs (cols-7) */}
-        <div className="xl:col-span-7 flex flex-col">
-          <Card className="flex-1 border-[var(--color-border)] shadow-none">
-            <CardBody className="p-6 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--color-text)]">Riwayat Snapshot</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Menampilkan hingga 5 cadangan snapshot lokal terakhir</p>
-                </div>
-                <Database className="h-5 w-5 text-[var(--color-primary)]" />
-              </div>
-
-              <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1 no-scrollbar">
-                {businessBackups.length ? (
-                  businessBackups.map((backup) => (
-                    <div
-                      key={backup.id}
-                      className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:shadow-sm"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-surface)] text-[var(--color-primary)] transition group-hover:scale-105">
-                          <Database className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[var(--color-text)]">{backup.summary}</p>
-                          <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                            {formatDateTime(backup.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="rounded-lg bg-[var(--color-primary-surface)] text-[var(--color-primary)] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider border border-[var(--color-info-border)]">
-                        {backup.type}
-                      </span>
+                  {/* Status Indicator Panel */}
+                  <div className={`rounded-2xl border p-4 flex gap-4 items-start ${
+                    subscriptionForCurrentBusiness.hasCompletedRequiredBackup
+                      ? "bg-emerald-50/50 border-emerald-100 text-emerald-800"
+                      : "bg-amber-50/50 border-amber-100 text-amber-800"
+                  }`}>
+                    <span className={`flex h-2 w-2 shrink-0 rounded-full mt-1.5 ${
+                      subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? "bg-emerald-500 animate-ping" : "bg-amber-500 animate-pulse"
+                    }`} />
+                    <div>
+                      <h4 className="text-[10px] font-extrabold uppercase tracking-wider">
+                        {subscriptionForCurrentBusiness.hasCompletedRequiredBackup ? "Keamanan Data: Optimal" : "Tindakan Diperlukan"}
+                      </h4>
+                      <p className="mt-1 text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                        {subscriptionForCurrentBusiness.hasCompletedRequiredBackup
+                          ? "Bisnis Anda memiliki data backup yang valid. Lakukan backup secara berkala setelah melakukan pembaruan besar."
+                          : "Akun Anda belum memiliki data backup. Buat snapshot sekarang agar data tidak hilang ketika cache browser dibersihkan."}
+                      </p>
                     </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] py-12 px-4 text-center text-sm text-[var(--color-text-secondary)]">
-                    <Database className="h-8 w-8 text-slate-300 mb-2.5" />
-                    <p className="font-semibold text-slate-400">Belum Ada Cadangan</p>
-                    <p className="text-xs text-slate-400 max-w-[240px] mt-1">Buat snapshot pertama Anda untuk mengamankan data bisnis.</p>
                   </div>
-                )}
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      </section>
+                </div>
+
+                <div className="space-y-4">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full py-3 text-xs font-bold rounded-xl flex items-center justify-center gap-2 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all duration-300"
+                    isLoading={loadingAction === "backup"}
+                    onClick={() => void handleCreateBackup()}
+                  >
+                    <ShieldCheck className="h-4.5 w-4.5" />
+                    Cadangkan Database Sekarang
+                  </Button>
+
+                  <div className="border-t border-[var(--color-border)]/60 pt-4 space-y-3">
+                    <span className="block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Ekspor Laporan ke Excel</span>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all"
+                        onClick={() => {
+                          const headers = ["ID Pelanggan", "Nama", "Nomor WhatsApp", "Status", "Catatan", "Tanggal Terdaftar"];
+                          const rows = customers.map((c) => [
+                            c.id,
+                            c.name,
+                            c.whatsappNumber,
+                            c.status,
+                            c.notes || "",
+                            formatDateTime(c.createdAt),
+                          ]);
+                          exportToCsv(headers, rows, `laporan-pelanggan-${new Date().toISOString().slice(0, 10)}.csv`);
+                        }}
+                      >
+                        <Download className="h-4 w-4" />
+                        Ekspor Kontak Pelanggan (Excel)
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] transition-all"
+                        onClick={() => {
+                          const headers = [
+                            "ID Order",
+                            "Nama Pelanggan",
+                            "Nomor WhatsApp",
+                            "Layanan / Produk",
+                            "Tanggal Jadwal",
+                            "Jam Jadwal",
+                            "Durasi (Menit)",
+                            "Total Harga",
+                            "DP Masuk",
+                            "Status Pembayaran",
+                            "Status Pesanan",
+                            "Catatan",
+                          ];
+                          const rows = orders.map((o) => [
+                            o.id,
+                            o.customerName,
+                            o.whatsappNumber,
+                            o.title,
+                            o.scheduledDate || "-",
+                            o.scheduledTime || "-",
+                            String(o.bookingDurationMinutes || 0),
+                            String(o.totalAmount || 0),
+                            String(o.dpAmount || 0),
+                            o.paymentStatus,
+                            o.status,
+                            o.notes || "",
+                          ]);
+                          exportToCsv(headers, rows, `laporan-pemesanan-${new Date().toISOString().slice(0, 10)}.csv`);
+                        }}
+                      >
+                        <Download className="h-4 w-4" />
+                        Ekspor Riwayat Pemesanan (Excel)
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+
+          {/* Right Side: Snapshot History Logs (cols-7) */}
+          <div className="xl:col-span-7 flex flex-col">
+            <Card className="flex-1 border-[var(--color-border)] shadow-none">
+              <CardBody className="p-6 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-[var(--color-text)]">Riwayat Snapshot</h2>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Menampilkan hingga 5 cadangan snapshot lokal terakhir</p>
+                  </div>
+                  <Database className="h-5 w-5 text-[var(--color-primary)]" />
+                </div>
+
+                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1 no-scrollbar">
+                  {businessBackups.length ? (
+                    businessBackups.map((backup) => (
+                      <div
+                        key={backup.id}
+                        className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:shadow-sm"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-surface)] text-[var(--color-primary)] transition group-hover:scale-105">
+                            <Database className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--color-text)]">{backup.summary}</p>
+                            <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                              {formatDateTime(backup.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded-lg bg-[var(--color-primary-surface)] text-[var(--color-primary)] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider border border-[var(--color-info-border)]">
+                          {backup.type}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] py-12 px-4 text-center text-sm text-[var(--color-text-secondary)]">
+                      <Database className="h-8 w-8 text-slate-300 mb-2.5" />
+                      <p className="font-semibold text-slate-400">Belum Ada Cadangan</p>
+                      <p className="text-xs text-slate-400 max-w-[240px] mt-1">Buat snapshot pertama Anda untuk mengamankan data bisnis.</p>
+                    </div>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

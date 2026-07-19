@@ -81,8 +81,8 @@ export function OrderBoard({
         <div className="flex gap-4">
           {statusOptions.map((option) => {
             const laneOrders = orders.filter((order) => {
-              if (option.value === "WAITING_DP") {
-                return order.status === "WAITING_DP" || order.status === "INQUIRY";
+              if (option.value === "WAITING_DP" || option.value === "ORDER_BARU" || option.value === "REQUEST_MASUK") {
+                return order.status === option.value || order.status === "INQUIRY";
               }
               return order.status === option.value;
             });

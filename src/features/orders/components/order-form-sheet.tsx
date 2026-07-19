@@ -28,7 +28,7 @@ import { parseIndonesianNumber } from "@/lib/number";
 import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS, getValidStatusOptions } from "@/lib/constants/orders";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
 
-import type { BusinessMode } from "@/types/business";
+import type { BusinessMode, Business } from "@/types/business";
 import type { OrderStatus, PaymentStatus } from "@/types/order";
 
 type OrderFormState = {
@@ -48,18 +48,18 @@ type OrderFormState = {
 };
 type OrderFormField = keyof OrderFormState;
 
-function createDefaultForm(mode: BusinessMode): OrderFormState {
+function createDefaultForm(business: Business): OrderFormState {
   return {
     customerName: "",
     whatsappNumber: "",
     title: "",
-    mode,
-    status: ORDER_STATUS_BY_MODE[mode]?.[0]?.value || "WAITING_DP",
+    mode: business.mode,
+    status: ORDER_STATUS_BY_MODE[business.mode]?.[0]?.value || "WAITING_DP",
     paymentStatus: "UNPAID",
     scheduledDate: "",
     scheduledTime: "",
     bookingDurationMinutes: "60",
-    resourceId: "",
+    resourceId: business.operationalModel === "RESOURCE_BOOKING" ? "ANY" : "",
     totalAmount: "",
     dpAmount: "",
     notes: "",
@@ -78,6 +78,29 @@ function formatDateTime(value?: string | null) {
   }).format(parsedDate);
 }
 
+function formatWhatsApp(val: string): string {
+  let clean = val.replace(/[^\d]/g, "");
+  if (clean.startsWith("08")) {
+    clean = "62" + clean.slice(1);
+  }
+  if (clean.startsWith("62")) {
+    const main = clean.slice(2);
+    if (main.length === 0) return "+62";
+    let formatted = "+62 " + main.slice(0, 3);
+    if (main.length > 3) {
+      formatted += "-" + main.slice(3, 7);
+    }
+    if (main.length > 7) {
+      formatted += "-" + main.slice(7, 12);
+    }
+    return formatted;
+  }
+  if (clean.length > 0) {
+    return "+" + clean;
+  }
+  return val;
+}
+
 interface OrderFormSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -89,7 +112,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
   const { business, canCreateOrder, readOnlyReason, customers } = useAppData();
   const { orders, createOrder, updateOrder } = useOrders();
   
-  const [form, setForm] = useState<OrderFormState>(createDefaultForm(business.mode));
+  const [form, setForm] = useState<OrderFormState>(createDefaultForm(business));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -104,7 +127,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
         if (order) {
           setForm({
             customerName: order.customerName,
-            whatsappNumber: order.whatsappNumber,
+            whatsappNumber: formatWhatsApp(order.whatsappNumber),
             title: order.title,
             mode: order.mode,
             status: order.status,
@@ -112,21 +135,21 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
             scheduledDate: order.scheduledDate ?? "",
             scheduledTime: order.scheduledTime ?? "",
             bookingDurationMinutes: String(order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES),
-            resourceId: order.resourceId ?? "",
+            resourceId: order.resourceId ?? (business.operationalModel === "RESOURCE_BOOKING" ? "ANY" : ""),
             totalAmount: order.totalAmount ? String(order.totalAmount) : "",
             dpAmount: order.dpAmount ? String(order.dpAmount) : "",
             notes: order.notes ?? "",
           });
         }
       } else {
-        setForm(createDefaultForm(business.mode));
+        setForm(createDefaultForm(business));
         setChatPasteText("");
         setShowPasteChat(false);
       }
       setError("");
       setIsSubmitting(false);
     }
-  }, [isOpen, editingId, orders, business.mode]);
+  }, [isOpen, editingId, orders, business]);
 
   const isDuplicatePhone = useMemo(() => {
     const normalized = normalizePhoneNumber(form.whatsappNumber);
@@ -335,6 +358,8 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
         : undefined;
 
       if (editingId) {
+        const existingOrder = orders.find((o) => o.id === editingId);
+        const isLeavingResourceAny = isResourceBookingMode && (activeResources.length <= 1 || form.resourceId === "ANY");
         await updateOrder(editingId, {
           customerName: form.customerName.trim(),
           whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
@@ -346,8 +371,20 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
           scheduledTime: form.scheduledTime || undefined,
           bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
           bookingHoldExpiresAt: nextHoldExpiresAt,
-          resourceId: isResourceBookingMode ? form.resourceId || undefined : undefined,
-          resourceNameSnapshot: isResourceBookingMode ? activeResources.find((resource) => resource.id === form.resourceId)?.name : undefined,
+          // Jika owner memilih "Umum" (ANY) atau hanya ada 1 unit aktif, alokasikan otomatis
+          resourceId: isResourceBookingMode
+            ? (activeResources.length <= 1
+                ? activeResources[0]?.id
+                : (isLeavingResourceAny ? undefined : form.resourceId || undefined))
+            : undefined,
+          // Pertahankan snapshot asli jika owner tidak memilih unit spesifik
+          resourceNameSnapshot: isResourceBookingMode
+            ? (activeResources.length <= 1
+                ? activeResources[0]?.name
+                : (isLeavingResourceAny
+                    ? existingOrder?.resourceNameSnapshot ?? undefined
+                    : activeResources.find((resource) => resource.id === form.resourceId)?.name))
+            : undefined,
           totalAmount: normalizedTotal,
           dpAmount: normalizedDp,
           notes: form.notes.trim() || undefined,
@@ -368,8 +405,16 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
         scheduledTime: form.scheduledTime || undefined,
         bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
         bookingHoldExpiresAt: nextHoldExpiresAt,
-        resourceId: isResourceBookingMode ? form.resourceId || undefined : undefined,
-        resourceNameSnapshot: isResourceBookingMode ? activeResources.find((resource) => resource.id === form.resourceId)?.name : undefined,
+        resourceId: isResourceBookingMode
+          ? (activeResources.length <= 1
+              ? activeResources[0]?.id
+              : (form.resourceId === "ANY" ? undefined : form.resourceId || undefined))
+          : undefined,
+        resourceNameSnapshot: isResourceBookingMode
+          ? (activeResources.length <= 1
+              ? activeResources[0]?.name
+              : activeResources.find((resource) => resource.id === form.resourceId)?.name)
+          : undefined,
         totalAmount: normalizedTotal,
         dpAmount: normalizedDp,
         notes: form.notes.trim() || undefined,
@@ -470,9 +515,9 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
                <Input
                 value={form.whatsappNumber}
                 onChange={(e) => {
-                  const num = e.target.value.replace(/[^\d]/g, "");
-                  updateFormField("whatsappNumber", num);
-                  const normalized = normalizePhoneNumber(num);
+                  const formatted = formatWhatsApp(e.target.value);
+                  updateFormField("whatsappNumber", formatted);
+                  const normalized = normalizePhoneNumber(formatted);
                   if (normalized && normalized.length >= 9) {
                     const match = customers.find((c) => normalizePhoneNumber(c.whatsappNumber) === normalized);
                     if (match && !form.customerName.trim()) {
@@ -480,7 +525,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
                     }
                   }
                 }}
-                placeholder="08123..."
+                placeholder="+62 812-3456-7890"
               />
               {isDuplicatePhone && (
                 <div className="mt-1.5 rounded-lg bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-2 py-1.5 text-[10px] text-[var(--color-warning-text)]">
@@ -548,32 +593,36 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pesanan</label>
-              <Select value={form.status} onValueChange={(val) => updateFormField("status", val as OrderStatus)} options={statusOptions} />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pembayaran</label>
-              <Select value={form.paymentStatus} onValueChange={(val) => updateFormField("paymentStatus", val as PaymentStatus)} options={Object.entries(PAYMENT_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
-            </div>
-          </div>
+          {editingId ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pesanan</label>
+                  <Select value={form.status} onValueChange={(val) => updateFormField("status", val as OrderStatus)} options={statusOptions} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pembayaran</label>
+                  <Select value={form.paymentStatus} onValueChange={(val) => updateFormField("paymentStatus", val as PaymentStatus)} options={Object.entries(PAYMENT_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
+                </div>
+              </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Total Biaya (Rp)</label>
-              <FormattedNumberInput value={form.totalAmount} onValueChange={(val) => updateFormField("totalAmount", val)} placeholder="0" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Uang Muka (Rp)</label>
-              <FormattedNumberInput value={form.dpAmount} onValueChange={(val) => updateFormField("dpAmount", val)} placeholder="0" />
-            </div>
-          </div>
-          {((parseIndonesianNumber(form.totalAmount) ?? 0) > 0 || (parseIndonesianNumber(form.dpAmount) ?? 0) > 0) && (
-            <p className="text-right text-xs font-bold text-[var(--color-text-secondary)]">
-              Sisa Pelunasan: <span className="text-[var(--color-text)]">Rp {formatCurrency(Math.max(0, (parseIndonesianNumber(form.totalAmount) ?? 0) - (parseIndonesianNumber(form.dpAmount) ?? 0)))}</span>
-            </p>
-          )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Total Biaya (Rp)</label>
+                  <FormattedNumberInput value={form.totalAmount} onValueChange={(val) => updateFormField("totalAmount", val)} placeholder="0" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Uang Muka (Rp)</label>
+                  <FormattedNumberInput value={form.dpAmount} onValueChange={(val) => updateFormField("dpAmount", val)} placeholder="0" />
+                </div>
+              </div>
+              {((parseIndonesianNumber(form.totalAmount) ?? 0) > 0 || (parseIndonesianNumber(form.dpAmount) ?? 0) > 0) && (
+                <p className="text-right text-xs font-bold text-[var(--color-text-secondary)]">
+                  Sisa Pelunasan: <span className="text-[var(--color-text)]">Rp {formatCurrency(Math.max(0, (parseIndonesianNumber(form.totalAmount) ?? 0) - (parseIndonesianNumber(form.dpAmount) ?? 0)))}</span>
+                </p>
+              )}
+            </>
+          ) : null}
         </div>
 
         {/* Scheduling */}
@@ -602,7 +651,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
                 </div>
                               </div>
 
-              {isResourceBookingMode && form.scheduledDate && resourceDetailsForDate.length > 0 && (
+              {isResourceBookingMode && activeResources.length > 1 && form.scheduledDate && resourceDetailsForDate.length > 0 && (
                 <div className="space-y-3 mt-4 pt-4 border-t border-[var(--color-border)]/50">
                   <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih {business.resourceLabel || "Unit"}</span>
                   <div className="grid gap-2 sm:grid-cols-2">

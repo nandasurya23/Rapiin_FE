@@ -228,12 +228,7 @@ export function SettingsPage() {
       nextErrors.whatsappNumber = "Nomor WhatsApp harus 9-15 digit angka.";
     }
 
-    if (form.mode === "BOOKING_SERVICE") {
-      const parsedDuration = Number(form.defaultBookingDurationMinutes);
-      if (!Number.isFinite(parsedDuration) || parsedDuration < 15) {
-        nextErrors.defaultBookingDurationMinutes = "Durasi default minimal 15 menit.";
-      }
-    }
+    // defaultBookingDurationMinutes removed as per requirements
 
     if (form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT") {
       const parsedCapacity = Number(form.bookingCapacity);
@@ -300,8 +295,7 @@ export function SettingsPage() {
         bookingCapacity: (form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT")
           ? Math.max(1, Number(form.bookingCapacity) || 2)
           : undefined,
-        defaultBookingDurationMinutes:
-          form.mode === "BOOKING_SERVICE" ? Math.max(15, Number(form.defaultBookingDurationMinutes) || 60) : undefined,
+        defaultBookingDurationMinutes: undefined,
         openingHours: form.openingHours.trim() || undefined,
         timezone: form.timezone,
         address: form.address.trim() || undefined,
@@ -608,21 +602,7 @@ export function SettingsPage() {
               />
             </label>
 
-            {form.mode === "BOOKING_SERVICE" ? (
-              <label className="block">
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi Default Booking (Jam)</span>
-                <Input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={form.defaultBookingDurationMinutes ? Number(form.defaultBookingDurationMinutes) / 60 : ""}
-                  onChange={(event) => updateForm("defaultBookingDurationMinutes", String((parseInt(event.target.value, 10) || 0) * 60))}
-                />
-                {errors.defaultBookingDurationMinutes ? (
-                  <p className="mt-1 text-[10px] font-bold text-[var(--color-danger)]">{errors.defaultBookingDurationMinutes}</p>
-                ) : null}
-              </label>
-            ) : (
+            {form.mode !== "BOOKING_SERVICE" && (
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed shadow-sm">
                 📌 <strong>Mode Request Order:</strong> Customer tidak perlu memilih tanggal dan jam. Form publik akan fokus mengumpulkan detail order/request kebutuhan dari customer.
               </div>
@@ -934,7 +914,7 @@ export function SettingsPage() {
                       name: "",
                       description: "",
                       priceLabel: "",
-                      durationMinutes: current.mode === "BOOKING_SERVICE" ? Number(current.defaultBookingDurationMinutes) : undefined,
+                      durationMinutes: current.mode === "BOOKING_SERVICE" ? 60 : undefined,
                     },
                   ],
                 }))

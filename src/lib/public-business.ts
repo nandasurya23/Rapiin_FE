@@ -37,6 +37,14 @@ const orderRequestFieldsByMode: Record<Exclude<BusinessMode, "BOOKING_SERVICE">,
   ],
 };
 
+export function isTimeRequired(input: Business | BusinessMode): boolean {
+  if (typeof input === "string") return true;
+  if (input.operationalModel === "ORDER_REQUEST") return false;
+  const noTimeNiches = ["LAUNDRY", "KATERING"];
+  if (noTimeNiches.includes(input.niche)) return false;
+  return true;
+}
+
 function getModeFromBusinessOrMode(input: Business | BusinessMode) {
   return typeof input === "string" ? input : input.mode;
 }
@@ -80,7 +88,13 @@ export function getPublicOrderFields(input: Business | BusinessMode) {
   const operationalModel = getOperationalModel(input);
 
   if (mode === "BOOKING_SERVICE") {
-    return appointmentFields;
+    const timeRequired = isTimeRequired(input);
+    return appointmentFields.map(f => {
+      if (f.name === "scheduledTime" || f.name === "bookingDurationMinutes") {
+        return { ...f, required: timeRequired };
+      }
+      return f;
+    });
   }
 
   if (operationalModel === "ORDER_REQUEST") {

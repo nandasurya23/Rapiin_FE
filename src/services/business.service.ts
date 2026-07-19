@@ -3,6 +3,14 @@ import type { Business, BusinessMode, OperationalModel, NicheTemplate, BusinessR
 import { apiFetch } from "@/lib/api-client";
 import { logServiceError } from "./utils";
 
+export interface ServiceDTO {
+  id: string;
+  name: string;
+  description?: string;
+  price: string | number;
+  duration: number;
+}
+
 export interface BusinessDTO {
   id: string;
   ownerName: string;
@@ -15,7 +23,7 @@ export interface BusinessDTO {
   resourceLabel?: string;
   resourceCount?: number;
   resources?: BusinessResource[];
-  services?: PublicCatalogItem[];
+  services?: ServiceDTO[];
   bookingCapacity?: number;
   defaultBookingDurationMinutes?: number;
   niche: NicheTemplate;
@@ -33,18 +41,80 @@ export interface BusinessDTO {
 
 export class BusinessMapper implements Mapper<BusinessDTO, Business> {
   toDomain(raw: BusinessDTO): Business {
-    return { ...raw };
+    return {
+      ...raw,
+      services: raw.services?.map((s: ServiceDTO) => {
+        const priceNum = s.price !== undefined ? Number(s.price) : 0;
+        return {
+          id: s.id,
+          name: s.name,
+          description: s.description || "",
+          priceLabel: priceNum > 0 ? `Rp ${priceNum.toLocaleString("id-ID")}` : "Gratis",
+          durationMinutes: s.duration !== undefined ? Number(s.duration) : 60,
+        };
+      }),
+    };
   }
 
   toDTO(domain: Business): BusinessDTO {
-    return { ...domain };
+    return {
+      ...domain,
+      services: domain.services?.map((s: PublicCatalogItem) => {
+        let priceNum = 0;
+        if (s.priceLabel) {
+          const clean = s.priceLabel.replace(/[^0-9]/g, "");
+          priceNum = Number(clean) || 0;
+        }
+
+        return {
+          id: s.id,
+          name: s.name,
+          description: s.description || "",
+          price: priceNum,
+          duration: s.durationMinutes !== undefined ? Number(s.durationMinutes) : 60,
+        };
+      }),
+    };
   }
+}
+
+export interface BusinessUpdateInput {
+  ownerName?: string;
+  name?: string;
+  slug?: string;
+  whatsappNumber?: string;
+  mode?: BusinessMode;
+  operationalModel?: OperationalModel;
+  usesResources?: boolean;
+  resourceLabel?: string;
+  resourceCount?: number;
+  resources?: BusinessResource[];
+  services?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    price?: number | string;
+    priceLabel?: string;
+    duration?: number;
+    durationMinutes?: number;
+  }>;
+  bookingCapacity?: number;
+  defaultBookingDurationMinutes?: number;
+  niche?: NicheTemplate;
+  description?: string;
+  address?: string;
+  openingHours?: string;
+  timezone?: string;
+  logoUrl?: string;
+  paymentInstructions?: string;
+  closedDates?: Record<string, string>;
+  autoCreateOrderFromSubmission?: boolean;
 }
 
 export interface BusinessService {
   getBusinessById(id: string): Promise<Business | null>;
   getBusinessBySlug(slug: string): Promise<Business | null>;
-  updateBusiness(id: string, payload: Partial<Omit<BusinessDTO, "id" | "createdAt" | "updatedAt">>): Promise<Business | null>;
+  updateBusiness(id: string, payload: BusinessUpdateInput): Promise<Business | null>;
 }
 
 export class ApiBusinessService implements BusinessService {
@@ -71,7 +141,7 @@ export class ApiBusinessService implements BusinessService {
     }
   }
 
-  async updateBusiness(id: string, payload: Partial<Omit<BusinessDTO, "id" | "createdAt" | "updatedAt">>): Promise<Business | null> {
+  async updateBusiness(id: string, payload: BusinessUpdateInput): Promise<Business | null> {
     try {
       // Backend expects PUT /api/business/settings
       const response = await apiFetch<BusinessDTO>("/api/business/settings", {
