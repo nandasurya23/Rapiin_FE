@@ -1,6 +1,16 @@
 // src/lib/api-client.ts
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window === "undefined") {
+    return "http://localhost:3003";
+  }
+  return "";
+};
+
+const BASE_URL = getBaseUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -26,6 +36,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit & { rawRes
   let response: Response;
   try {
     response = await fetch(url, {
+      cache: "no-store",
       ...options,
       headers: {
         ...defaultHeaders,

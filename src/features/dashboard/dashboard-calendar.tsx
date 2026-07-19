@@ -96,7 +96,7 @@ function getTimelineStatusLabel(status: OrderStatus): string {
 
 export const DashboardCalendar = memo(function DashboardCalendar({ business, orders, selectedDate, onDateSelect }: DashboardCalendarProps) {
   const toast = useToast();
-  const { updateOrder, updateBusiness } = useAppData();
+  const { updateOrder, updateBusiness, deleteOrder } = useAppData();
   const { invoices, createInvoiceFromOrder } = useInvoices();
   const todayKey = toDateKey(new Date());
 
@@ -124,7 +124,12 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
     updateBusiness({ closedDates });
   }
   const [viewDate, setViewDate] = useState(parseDateKey(todayKey));
-  const [viewMode, setViewMode] = useState<"MONTH" | "DAY_TIMELINE">("MONTH");
+  const [viewMode, setViewMode] = useState<"MONTH" | "DAY_TIMELINE">(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      return "DAY_TIMELINE";
+    }
+    return "MONTH";
+  });
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [draftStatuses, setDraftStatuses] = useState<Record<string, OrderStatus>>({});
   const [draftPaymentStatuses, setDraftPaymentStatuses] = useState<Record<string, PaymentStatus>>({});
@@ -283,6 +288,20 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
     return persistOrder(order, patch);
   }
 
+  async function onDeleteOrder(orderId: string) {
+    if (confirm("Apakah Anda yakin ingin menghapus / membatalkan booking ini secara permanen?")) {
+      setSavingOrderId(orderId);
+      try {
+        await deleteOrder(orderId);
+        toast.success("Order berhasil dihapus", "Jadwal dan unit kini telah dibebaskan.");
+      } catch (error) {
+        toast.error("Gagal menghapus order", error instanceof Error ? error.message : "Terjadi kesalahan.");
+      } finally {
+        setSavingOrderId(null);
+      }
+    }
+  }
+
   async function onCreateInvoice(order: Order) {
     setCreatingInvoiceOrderId(order.id);
     try {
@@ -402,6 +421,19 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
   }
 
   const activeResources = useMemo(() => (business.resources ?? []).filter((resource) => resource.isActive), [business.resources]);
+
+  const timelineColumns = useMemo(() => {
+    const list = [...activeResources];
+    const hasUnassigned = selectedOrders.some((o) => !o.resourceId || o.resourceId === "ANY");
+    if (hasUnassigned) {
+      list.push({
+        id: "ANY",
+        name: "Umum",
+        isActive: true,
+      });
+    }
+    return list;
+  }, [activeResources, selectedOrders]);
 
   const [startHour, endHour] = useMemo(() => {
     if (!business.openingHours) return [7, 21];
@@ -650,13 +682,13 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
               {/* Desktop/Tablet G-Cal Timeline View */}
               <div className="hidden md:block overflow-x-auto">
                 <div className="min-w-[600px] select-none">
-                  {isResourceMode && activeResources.length > 0 ? (
+                  {isResourceMode && timelineColumns.length > 0 ? (
                     // ── RESOURCE TIMELINE VIEW (G-CAL STYLE) ──
                     <div className="relative">
                       {/* Column titles */}
-                      <div className="grid border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/40" style={{ gridTemplateColumns: `80px repeat(${activeResources.length}, minmax(180px, 1fr))` }}>
+                      <div className="grid border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/40" style={{ gridTemplateColumns: `80px repeat(${timelineColumns.length}, minmax(180px, 1fr))` }}>
                         <div className="py-2.5">Waktu</div>
-                        {activeResources.map((res) => (
+                        {timelineColumns.map((res) => (
                           <div key={res.id} className="py-2.5 truncate">{res.name}</div>
                         ))}
                       </div>
@@ -673,9 +705,14 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                         </div>
 
                         {/* Resource columns content */}
-                        <div className="flex-1 grid divide-x divide-[var(--color-border)]/40 relative" style={{ gridTemplateColumns: `repeat(${activeResources.length}, minmax(180px, 1fr))` }}>
-                          {activeResources.map((res) => {
-                            const resOrders = selectedOrders.filter((o) => o.resourceId === res.id);
+                        <div className="flex-1 grid divide-x divide-[var(--color-border)]/40 relative" style={{ gridTemplateColumns: `repeat(${timelineColumns.length}, minmax(180px, 1fr))` }}>
+                          {timelineColumns.map((res) => {
+                            const resOrders = selectedOrders.filter((o) => {
+                              if (res.id === "ANY") {
+                                return !o.resourceId || o.resourceId === "ANY";
+                              }
+                              return o.resourceId === res.id;
+                            });
                             return (
                               <div key={res.id} className="relative h-full">
                                 {/* Grid backgrounds */}
@@ -868,6 +905,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                 onDraftPaymentChange={onDraftPaymentChange}
                 onSaveOrder={onSaveOrder}
                 onQuickAction={onQuickAction}
+                onDeleteOrder={onDeleteOrder}
                 invoiceByOrderId={invoiceByOrderId}
                 creatingInvoiceOrderId={creatingInvoiceOrderId}
                 onCreateInvoice={onCreateInvoice}

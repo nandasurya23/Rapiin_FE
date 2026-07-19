@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Plus, Search, ClipboardList } from "lucide-react";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { Card, CardBody } from "@/components/ui/card";
@@ -29,6 +30,7 @@ type PaymentFilterValue = "ALL" | PaymentStatus;
 
 export function OrderManager() {
   const toast = useToast();
+  const searchParams = useSearchParams();
   const { business, canCreateOrder, messageTemplates } = useAppData();
   const { orders, isLoading, updateOrder } = useOrders();
   
@@ -40,6 +42,12 @@ export function OrderManager() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [finishingOrder, setFinishingOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    if (searchParams && searchParams.get("action") === "new-order") {
+      setIsFormOpen(true);
+    }
+  }, [searchParams]);
 
   const statusOptions = ORDER_STATUS_BY_MODE[mode] ?? ORDER_STATUS_BY_MODE["BOOKING_SERVICE"];
 

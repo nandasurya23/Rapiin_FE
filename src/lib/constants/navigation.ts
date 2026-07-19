@@ -13,7 +13,7 @@ export function getAppNavItems(slug: string): NavItem[] {
     { label: "Hari Ini", href: ROUTES.dashboard(slug), icon: LayoutDashboard },
     { label: "Asisten Pintar", href: ROUTES.assistant(slug), icon: Sparkles },
     { label: "Customer", href: ROUTES.customers(slug), icon: UsersRound },
-    { label: "Order / Booking", href: ROUTES.orders(slug), icon: NotebookPen },
+    { label: "Booking", href: ROUTES.orders(slug), icon: NotebookPen },
     { label: "Pesan Cepat", href: ROUTES.messages(slug), icon: MessageSquareText },
     { label: "Nota", href: ROUTES.invoices(slug), icon: Receipt },
     { label: "Laporan", href: ROUTES.reports(slug), icon: ChartColumn },
@@ -26,7 +26,7 @@ export function getAppNavItems(slug: string): NavItem[] {
 export function getMobileNavItems(slug: string): NavItem[] {
   return [
     { label: "Hari Ini", href: ROUTES.dashboard(slug), icon: LayoutDashboard },
-    { label: "Order", href: ROUTES.orders(slug), icon: NotebookPen },
+    { label: "Booking", href: ROUTES.orders(slug), icon: NotebookPen },
     { label: "Pesan", href: ROUTES.messages(slug), icon: MessageSquareText },
     { label: "Customer", href: ROUTES.customers(slug), icon: UsersRound },
   ];

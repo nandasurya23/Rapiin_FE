@@ -30,6 +30,7 @@ import {
   inferCatalogDurationMinutes,
   getPublicFormFields,
   isBusinessSlugMatch,
+  isTimeRequired,
 } from "@/lib/public-business";
 import type { Business, BusinessMode } from "@/types/business";
 import { apiFetch } from "@/lib/api-client";
@@ -236,6 +237,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
       return {
         ...initialStateByMode[business.mode],
         bookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES),
+        resourceId: business.operationalModel === "RESOURCE_BOOKING" ? "ANY" : "",
       };
     }
     return initialStateByMode.BOOKING_SERVICE;
@@ -254,6 +256,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
     let initialForm: FormState = {
       ...initialStateByMode[business.mode],
       bookingDurationMinutes: String(defaultBookingDuration),
+      resourceId: business.operationalModel === "RESOURCE_BOOKING" ? "ANY" : "",
     };
 
     let step = 1;
@@ -428,6 +431,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
 
     if (
       business?.mode === "BOOKING_SERVICE" &&
+      isTimeRequired(business) &&
       (business.operationalModel === "RESOURCE_BOOKING"
         ? activeAvailability.isFull
         : isBookingSlotFull(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, undefined, undefined, business.bookingCapacity))
@@ -477,6 +481,9 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
     const candidates: string[] = [];
     for (let i = startHour; i <= endHour; i++) {
       candidates.push(`${String(i).padStart(2, "0")}:00`);
+      if (i < endHour) {
+        candidates.push(`${String(i).padStart(2, "0")}:30`);
+      }
     }
     return candidates;
   }, [business?.openingHours]);
@@ -653,7 +660,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                 </p>
                 <ul className="list-decimal list-inside space-y-1.5 text-slate-700 font-medium">
                   <li>
-                    Klik tombol <span className="font-bold text-amber-900">&quot;Kirim Bukti via WhatsApp&quot;</span> untuk mengirim konfirmasi pemesanan otomatis ke kami.
+                    Klik tombol <span className="font-bold text-amber-900">&quot;{business.paymentInstructions ? "Kirim Bukti via WhatsApp" : "Kirim Konfirmasi via WhatsApp"}&quot;</span> untuk mengirim konfirmasi pemesanan otomatis ke kami.
                   </li>
                   {business.paymentInstructions ? (
                     <li>
@@ -670,7 +677,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                   Kembali ke Toko
                 </LinkButton>
                 <LinkButton href={waLink} className="w-full justify-center rounded-xl font-bold py-3">
-                  Kirim Bukti via WhatsApp
+                  {business.paymentInstructions ? "Kirim Bukti via WhatsApp" : "Kirim Konfirmasi via WhatsApp"}
                 </LinkButton>
               </div>
             </CardBody>
@@ -906,29 +913,75 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                         )}
                       </label>
 
-                      {form.scheduledDate && !business.closedDates?.[form.scheduledDate] && (
+                      {form.scheduledDate && !business.closedDates?.[form.scheduledDate] && isTimeRequired(business) && (
                         <div className="space-y-4 pt-2">
-                          {business.operationalModel === "RESOURCE_BOOKING" && resourceDetailsForDate.length > 0 && (
-                            <div className="space-y-3">
-                              <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih {business.resourceLabel || "Unit"} <span className="text-red-500">*</span></span>
+                          {/* 1. SELECT TIME FIRST */}
+                          <div className="space-y-3 pt-2">
+                            <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Jam yang Tersedia <span className="text-red-500">*</span></span>
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                              {timeCandidates.map((time) => {
+                                const avail = getCandidateAvailability(time);
+                                const isSelected = form.scheduledTime === time;
+                                const isFull = avail.isFull;
+
+                                return (
+                                  <button
+                                    key={time}
+                                    type="button"
+                                    onClick={() => {
+                                      if (!isFull) {
+                                        updateField("scheduledTime", time);
+                                        updateField("resourceId", business.operationalModel === "RESOURCE_BOOKING" ? "ANY" : "");
+                                      }
+                                    }}
+                                    className={cn(
+                                      "py-2 px-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-0.5",
+                                      isFull
+                                        ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
+                                        : isSelected
+                                          ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                          : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+                                    )}
+                                    disabled={isFull}
+                                  >
+                                    <span className="text-xs font-bold">{time}</span>
+                                    <span className={cn(
+                                      "text-[8px] tracking-wide uppercase font-extrabold",
+                                      isFull ? "text-red-500/60" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
+                                    )}>
+                                      {isFull ? "Penuh" : avail.hasHold ? "Ditahan" : "Tersedia"}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Alternative Warnings / Overlap details */}
+                            {form.scheduledTime && (
+                              <div className="pt-2">
+                                <p className={`text-xs ${activeAvailability.isFull ? "text-[var(--color-danger)]" : activeAvailability.hasHold ? "text-[var(--color-warning-text)]" : "text-[var(--color-text-muted)]"}`}>
+                                  {slotHint}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 2. SELECT RESOURCE SECOND */}
+                          {form.scheduledTime && business.operationalModel === "RESOURCE_BOOKING" && resourceDetailsForDate.length > 0 && (
+                            <div className="space-y-3 pt-2">
+                              <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih {business.resourceLabel || "Unit"} yang Tersedia <span className="text-red-500">*</span></span>
                               <div className="grid gap-2 sm:grid-cols-2">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (!resourceBookingAvailability.isFull) {
-                                      updateField("resourceId", "ANY");
-                                      updateField("scheduledTime", "");
-                                    }
+                                    updateField("resourceId", "ANY");
                                   }}
                                   className={cn(
                                     "p-3 rounded-xl border text-left transition-all flex justify-between items-center",
-                                    resourceBookingAvailability.isFull
-                                      ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
-                                      : form.resourceId === "ANY"
-                                        ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
-                                        : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+                                    form.resourceId === "ANY"
+                                      ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                      : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
                                   )}
-                                  disabled={resourceBookingAvailability.isFull}
                                 >
                                   <div>
                                     <div className="font-bold text-sm">Bebas / Pilihkan Untuk Saya</div>
@@ -939,92 +992,42 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                                 </button>
                                 {resourceDetailsForDate.map((res) => {
                                   const isSelected = form.resourceId === res.resourceId;
-                                  const isFull = res.isFull;
+                                  // Compute specific unit availability at the selected time range
+                                  const unitAvail = getResourceAvailabilityForSelection(orders, res.resourceId, form.scheduledDate, form.scheduledTime, bookingDurationMinutes);
+                                  const isUnitFull = unitAvail.isFull;
 
                                   return (
                                     <button
                                       key={res.resourceId}
                                       type="button"
                                       onClick={() => {
-                                        if (!isFull) {
+                                        if (!isUnitFull) {
                                           updateField("resourceId", res.resourceId);
-                                          updateField("scheduledTime", "");
                                         }
                                       }}
                                       className={cn(
                                         "p-3 rounded-xl border text-left transition-all flex justify-between items-center",
-                                        isFull
+                                        isUnitFull
                                           ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
                                           : isSelected
                                             ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
                                             : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
                                       )}
-                                      disabled={isFull}
+                                      disabled={isUnitFull}
                                     >
                                       <div>
                                         <span className="text-sm font-bold block">{res.resourceName}</span>
                                         <span className={cn(
                                           "text-[10px] tracking-wide uppercase font-extrabold mt-0.5 block",
-                                          isFull ? "text-red-500/60" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
+                                          isUnitFull ? "text-red-500/60" : isSelected ? "text-white/80" : "text-[var(--color-success-text)]"
                                         )}>
-                                          {isFull ? "Semua Jadwal Penuh" : res.hasHold ? "Tersedia Sebagian" : "Tersedia"}
+                                          {isUnitFull ? "Terisi / Penuh" : "Tersedia"}
                                         </span>
                                       </div>
                                     </button>
                                   );
                                 })}
                               </div>
-                            </div>
-                          )}
-
-                          {(business.operationalModel !== "RESOURCE_BOOKING" || form.resourceId) && (
-                            <div className="space-y-3 pt-2">
-                              <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih Jam yang Tersedia <span className="text-red-500">*</span></span>
-                          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-                            {timeCandidates.map((time) => {
-                              const avail = getCandidateAvailability(time);
-                              const isSelected = form.scheduledTime === time;
-                              const isFull = avail.isFull;
-
-                              return (
-                                <button
-                                  key={time}
-                                  type="button"
-                                  onClick={() => {
-                                    if (!isFull) {
-                                      updateField("scheduledTime", time);
-                                    }
-                                  }}
-                                  className={cn(
-                                    "py-2 px-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-0.5",
-                                    isFull
-                                      ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
-                                      : isSelected
-                                        ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
-                                        : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
-                                  )}
-                                  disabled={isFull}
-                                >
-                                  <span className="text-xs font-bold">{time}</span>
-                                  <span className={cn(
-                                    "text-[8px] tracking-wide uppercase font-extrabold",
-                                    isFull ? "text-red-500/60" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
-                                  )}>
-                                    {isFull ? "Penuh" : avail.hasHold ? "Ditahan" : "Tersedia"}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Alternative Warnings / Overlap details */}
-                          {form.scheduledTime && (
-                            <div className="pt-2">
-                              <p className={`text-xs ${activeAvailability.isFull ? "text-[var(--color-danger)]" : activeAvailability.hasHold ? "text-[var(--color-warning-text)]" : "text-[var(--color-text-muted)]"}`}>
-                                {slotHint}
-                              </p>
-                            </div>
-                          )}
                             </div>
                           )}
                         </div>
@@ -1041,7 +1044,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                         </Button>
                         <Button
                           type="button"
-                          disabled={!form.scheduledDate || !form.scheduledTime || Boolean(business.closedDates?.[form.scheduledDate]) || (business.operationalModel === "RESOURCE_BOOKING" && !form.resourceId)}
+                          disabled={!form.scheduledDate || (isTimeRequired(business) && !form.scheduledTime) || Boolean(business.closedDates?.[form.scheduledDate]) || (business.operationalModel === "RESOURCE_BOOKING" && !form.resourceId)}
                           onClick={() => setCurrentStep(3)}
                           className="font-bold rounded-xl"
                         >

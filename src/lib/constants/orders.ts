@@ -10,8 +10,8 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 };
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  INQUIRY: "Menunggu",
-  WAITING_DP: "Menunggu",
+  INQUIRY: "Booking Baru",
+  WAITING_DP: "Menunggu DP",
   CONFIRMED: "Disetujui",
   ORDER_BARU: "Order Baru",
   DIPROSES: "Diproses",
@@ -26,7 +26,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 export const ORDER_STATUS_BY_MODE: Record<BusinessMode, StatusOption[]> = {
   BOOKING_SERVICE: [
-    { value: "WAITING_DP", label: "Menunggu", tone: "warning" },
+    { value: "WAITING_DP", label: "Menunggu DP", tone: "warning" },
     { value: "CONFIRMED", label: "Disetujui", tone: "success" },
     { value: "SELESAI", label: "Selesai", tone: "success" },
     { value: "BATAL", label: "Batal", tone: "danger" },
@@ -57,19 +57,29 @@ export const PAYMENT_FILTER_OPTIONS: Array<{ value: "ALL" | PaymentStatus; label
   { value: "CANCELLED", label: "Batal" },
 ];
 
-export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  INQUIRY: ["WAITING_DP", "CONFIRMED", "REQUEST_MASUK", "DEAL", "SELESAI", "BATAL"],
-  WAITING_DP: ["CONFIRMED", "SELESAI", "BATAL"],
-  CONFIRMED: ["ORDER_BARU", "DIPROSES", "DIBAHAS", "SELESAI", "BATAL"],
-  ORDER_BARU: ["DIPROSES", "SELESAI", "BATAL"],
-  DIPROSES: ["DIKIRIM_DIAMBIL", "SELESAI", "BATAL"],
-  DIKIRIM_DIAMBIL: ["SELESAI", "BATAL"],
-  REQUEST_MASUK: ["DIBAHAS", "SELESAI", "BATAL"],
-  DIBAHAS: ["PENAWARAN_DIKIRIM", "DEAL", "SELESAI", "BATAL"],
-  PENAWARAN_DIKIRIM: ["DEAL", "SELESAI", "BATAL"],
-  DEAL: ["SELESAI", "BATAL"],
-  SELESAI: [],
-  BATAL: [],
+export const ORDER_STATUS_TRANSITIONS_BY_MODE_FE: Record<string, Partial<Record<OrderStatus, OrderStatus[]>>> = {
+  BOOKING_SERVICE: {
+    INQUIRY: ["WAITING_DP", "CONFIRMED", "BATAL"],
+    WAITING_DP: ["CONFIRMED", "BATAL"],
+    CONFIRMED: ["SELESAI", "BATAL"],
+    SELESAI: [],
+    BATAL: [],
+  },
+  PRODUCT_ORDER: {
+    ORDER_BARU: ["DIPROSES", "DIKIRIM_DIAMBIL", "SELESAI", "BATAL"],
+    DIPROSES: ["DIKIRIM_DIAMBIL", "SELESAI", "BATAL"],
+    DIKIRIM_DIAMBIL: ["SELESAI", "BATAL"],
+    SELESAI: [],
+    BATAL: [],
+  },
+  CUSTOM_REQUEST: {
+    REQUEST_MASUK: ["DIBAHAS", "PENAWARAN_DIKIRIM", "DEAL", "SELESAI", "BATAL"],
+    DIBAHAS: ["PENAWARAN_DIKIRIM", "DEAL", "SELESAI", "BATAL"],
+    PENAWARAN_DIKIRIM: ["DEAL", "SELESAI", "BATAL"],
+    DEAL: ["SELESAI", "BATAL"],
+    SELESAI: [],
+    BATAL: [],
+  },
 };
 
 export function getValidStatusOptions(currentStatus: OrderStatus | undefined, mode: BusinessMode): StatusOption[] {
@@ -77,7 +87,7 @@ export function getValidStatusOptions(currentStatus: OrderStatus | undefined, mo
   if (!currentStatus) {
     return allOptions;
   }
-  const allowedNext = ORDER_STATUS_TRANSITIONS[currentStatus] ?? [];
+  const allowedNext = ORDER_STATUS_TRANSITIONS_BY_MODE_FE[mode]?.[currentStatus] ?? [];
   return allOptions.filter(
     (opt) => opt.value === currentStatus || allowedNext.includes(opt.value)
   );
