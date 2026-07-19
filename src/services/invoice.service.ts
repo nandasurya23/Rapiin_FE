@@ -52,8 +52,8 @@ export class ApiInvoiceService implements InvoiceService {
 
   async getInvoiceById(id: string): Promise<Invoice | null> {
     try {
-      const invoices = await this.getInvoices("");
-      return invoices.find((item) => item.id === id) || null;
+      const response = await apiFetch<InvoiceDTO>(`/api/invoices/${id}`);
+      return this.mapper.toDomain(response);
     } catch (err) {
       logServiceError("Failed to fetch invoice by ID", err);
       return null;
