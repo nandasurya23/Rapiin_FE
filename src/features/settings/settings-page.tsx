@@ -281,6 +281,22 @@ export function SettingsPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 220));
 
+      // Konversi services dari format FE (priceLabel/durationMinutes) ke format BE (price/duration)
+      const servicesForBE = form.services.map((s) => {
+        let priceNum = 0;
+        if (s.priceLabel) {
+          const clean = s.priceLabel.replace(/[^0-9]/g, "");
+          priceNum = Number(clean) || 0;
+        }
+        return {
+          id: s.id,
+          name: s.name,
+          description: s.description || "",
+          price: priceNum,
+          duration: s.durationMinutes !== undefined ? Number(s.durationMinutes) : 60,
+        };
+      });
+
       await saveBusinessSettings({
         name: form.name.trim(),
         whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
@@ -291,11 +307,13 @@ export function SettingsPage() {
         resourceLabel: usesResources ? form.resourceLabel.trim() : undefined,
         resourceCount: usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
         resources: usesResources ? form.resources : [],
-        services: form.services,
+        services: servicesForBE,
         bookingCapacity: (form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT")
           ? Math.max(1, Number(form.bookingCapacity) || 2)
           : undefined,
-        defaultBookingDurationMinutes: undefined,
+        defaultBookingDurationMinutes: form.defaultBookingDurationMinutes
+          ? Math.max(1, Number(form.defaultBookingDurationMinutes) || 60)
+          : undefined,
         openingHours: form.openingHours.trim() || undefined,
         timezone: form.timezone,
         address: form.address.trim() || undefined,
@@ -304,6 +322,11 @@ export function SettingsPage() {
         logoUrl: form.logoUrl.trim() || undefined,
       });
       toast.success("Pengaturan bisnis disimpan", "Flow form dan booking sudah ikut menyesuaikan.");
+    } catch (err) {
+      toast.error(
+        "Gagal menyimpan pengaturan",
+        err instanceof Error ? err.message : "Terjadi kesalahan. Silakan coba lagi."
+      );
     } finally {
       setIsSaving(false);
     }

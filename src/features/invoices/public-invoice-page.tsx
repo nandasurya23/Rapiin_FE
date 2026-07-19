@@ -36,11 +36,13 @@ export function PublicInvoicePage({
   const [data, setData] = useState<{ invoice: Invoice; order: Order; business: Business } | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) return;
     async function load() {
       if (!invoiceCode || !seal) {
+        setLoadError("Link nota tidak lengkap. Pastikan link yang dibuka sudah benar.");
         setLoading(false);
         return;
       }
@@ -53,6 +55,11 @@ export function PublicInvoicePage({
         });
       } catch (err) {
         console.error("Failed to load public invoice", err);
+        setLoadError(
+          err instanceof Error && err.message
+            ? err.message
+            : "Nota tidak ditemukan atau link sudah tidak valid."
+        );
       } finally {
         setLoading(false);
       }
@@ -100,6 +107,19 @@ export function PublicInvoicePage({
     return (
       <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] p-4">
+        <div className="w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg text-center space-y-4">
+          <Badge tone="danger">Nota Tidak Ditemukan</Badge>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">Nota tidak dapat dimuat</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">{loadError}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">Silakan periksa kembali link nota yang dibagikan oleh admin toko.</p>
+        </div>
       </main>
     );
   }

@@ -142,19 +142,15 @@ export class ApiBusinessService implements BusinessService {
   }
 
   async updateBusiness(id: string, payload: BusinessUpdateInput): Promise<Business | null> {
-    try {
-      // Backend expects PUT /api/business/settings
-      const response = await apiFetch<BusinessDTO>("/api/business/settings", {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
-      }
-      return this.mapper.toDomain(response);
-    } catch (err) {
-      logServiceError("Failed to update business settings", err);
-      return null;
+    // Biarkan error propagate ke caller — jangan ditelan di sini
+    // Sebelumnya: try-catch + return null membuat UI selalu tampil "sukses" walau request gagal
+    const response = await apiFetch<BusinessDTO>("/api/business/settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("rapiin-storage-sync"));
     }
+    return this.mapper.toDomain(response);
   }
 }
