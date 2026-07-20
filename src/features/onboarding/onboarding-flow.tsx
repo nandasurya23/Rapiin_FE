@@ -374,13 +374,38 @@ export function OnboardingFlow() {
                     </label>
                     <label className="block">
                       <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Jumlah {form.resourceLabel || "Unit"}</span>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={form.resourceCount}
-                        onChange={(e) => setForm(c => ({ ...c, resourceCount: e.target.value, resources: updateResources(c.resourceLabel, e.target.value) }))}
-                        hasError={!!errors.resourceCount}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-11 w-11 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg border border-[var(--color-border)]"
+                          onClick={() => {
+                            const nextCount = Math.max(1, (Number(form.resourceCount) || 1) - 1);
+                            setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
+                          }}
+                        >
+                          -
+                        </Button>
+                        <Input
+                          type="number"
+                          min="1"
+                          className="text-center"
+                          value={form.resourceCount}
+                          onChange={(e) => setForm(c => ({ ...c, resourceCount: e.target.value, resources: updateResources(c.resourceLabel, e.target.value) }))}
+                          hasError={!!errors.resourceCount}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-11 w-11 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg border border-[var(--color-border)]"
+                          onClick={() => {
+                            const nextCount = (Number(form.resourceCount) || 1) + 1;
+                            setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
+                          }}
+                        >
+                          +
+                        </Button>
+                      </div>
                       {errors.resourceCount ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceCount}</p> : null}
                     </label>
                   </div>

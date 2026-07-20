@@ -605,6 +605,12 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
                 <CheckCircle2 className="h-10 w-10 animate-bounce" />
               </div>
+
+              <div className="inline-flex mx-auto">
+                <Badge tone="success" className="font-extrabold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                  ✓ Tersimpan di Database
+                </Badge>
+              </div>
               
               <div className="space-y-2">
                 <h1 className="text-2xl font-black text-[var(--color-text)]">Pemesanan Terkirim!</h1>

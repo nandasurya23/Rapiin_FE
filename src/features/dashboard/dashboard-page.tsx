@@ -305,13 +305,13 @@ export function DashboardPage() {
         statsCard={
           <div className="flex flex-col gap-2 rounded-2xl bg-white/[0.06] p-4.5 border border-white/[0.08] backdrop-blur-md min-w-[280px]">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-white/80">📈 Kuota Pemesanan Berjalan</span>
-              <span className="text-[var(--color-gold-300)]">{currentOrderUsage.used} / {currentOrderUsage.limit} Booking</span>
+              <span className="text-white/80">📈 Kuota Pelanggan Aktif</span>
+              <span className="text-[var(--color-gold-300)]">{currentBusinessUsage.used} / {currentBusinessUsage.limit} Pelanggan</span>
             </div>
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/10">
               <div 
                 className="absolute bottom-0 left-0 top-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-300"
-                style={{ width: `${Math.min(100, (currentOrderUsage.used / currentOrderUsage.limit) * 100)}%` }}
+                style={{ width: `${Math.min(100, (currentBusinessUsage.limit > 0 ? (currentBusinessUsage.used / currentBusinessUsage.limit) : 0) * 100)}%` }}
               />
             </div>
             <p className="text-[10px] text-white/50">
