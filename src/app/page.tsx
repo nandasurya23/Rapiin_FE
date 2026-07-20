@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ROUTES } from "@/lib/routes";
 
-export default function HomePage() {
-  const host = headers().get("host") || "";
+export default async function HomePage() {
+  const headersList = await headers();
+  const host = headersList.get("host") || "";
   const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "";
   const adminHost = adminUrl ? new URL(adminUrl).host : "";
 

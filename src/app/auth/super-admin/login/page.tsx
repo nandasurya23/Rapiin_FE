@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
 import { AuthPanel } from "@/features/auth/auth-panel";
 
-export default function SuperAdminLoginPage() {
-  const host = headers().get("host") || "";
+export default async function SuperAdminLoginPage() {
+  const headersList = await headers();
+  const host = headersList.get("host") || "";
   const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "";
   const adminHost = adminUrl ? new URL(adminUrl).host : "";
 
