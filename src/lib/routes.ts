@@ -21,5 +21,5 @@ export const ROUTES = {
   superAdminResetRequests: "/dashboard/super-admin/reset-requests",
   publicBusiness: (slug: string) => `/b/${slug}`,
   publicBusinessOrder: (slug: string) => `/b/${slug}/order`,
-  invoice: (code: string) => `/invoice/${code}`,
+  invoice: (code: string, seal: string) => `/invoice/${code}?seal=${seal}`,
 } as const;

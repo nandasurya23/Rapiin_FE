@@ -49,7 +49,7 @@ type CalendarDetailContentProps = {
  invoiceByOrderId: Record<string, Invoice>;
  creatingInvoiceOrderId: string | null;
  onCreateInvoice: (order: Order) => Promise<void>;
- onOpenInvoice: (invoiceCode: string) => void;
+ onOpenInvoice: (invoiceCode: string, seal: string) => void;
  onDeleteOrder: (orderId: string) => void;
  savingOrderId: string | null;
  onToggleClosedDate: (date: string, reason?: string, endDate?: string) => void;
@@ -289,7 +289,7 @@ export function CalendarDetailContent({
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => onOpenInvoice(linkedInvoice.invoiceCode)}
+            onClick={() => onOpenInvoice(linkedInvoice.invoiceCode, linkedInvoice.integritySeal)}
             className="text-[11px] h-8"
            >
             <ExternalLink className="h-3 w-3" />
@@ -356,7 +356,7 @@ export function CalendarDetailContent({
            type="button"
            variant="secondary"
            size="sm"
-           onClick={() => onOpenInvoice(linkedInvoice.invoiceCode)}
+           onClick={() => onOpenInvoice(linkedInvoice.invoiceCode, linkedInvoice.integritySeal)}
            className="text-[11px] h-8"
           >
            <ExternalLink className="h-3 w-3" />
