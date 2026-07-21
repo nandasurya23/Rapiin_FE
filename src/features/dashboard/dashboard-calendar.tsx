@@ -21,6 +21,7 @@ import { ROUTES } from "@/lib/routes";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { useInvoices } from "@/hooks/use-invoices";
+import { useOrders } from "@/hooks/use-orders";
 import type { Business } from "@/types/business";
 import type { Invoice } from "@/types/invoice";
 import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
@@ -96,7 +97,8 @@ function getTimelineStatusLabel(status: OrderStatus): string {
 
 export const DashboardCalendar = memo(function DashboardCalendar({ business, orders, selectedDate, onDateSelect }: DashboardCalendarProps) {
   const toast = useToast();
-  const { updateOrder, updateBusiness, deleteOrder } = useAppData();
+  const { updateBusiness } = useAppData();
+  const { updateOrder, deleteOrder } = useOrders();
   const { invoices, createInvoiceFromOrder } = useInvoices();
   const todayKey = toDateKey(new Date());
 

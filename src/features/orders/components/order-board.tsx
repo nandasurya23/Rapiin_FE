@@ -68,7 +68,7 @@ export function OrderBoard({
   }
 
   return (
-    <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
+    <section className="space-y-4">
       <div className="flex items-center justify-between gap-3 px-1 border-b border-[var(--color-border)] pb-3">
         <div>
           <h2 className="text-lg font-bold text-[var(--color-text)]">Board Alur Status Pesanan</h2>
@@ -92,8 +92,8 @@ export function OrderBoard({
             );
 
             return (
-              <div key={option.value} className="w-[310px] shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5 mb-3">
+              <div key={option.value} className="w-[310px] shrink-0 border border-transparent flex flex-col justify-between">
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2 mb-3 px-1">
                   <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text)]">{option.label}</p>
                   <Badge tone={option.tone} className="text-[9px] uppercase tracking-wider font-extrabold">{laneOrders.length}</Badge>
                 </div>
@@ -121,13 +121,13 @@ export function OrderBoard({
                     laneOrders.map((order) => {
                       const waConfig = getWhatsAppConfig(order);
                       
-                      let leftBorderStripe = "border-l-4 border-l-stone-300";
+                      let statusIndicator = "bg-stone-300";
                       if (order.paymentStatus === "PAID") {
-                        leftBorderStripe = "border-l-4 border-l-emerald-500";
+                        statusIndicator = "bg-emerald-500";
                       } else if (order.paymentStatus === "DP_PAID") {
-                        leftBorderStripe = "border-l-4 border-l-blue-500";
+                        statusIndicator = "bg-blue-500";
                       } else if (order.paymentStatus === "UNPAID") {
-                        leftBorderStripe = "border-l-4 border-l-rose-500";
+                        statusIndicator = "bg-rose-500";
                       }
 
                       const isDraggable = order.status !== "SELESAI" && order.status !== "BATAL";
@@ -144,14 +144,14 @@ export function OrderBoard({
                             setDraggedOrder(null);
                           }}
                           className={cn(
-                            "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm hover:shadow transition-all duration-300",
-                            leftBorderStripe,
+                            "py-3 border-b border-[var(--color-border)] transition-all duration-300 relative",
                             isDraggable ? "cursor-grab active:cursor-grabbing" : "opacity-90 cursor-default"
                           )}
                         >
-                          <div className="flex items-start gap-3">
+                          <div className={cn("absolute left-0 top-3 bottom-3 w-1 rounded-full", statusIndicator)} />
+                          <div className="flex items-start gap-3 pl-3">
                             <div className={cn(
-                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white text-[10px] font-black shadow-xs select-none border border-white/20",
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white text-[10px] font-black select-none border border-white/20",
                               getAvatarGradient(order.customerName)
                             )}>
                               {getInitials(order.customerName)}

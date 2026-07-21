@@ -57,7 +57,7 @@ export function MobileBottomNav() {
         <div
           className={cn(
             "grid px-1 py-1",
-            isSuperAdmin ? "grid-cols-3" : "grid-cols-5"
+            isSuperAdmin ? "grid-cols-4" : "grid-cols-5"
           )}
         >
           {navItems.map((item) => {
@@ -136,6 +136,25 @@ export function MobileBottomNav() {
                 )}
               />
               <span className="leading-none">Lainnya</span>
+            </button>
+          )}
+
+          {/* Logout button for Super Admin */}
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-0.5",
+                "min-h-[52px] rounded-[var(--radius-md)] px-1 py-2",
+                "text-[11px] font-medium text-[var(--color-danger)]",
+                "transition-all duration-[var(--transition-fast)]",
+                "hover:bg-[var(--color-danger)]/10",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]"
+              )}
+            >
+              <LogOut className="h-[18px] w-[18px]" />
+              <span className="leading-none">Logout</span>
             </button>
           )}
         </div>

@@ -1,9 +1,6 @@
 import type { Business } from "@/types/business";
 import type { ID } from "@/types/common";
-import type { Customer } from "@/types/customer";
-import type { Invoice } from "@/types/invoice";
-import type { MessageCategory, MessageTemplate } from "@/types/message";
-import type { Order } from "@/types/order";
+import type { MessageCategory } from "@/types/message";
 import type {
   BackupRecord,
   BusinessSubscription,
@@ -68,15 +65,10 @@ export type MessageComposerDraft = {
 export type AppStorageState = {
   version: 1;
   business: Business;
-  customers: Customer[];
-  orders: Order[];
-  invoices: Invoice[];
   subscriptions: BusinessSubscription[];
   upgradeRequests: UpgradeRequest[];
   backupRecords: BackupRecord[];
   superAdminLogs: SuperAdminActionLog[];
-  messageTemplates: MessageTemplate[];
-  publicSubmissions: PublicSubmission[];
   auth: AuthState;
   system: {
     superAdminUserIds: ID[];

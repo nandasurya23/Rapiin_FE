@@ -224,23 +224,26 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </p>
           </div>
 
-          {/* Logout icon button */}
-          {!collapsed && (
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              title="Logout"
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)]",
-                "text-white/40 transition-all duration-[var(--transition-fast)]",
-                "hover:bg-white/[0.08] hover:text-white/80",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold-300)]"
-              )}
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          )}
         </div>
+
+        {/* Logout button */}
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          title="Logout"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-[var(--radius-md)]",
+            "transition-all duration-[var(--transition-fast)] font-medium",
+            "text-[var(--color-danger)]/80 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]",
+            collapsed ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto" : "px-3 py-2.5"
+          )}
+        >
+          <LogOut className="h-[18px] w-[18px] shrink-0" />
+          {!collapsed && (
+            <span className="truncate">Logout</span>
+          )}
+        </button>
 
         {/* Collapse toggle */}
         <button

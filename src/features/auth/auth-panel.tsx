@@ -8,7 +8,6 @@ import { ROUTES } from "@/lib/routes";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { isValidEmail, isValidEmailOrPhone, isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
@@ -360,8 +359,8 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
 
           {/* ── SUCCESS STATE: request-reset sent ── */}
           {mode === "request-reset" && requestResetSent ? (
-            <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)]">
-              <CardBody className="p-6 space-y-4">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+              <div className="p-6 space-y-4">
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
                   <div>
@@ -386,7 +385,7 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
                   href={`https://wa.me/628123456789?text=Halo%20Admin%20Rapiin%2C%20saya%20meminta%20bantuan%20reset%20password%20untuk%20akun%20saya%20dengan%20email%3A%20${encodeURIComponent(resetEmail)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm py-3 transition-colors shadow-sm"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm py-3 transition-colors "
                 >
                   Hubungi Admin via WhatsApp
                 </a>
@@ -398,12 +397,12 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
                 <LinkButton href={ROUTES.login} variant="ghost" className="w-full h-10 text-sm font-semibold">
                   ← Kembali ke halaman login
                 </LinkButton>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           ) : (
             /* ── FORM CARD ── */
-            <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)]">
-              <CardBody className="space-y-4 p-6">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+              <div className="space-y-4 p-6">
                 <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
 
                   {/* ─── REGISTER FIELDS ─── */}
@@ -735,8 +734,8 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
                     ) : null}
                   </div>
                 ) : null}
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
+
 import { PLAN_DEFINITIONS, TRIAL_WARNING_DAYS } from "@/lib/constants/subscription";
-import type { AppStorageState } from "@/types/app-state";
 import type { BusinessSubscription, PlanCode, SubscriptionStatus } from "@/types/subscription";
 import type { Order } from "@/types/order";
 
@@ -55,12 +55,11 @@ export function canAccessWriteMode(subscription: BusinessSubscription | null) {
   return status === "TRIAL_ACTIVE" || status === "ACTIVE";
 }
 
-export function canCreateCustomer(state: Pick<AppStorageState, "business" | "customers" | "subscriptions">) {
+export function canCreateCustomer(state: { business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
   const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
   if (!canAccessWriteMode(subscription)) {
     return false;
   }
-
   return state.customers.length < (subscription?.customerLimit ?? 0);
 }
 
@@ -97,12 +96,12 @@ export function getOrderUsage(state: { business: { id: string }; subscriptions: 
   };
 }
 
-export function canCreateInvoice(state: Pick<AppStorageState, "business" | "subscriptions">) {
+export function canCreateInvoice(state: { business: { id: string }; subscriptions: BusinessSubscription[] }) {
   const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
   return canAccessWriteMode(subscription);
 }
 
-export function getCustomerUsage(state: Pick<AppStorageState, "business" | "customers" | "subscriptions">) {
+export function getCustomerUsage(state: { business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
   const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
   return {
     used: state.customers.length,

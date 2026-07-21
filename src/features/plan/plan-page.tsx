@@ -16,27 +16,31 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
-import { Card, CardBody } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { formatDateTime } from "@/lib/format";
 import { getDaysUntilExpiry } from "@/lib/subscription";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useCustomers } from "@/hooks/use-customers";
+import { useOrders } from "@/hooks/use-orders";
+import { getCustomerUsage } from "@/lib/subscription";
 import type { PlanCode } from "@/types/subscription";
 
 export function PlanPage() {
   const toast = useToast();
   const {
     subscriptionForCurrentBusiness,
-    currentBusinessUsage,
     system,
     backupRecords,
     upgradeRequests,
     createBackup,
     requestUpgrade,
-    customers,
-    orders,
+    business,
   } = useAppData();
+
+  const { customers } = useCustomers();
+  const { orders } = useOrders();
+  const currentBusinessUsage = getCustomerUsage({ business: business!, subscriptions: subscriptionForCurrentBusiness ? [subscriptionForCurrentBusiness] : [], customers });
   const [selectedPlan, setSelectedPlan] = useState<PlanCode>("PRO");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
@@ -223,7 +227,7 @@ export function PlanPage() {
               >
                 {/* Popular Badge */}
                 {details.isPopular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[var(--color-accent)] to-[#AF752E] px-4 py-1 text-[9px] font-extrabold uppercase tracking-widest text-white shadow-sm border border-amber-300/20">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[var(--color-accent)] to-[#AF752E] px-4 py-1 text-[9px] font-extrabold uppercase tracking-widest text-white  border border-amber-300/20">
                     Terpopuler
                   </span>
                 )}
@@ -351,8 +355,8 @@ export function PlanPage() {
         <section className="grid gap-6 xl:grid-cols-12">
           {/* Left Side: Backup Status Controller (cols-5) */}
           <div className="xl:col-span-5 flex flex-col">
-            <Card className="flex-1 flex flex-col justify-between border-[var(--color-border)] shadow-none">
-              <CardBody className="p-6 flex flex-col justify-between h-full space-y-6">
+            <div className="flex-1 flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+              <div className="p-6 flex flex-col justify-between h-full space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="text-lg font-bold text-[var(--color-text)]">Pencadangan Data</h2>
@@ -462,14 +466,14 @@ export function PlanPage() {
                     </div>
                   </div>
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           </div>
 
           {/* Right Side: Snapshot History Logs (cols-7) */}
           <div className="xl:col-span-7 flex flex-col">
-            <Card className="flex-1 border-[var(--color-border)] shadow-none">
-              <CardBody className="p-6 space-y-4">
+            <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+              <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-bold text-[var(--color-text)]">Riwayat Snapshot</h2>
@@ -483,7 +487,7 @@ export function PlanPage() {
                     businessBackups.map((backup) => (
                       <div
                         key={backup.id}
-                        className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:shadow-sm"
+                        className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:"
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-surface)] text-[var(--color-primary)] transition group-hover:scale-105">
@@ -509,8 +513,8 @@ export function PlanPage() {
                     </div>
                   )}
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           </div>
         </section>
       )}
@@ -530,7 +534,7 @@ function SummaryStat({
   description?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-5 py-4 transition-all duration-300 hover:border-[var(--color-border-strong)] hover:shadow-md group">
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-5 py-4 transition-all duration-300 hover:border-[var(--color-border-strong)] hover: group">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-extrabold tracking-wider text-[var(--color-text-muted)] uppercase">{label}</p>
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-primary-surface)] text-[var(--color-primary)] transition-transform duration-300 group-hover:scale-110">

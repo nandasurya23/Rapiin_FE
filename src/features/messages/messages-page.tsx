@@ -19,6 +19,9 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ROUTES } from "@/lib/routes";
 import { LinkButton } from "@/components/ui/button";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useOrders } from "@/hooks/use-orders";
+import { useCustomers } from "@/hooks/use-customers";
+import { useMessageTemplates } from "@/hooks/use-message-templates";
 import { getEntityById } from "@/lib/domain";
 import { cn } from "@/lib/cn";
 import type { MessageCategory } from "@/types/message";
@@ -33,15 +36,15 @@ async function copyToClipboard(text: string) {
 
 export function MessagesPage() {
   const toast = useToast();
+  const { business } = useAppData();
+  const { customers } = useCustomers();
+  const { orders } = useOrders();
   const {
-    business,
-    customers,
-    orders,
     messageTemplates,
     createMessageTemplate,
     updateMessageTemplate,
     deleteMessageTemplate,
-  } = useAppData();
+  } = useMessageTemplates();
 
   const {
     activeCategory,
@@ -274,18 +277,13 @@ export function MessagesPage() {
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* SECTION 1: HERO HEADER */}
       <PageHeader
-        variant="hero"
+        variant="default"
+        className="px-0 bg-transparent border-none sm:px-0 py-0"
         title="Template WhatsApp Siap Pakai"
         description="Kirim pesan cepat ke pelanggan untuk menagih DP, follow-up, atau minta review. Atau susun pesan manual dari katalog template."
-        badge={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-            <MessageCircle className="h-3.5 w-3.5 animate-pulse text-[var(--color-accent)]" />
-            Pesan Cepat
-          </span>
-        }
         action={
           <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-            <Button onClick={() => { setIsComposerOpen(true); setComposerTab("SEND"); }} variant="accent" className="shadow-sm">
+            <Button onClick={() => { setIsComposerOpen(true); setComposerTab("SEND"); }} variant="primary" size="sm">
               <PencilLine className="h-4 w-4 mr-2" />
               Buat Pesan Manual
             </Button>
@@ -294,22 +292,20 @@ export function MessagesPage() {
       />
 
       {customers.length === 0 ? (
-        <Card className="border-[var(--color-border)] shadow-none animate-fade-up">
-          <CardBody className="p-8 text-center flex flex-col items-center justify-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center text-[var(--color-primary)]">
-              <Users className="h-8 w-8" />
-            </div>
-            <div className="space-y-1.5 max-w-md">
-              <h3 className="font-bold text-lg text-[var(--color-text)]">Belum Ada Pelanggan</h3>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                Daftar template WhatsApp otomatis akan aktif secara instan setelah Anda menambahkan pelanggan pertama atau menerima pemesanan dari pelanggan!
-              </p>
-            </div>
-            <LinkButton href={ROUTES.customers(business.slug)} size="sm">
-              Tambah Pelanggan Baru
-            </LinkButton>
-          </CardBody>
-        </Card>
+        <div className="border-[var(--color-border)] py-12 text-center flex flex-col items-center justify-center space-y-4">
+          <div className="h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center text-[var(--color-primary)]">
+            <Users className="h-8 w-8" />
+          </div>
+          <div className="space-y-1.5 max-w-md">
+            <h3 className="font-bold text-lg text-[var(--color-text)]">Belum Ada Pelanggan</h3>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Daftar template WhatsApp otomatis akan aktif secara instan setelah Anda menambahkan pelanggan pertama atau menerima pemesanan dari pelanggan!
+            </p>
+          </div>
+          <LinkButton href={ROUTES.customers(business.slug)} size="sm">
+            Tambah Pelanggan Baru
+          </LinkButton>
+        </div>
       ) : (
         <>
           {/* SECTION 2: FOLLOW-UP QUICK ACTIONS */}
@@ -340,8 +336,8 @@ export function MessagesPage() {
                 const message = renderTemplate(template.content, values);
 
                 return (
-                  <Card key={`${action.title}-${index}`} className="border-[var(--color-border)] shadow-none flex flex-col justify-between">
-                    <CardBody className="p-4 flex flex-col justify-between h-full gap-4">
+                  <div key={`${action.title}-${index}`} className="border border-[var(--color-border)] rounded-md flex flex-col justify-between bg-[var(--color-surface)]">
+                    <div className="p-4 flex flex-col justify-between h-full gap-4">
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
@@ -356,13 +352,13 @@ export function MessagesPage() {
                         </p>
                       </div>
 
-                      <div className="flex gap-2 border-t border-[var(--color-border)]/40 pt-3">
+                      <div className="flex gap-2 border-t border-[var(--color-border)] pt-3">
                         <WhatsAppButton phoneNumber={customer.whatsappNumber} message={message} label="Kirim WA" className="h-9 px-3 text-xs w-full justify-center" />
                         <Button
                           type="button"
                           variant="secondary"
                           isLoading={loadingAction === `action-${action.title}`}
-                          className="h-9 px-3 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                          className="h-9 px-3 rounded-md border-[var(--color-border)] text-xs font-bold"
                           onClick={async () => {
                             setLoadingAction(`action-${action.title}`);
                             try {
@@ -377,8 +373,8 @@ export function MessagesPage() {
                           Salin
                         </Button>
                       </div>
-                    </CardBody>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -386,25 +382,23 @@ export function MessagesPage() {
 
           {/* SECTION 3: WHATSAPP CONFIG OVERVIEW */}
           <section className="animate-fade-up-delay-2">
-            <Card className="border-[var(--color-border)] shadow-none">
-              <CardBody className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="space-y-1">
-                  <h3 className="font-bold text-[var(--color-text)]">Konfigurasi & Ringkasan</h3>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Sistem WhatsApp otomatis aktif untuk semua pelanggan dengan nomor valid.</p>
+            <div className="border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="font-bold text-[var(--color-text)]">Konfigurasi & Ringkasan</h3>
+                <p className="text-xs text-[var(--color-text-secondary)]">Sistem WhatsApp otomatis aktif untuk semua pelanggan dengan nomor valid.</p>
+              </div>
+              
+              <div className="flex flex-wrap gap-3">
+                <div className="flex flex-col justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5">
+                  <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Pelanggan Aktif</p>
+                  <p className="mt-0.5 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{customers.length} Orang</p>
                 </div>
-                
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex flex-col justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2.5">
-                    <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Pelanggan Aktif</p>
-                    <p className="mt-0.5 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{customers.length} Orang</p>
-                  </div>
-                  <div className="flex flex-col justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2.5">
-                    <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Total Order</p>
-                    <p className="mt-0.5 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{orders.length} Transaksi</p>
-                  </div>
+                <div className="flex flex-col justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5">
+                  <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Total Order</p>
+                  <p className="mt-0.5 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{orders.length} Transaksi</p>
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           </section>
 
           {/* COMPOSER SHEET */}

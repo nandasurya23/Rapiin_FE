@@ -192,15 +192,10 @@ export function createInitialAppStorageState(): AppStorageState {
   return {
     version: 1,
     business,
-    customers: [],
-    orders: [],
-    invoices: [],
     subscriptions: [createBusinessSubscriptionRecord({ businessId: business.id, planCode: "FREE_TRIAL", startedAt: now() })],
     upgradeRequests: [],
     backupRecords: [],
     superAdminLogs: [],
-    messageTemplates: [],
-    publicSubmissions: [],
     auth: {
       currentUserId: null,
       onboardingCompleted: false,
