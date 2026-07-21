@@ -97,7 +97,7 @@ export function InvoicesPage() {
 
  const selectedInvoice = filteredInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? filteredInvoices[0] ?? invoices[0];
  const selectedOrder = getEntityById(orders, selectedOrderId) ?? orders[0];
- const selectedOrderLink = selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug);
+ const selectedOrderLink = selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode, selectedInvoice.integritySeal) : ROUTES.invoices(business.slug);
 
  async function createFromOrder() {
   if (loadingAction === "create-invoice") return;
@@ -162,7 +162,7 @@ export function InvoicesPage() {
        Buat Nota Baru
       </LinkButton>
       <LinkButton
-       href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug)}
+       href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode, selectedInvoice.integritySeal) : ROUTES.invoices(business.slug)}
        variant="secondary"
        className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold hover:text-white"
       >
@@ -324,7 +324,7 @@ export function InvoicesPage() {
          <div className="mt-5 flex flex-wrap gap-2 border-t border-dashed border-[var(--color-border)] pt-5">
           <WhatsAppButton
            phoneNumber={selectedInvoiceOrder?.whatsappNumber ?? business.whatsappNumber}
-           message={`Halo ${selectedInvoice.customerName}, ini nota untuk ${selectedInvoice.invoiceCode}. Silakan cek preview nota detail di link berikut: ${ROUTES.invoice(selectedInvoice.invoiceCode)}`}
+           message={`Halo ${selectedInvoice.customerName}, ini nota untuk ${selectedInvoice.invoiceCode}. Silakan cek preview nota detail di link berikut: ${typeof window !== "undefined" ? window.location.origin : ""}${ROUTES.invoice(selectedInvoice.invoiceCode, selectedInvoice.integritySeal)}`}
            label="Kirim WA"
           />
           <Button
@@ -346,7 +346,7 @@ export function InvoicesPage() {
            Salin Kode
           </Button>
           <LinkButton
-           href={ROUTES.invoice(selectedInvoice.invoiceCode)}
+           href={ROUTES.invoice(selectedInvoice.invoiceCode, selectedInvoice.integritySeal)}
            variant="secondary"
            className="rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold h-10 px-4"
           >

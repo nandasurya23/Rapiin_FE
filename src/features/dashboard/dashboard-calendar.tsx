@@ -325,8 +325,8 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
   }
  }
 
- function onOpenInvoice(invoiceCode: string) {
-  window.open(ROUTES.invoice(invoiceCode), "_blank", "noopener,noreferrer");
+ function onOpenInvoice(invoiceCode: string, seal: string) {
+  window.open(ROUTES.invoice(invoiceCode, seal), "_blank", "noopener,noreferrer");
   toast.info("Nota dibuka", "Preview nota dibuka di tab baru.");
  }
 
