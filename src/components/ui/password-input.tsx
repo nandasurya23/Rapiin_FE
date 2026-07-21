@@ -6,28 +6,28 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 
 type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
-  hasError?: boolean;
+ hasError?: boolean;
 };
 
 export function PasswordInput({ className, hasError, ...props }: PasswordInputProps) {
-  const [visible, setVisible] = useState(false);
+ const [visible, setVisible] = useState(false);
 
-  return (
-    <div className="relative">
-      <Input
-        {...props}
-        hasError={hasError}
-        type={visible ? "text" : "password"}
-        className={cn("pr-11", className)}
-      />
-      <button
-        type="button"
-        onClick={() => setVisible((current) => !current)}
-        className="absolute right-3 top-1/2 inline-flex -translate-y-1/2 items-center justify-center text-[var(--color-text-muted)] transition hover:text-[var(--color-text)]"
-        aria-label={visible ? "Sembunyikan password" : "Lihat password"}
-      >
-        {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </button>
-    </div>
-  );
+ return (
+  <div className="relative">
+   <Input
+    {...props}
+    hasError={hasError}
+    type={visible ? "text" : "password"}
+    className={cn("pr-11", className)}
+   />
+   <button
+    type="button"
+    onClick={() => setVisible((current) => !current)}
+    className="absolute right-3 top-1/2 inline-flex -translate-y-1/2 items-center justify-center text-[var(--color-text-muted)] transition hover:text-[var(--color-text)]"
+    aria-label={visible ? "Sembunyikan password" : "Lihat password"}
+   >
+    {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   </button>
+  </div>
+ );
 }

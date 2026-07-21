@@ -1,4 +1,3 @@
-import { Card, CardBody } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 
@@ -19,14 +18,8 @@ export function FeaturePlaceholder({ title, description, nextStep }: FeaturePlac
             description={description}
             actionLabel={nextStep}
           />
-          <Card>
-            <CardBody className="space-y-2">
-              <p className="text-sm font-medium text-[var(--color-text)]">Status phase</p>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                Struktur halaman sudah ada. Fitur detail akan diisi pada phase berikutnya.
-              </p>
-            </CardBody>
-          </Card>
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+          </div>
         </div>
       </main>
     </div>
