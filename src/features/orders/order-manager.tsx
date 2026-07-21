@@ -82,20 +82,7 @@ export function OrderManager() {
   async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus) {
     try {
       await updateOrder(order.id, {
-        customerName: order.customerName,
-        whatsappNumber: order.whatsappNumber,
-        title: order.title,
-        mode: order.mode,
         status: nextStatus,
-        paymentStatus: order.paymentStatus,
-        scheduledDate: order.scheduledDate || undefined,
-        scheduledTime: order.scheduledTime || undefined,
-        bookingDurationMinutes: order.bookingDurationMinutes || undefined,
-        resourceId: order.resourceId || undefined,
-        resourceNameSnapshot: order.resourceNameSnapshot || undefined,
-        totalAmount: order.totalAmount || undefined,
-        dpAmount: order.dpAmount || undefined,
-        notes: order.notes || undefined,
       });
       toast.success("Status order berhasil diperbarui!");
     } catch (err) {

@@ -66,9 +66,13 @@ export function getPublicCatalog(input: Business | BusinessMode) {
   return [];
 }
 
-export function inferCatalogDurationMinutes(item?: Pick<PublicCatalogItem, "name" | "durationMinutes"> | null) {
+export function inferCatalogDurationMinutes(item?: Pick<PublicCatalogItem, "name" | "durationMinutes" | "duration"> | null) {
   if (!item) {
     return null;
+  }
+
+  if (typeof item.duration === "number" && item.duration > 0) {
+    return item.duration;
   }
 
   if (typeof item.durationMinutes === "number" && item.durationMinutes > 0) {

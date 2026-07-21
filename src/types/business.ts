@@ -18,6 +18,7 @@ export type PublicCatalogItem = {
   description: string;
   priceLabel?: string;
   durationMinutes?: number;
+  duration?: number;
 };
 
 export type Business = Timestamped & {

@@ -145,7 +145,7 @@ type AppDataContextValue = AppStorageState & {
   updateCustomer: (id: string, payload: CustomerInput) => Promise<Customer | null>;
   deleteCustomer: (id: string) => Promise<void>;
   createOrder: (payload: OrderInput) => Promise<Order>;
-  updateOrder: (id: string, payload: OrderInput) => Promise<Order | null>;
+  updateOrder: (id: string, payload: Partial<OrderInput>) => Promise<Order | null>;
   deleteOrder: (id: string) => Promise<void>;
   createInvoiceFromOrder: (orderId: string, notes?: string) => Promise<Invoice | null>;
   createMessageTemplate: (payload: { category: string; title: string; content: string }) => Promise<MessageTemplate>;
@@ -558,7 +558,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return order;
   }, [canCreateOrder, readOnlyReason, state.business.id, queryClient]);
 
-  const updateOrder = useCallback(async (id: string, payload: OrderInput) => {
+  const updateOrder = useCallback(async (id: string, payload: Partial<OrderInput>) => {
     if (!canAccessWriteMode) {
       throw new Error(readOnlyReason || "Mode baca saja aktif.");
     }
