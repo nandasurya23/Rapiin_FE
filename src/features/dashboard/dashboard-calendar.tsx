@@ -246,10 +246,6 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
       const nextPaymentStatus = patch?.paymentStatus ?? getDraftPaymentStatus(order);
 
       await updateOrder(order.id, {
-        customerName: order.customerName,
-        whatsappNumber: order.whatsappNumber,
-        title: order.title,
-        mode: order.mode,
         status: nextStatus,
         paymentStatus: nextPaymentStatus,
         scheduledDate: order.scheduledDate,
@@ -257,10 +253,6 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
         bookingDurationMinutes: order.bookingDurationMinutes,
         bookingHoldExpiresAt: order.bookingHoldExpiresAt,
         resourceId: order.resourceId,
-        resourceNameSnapshot: order.resourceNameSnapshot,
-        totalAmount: order.totalAmount,
-        dpAmount: order.dpAmount,
-        notes: order.notes,
       });
 
       setDraftStatuses((current) => ({

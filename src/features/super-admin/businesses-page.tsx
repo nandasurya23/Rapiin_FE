@@ -16,7 +16,7 @@ import { formatDateTime } from "@/lib/format";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { ApiAdminService, AdminBusinessRow, AdminUser } from "@/services/admin.service";
+import { ApiAdminService, AdminBusinessRow, AdminUser, SystemMetrics } from "@/services/admin.service";
 import type { PlanCode } from "@/types/subscription";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -31,6 +31,9 @@ export function SuperAdminBusinessesPage() {
 
   const [businesses, setBusinesses] = useState<AdminBusinessRow[]>([]);
   const [totalItems, setTotalItems] = useState(0);
+  const [activeCount, setActiveCount] = useState(0);
+  const [suspendedCount, setSuspendedCount] = useState(0);
+  const [pendingUpgradeCount, setPendingUpgradeCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("");
@@ -38,9 +41,22 @@ export function SuperAdminBusinessesPage() {
   const [loading, setLoading] = useState(true);
   const pageSize = 10;
 
+  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+
   // Dialog actions state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [businessToDelete, setBusinessToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const data = await ApiAdminService.fetchSystemMetrics();
+      if (data) {
+        setMetrics(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch system metrics", err);
+    }
+  }, []);
 
   const fetchBusinesses = useCallback(async () => {
     setLoading(true);
@@ -61,6 +77,9 @@ export function SuperAdminBusinessesPage() {
         }));
         setBusinesses(mapped);
         setTotalItems(response.meta?.total ?? 0);
+        setActiveCount(response.meta?.activeCount ?? 0);
+        setSuspendedCount(response.meta?.suspendedCount ?? 0);
+        setPendingUpgradeCount(response.meta?.pendingUpgradeCount ?? 0);
       }
     } catch (err) {
       console.error("Failed to fetch businesses", err);
@@ -72,6 +91,12 @@ export function SuperAdminBusinessesPage() {
   useEffect(() => {
     fetchBusinesses();
   }, [fetchBusinesses]);
+
+  useEffect(() => {
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 30000);
+    return () => clearInterval(interval);
+  }, [fetchMetrics]);
 
   const handleAction = async (actionPromise: Promise<unknown>, successMsg: string) => {
     try {
@@ -97,10 +122,7 @@ export function SuperAdminBusinessesPage() {
     { value: "PENDING_UPGRADE_APPROVAL", label: "Menunggu Approval" },
   ];
 
-  // Quick statistics based on current page
-  const activeCount = businesses.filter((b) => b.subscription?.status === "ACTIVE").length;
-  const suspendedCount = businesses.filter((b) => b.subscription?.status === "SUSPENDED").length;
-  const pendingUpgradeCount = businesses.filter((b) => b.subscription?.status === "PENDING_UPGRADE_APPROVAL").length;
+  // Quick statistics loaded from server metadata
 
   return (
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -167,6 +189,52 @@ export function SuperAdminBusinessesPage() {
           </CardBody>
         </Card>
       </section>
+
+      {/* SYSTEM TELEMETRY */}
+      {metrics && (
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-[var(--color-info-surface)] border border-[var(--color-info-border)] flex items-center justify-center text-[var(--color-info-text)]">
+              <HardDrive className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status Server</p>
+              <p className="text-sm font-bold text-[var(--color-text)] mt-0.5">
+                CPU: {metrics.system.cpuUsagePercent}% | RAM: {metrics.system.memory.usagePercent}%
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "h-10 w-10 rounded-xl flex items-center justify-center border",
+              metrics.database.healthy 
+                ? "bg-[var(--color-success-surface)] border-[var(--color-success-border)] text-[var(--color-success-text)]"
+                : "bg-[var(--color-danger-surface)] border-[var(--color-danger-border)] text-[var(--color-danger-text)]"
+            )}>
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Database</p>
+              <p className="text-sm font-bold text-[var(--color-text)] mt-0.5">
+                {metrics.database.healthy ? `ONLINE (${metrics.database.latencyMs}ms)` : "DISCONNECTED"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] flex items-center justify-center text-[var(--color-warning-text)]">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Populasi Sistem</p>
+              <p className="text-sm font-bold text-[var(--color-text)] mt-0.5">
+                Users: {metrics.stats.totalUsers} | Biz: {metrics.stats.totalBusinesses}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FILTER & SEARCH (z-30 relative to ensure select dropdown displays above the list) */}
       <section className="relative z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl">

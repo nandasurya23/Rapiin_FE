@@ -41,7 +41,12 @@ export function SuperAdminResetRequestsPage() {
   }, [fetchRequests]);
 
   const handleCopyLink = async (request: AdminResetRequestRow) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://rapiin.id";
+    let origin = typeof window !== "undefined" ? window.location.origin : "https://app.rapiinusaha.com";
+    if (origin.includes("admin.rapiinusaha.com")) {
+      origin = origin.replace("admin.rapiinusaha.com", "app.rapiinusaha.com");
+    } else if (origin.includes("localhost:3002")) {
+      origin = origin.replace("localhost:3002", "localhost:3000");
+    }
     const resetUrl = `${origin}/auth/reset-password?email=${encodeURIComponent(request.user.email)}&token=${encodeURIComponent(request.plainToken || "")}`;
     try {
       await navigator.clipboard.writeText(resetUrl);
@@ -52,7 +57,12 @@ export function SuperAdminResetRequestsPage() {
   };
 
   const handleSendWhatsApp = (request: AdminResetRequestRow) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://rapiin.id";
+    let origin = typeof window !== "undefined" ? window.location.origin : "https://app.rapiinusaha.com";
+    if (origin.includes("admin.rapiinusaha.com")) {
+      origin = origin.replace("admin.rapiinusaha.com", "app.rapiinusaha.com");
+    } else if (origin.includes("localhost:3002")) {
+      origin = origin.replace("localhost:3002", "localhost:3000");
+    }
     const resetUrl = `${origin}/auth/reset-password?email=${encodeURIComponent(request.user.email)}&token=${encodeURIComponent(request.plainToken || "")}`;
     const phone = request.user.phoneNumber || "";
     const cleanPhone = phone.replace(/[^0-9]/g, "");

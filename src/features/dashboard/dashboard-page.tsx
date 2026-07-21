@@ -49,21 +49,9 @@ export function DashboardPage() {
           ? "CONFIRMED"
           : order.status;
 
-      updateOrder(orderId, {
-        customerName: order.customerName,
-        whatsappNumber: order.whatsappNumber,
-        title: order.title,
-        mode: order.mode,
+      await updateOrder(orderId, {
         status: nextStatus,
         paymentStatus: nextPaymentStatus,
-        scheduledDate: order.scheduledDate || undefined,
-        scheduledTime: order.scheduledTime || undefined,
-        bookingDurationMinutes: order.bookingDurationMinutes || undefined,
-        resourceId: order.resourceId || undefined,
-        resourceNameSnapshot: order.resourceNameSnapshot || undefined,
-        totalAmount: order.totalAmount || undefined,
-        dpAmount: order.dpAmount || undefined,
-        notes: order.notes || undefined,
       });
       toast.success("Status pembayaran berhasil diperbarui!");
     } catch (err) {
@@ -76,23 +64,10 @@ export function DashboardPage() {
     if (!order) return;
 
     try {
-      updateOrder(order.id, {
-        customerName: order.customerName,
-        whatsappNumber: order.whatsappNumber,
-        title: order.title,
-        mode: order.mode,
+      await updateOrder(order.id, {
         status: "SELESAI",
-        paymentStatus: order.paymentStatus,
-        scheduledDate: order.scheduledDate || undefined,
-        scheduledTime: order.scheduledTime || undefined,
-        bookingDurationMinutes: order.bookingDurationMinutes || undefined,
-        resourceId: order.resourceId || undefined,
-        resourceNameSnapshot: order.resourceNameSnapshot || undefined,
-        totalAmount: order.totalAmount || undefined,
-        dpAmount: order.dpAmount || undefined,
-        notes: order.notes || undefined,
       });
-      toast.success("Order ditandai selesai");
+      toast.success("Order telah diselesaikan dan dirapikan!");
     } catch (err) {
       toast.error("Gagal mengubah status", err instanceof Error ? err.message : "");
     }

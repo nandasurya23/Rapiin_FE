@@ -55,6 +55,9 @@ export interface PaginatedResponse<T> {
   data: T[];
   meta?: {
     total: number;
+    activeCount?: number;
+    suspendedCount?: number;
+    pendingUpgradeCount?: number;
   };
 }
 
@@ -164,4 +167,33 @@ export class ApiAdminService {
       method: "DELETE",
     });
   }
+
+  static async fetchSystemMetrics(): Promise<SystemMetrics> {
+    return apiFetch<SystemMetrics>("/api/admin/system/metrics");
+  }
+}
+
+export interface SystemMetrics {
+  system: {
+    uptimeSeconds: number;
+    cpuUsagePercent: number;
+    memory: {
+      totalGb: number;
+      usedGb: number;
+      freeGb: number;
+      usagePercent: number;
+    };
+    osPlatform: string;
+    osRelease: string;
+    cpuCores: number;
+  };
+  database: {
+    healthy: boolean;
+    latencyMs: number;
+  };
+  stats: {
+    totalBusinesses: number;
+    totalUsers: number;
+    activeSubscriptions: number;
+  };
 }

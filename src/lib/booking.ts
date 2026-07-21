@@ -248,7 +248,7 @@ export function isBookingHoldActive(order: Order, now = new Date()) {
     return false;
   }
 
-  if (order.paymentStatus !== "UNPAID" || order.status !== "WAITING_DP") {
+  if (order.paymentStatus !== "UNPAID" || (order.status !== "WAITING_DP" && order.status !== "INQUIRY")) {
     return false;
   }
 
@@ -261,15 +261,18 @@ export function isBookingLocked(order: Order, now = new Date()) {
     return false;
   }
 
-  if (order.status === "BATAL" || order.paymentStatus === "CANCELLED" || order.paymentStatus === "REFUNDED") {
+  if (order.status === "BATAL" || order.status === "SELESAI" || order.paymentStatus === "CANCELLED" || order.paymentStatus === "REFUNDED") {
     return false;
   }
 
-  if (order.paymentStatus === "DP_PAID" || order.paymentStatus === "PAID") {
-    return true;
+  if ((order.status === "INQUIRY" || order.status === "WAITING_DP") && order.paymentStatus === "UNPAID") {
+    const holdExpiresAt = getBookingHoldExpiresAt(order);
+    if (holdExpiresAt && holdExpiresAt.getTime() <= now.getTime()) {
+      return false;
+    }
   }
 
-  return isBookingHoldActive(order, now);
+  return true;
 }
 
 export function getBookingInterval(order: Order) {
