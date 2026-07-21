@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { Button, LinkButton } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
 import { ROUTES } from "@/lib/routes";
 import { CustomerStatusBadge, OrderStatusBadge } from "@/components/shared/status-badge";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
@@ -24,11 +23,17 @@ import { useAppData } from "@/components/providers/app-data-provider";
 import { renderTemplate } from "@/lib/messages";
 import { useToast } from "@/components/ui/toast-provider";
 import { cn } from "@/lib/cn";
+import { useOrders } from "@/hooks/use-orders";
+import { useCustomers } from "@/hooks/use-customers";
+import { useMessageTemplates } from "@/hooks/use-message-templates";
 
 
 export function DashboardPage() {
   const toast = useToast();
-  const { business, orders, customers, currentUser, messageTemplates, updateOrder, updateCustomer, currentOrderUsage, currentBusinessUsage, subscriptionForCurrentBusiness } = useAppData();
+  const { business, currentUser, subscriptionForCurrentBusiness } = useAppData();
+  const { orders, updateOrder } = useOrders();
+  const { customers, updateCustomer, currentBusinessUsage } = useCustomers();
+  const { messageTemplates } = useMessageTemplates();
 
   const isNearCustomerLimit = currentBusinessUsage 
     && currentBusinessUsage.used >= currentBusinessUsage.limit - 5;
@@ -268,41 +273,25 @@ export function DashboardPage() {
 
       {/* ── WELCOME HERO BANNER ─────────────────────────── */}
       <PageHeader
-        variant="hero"
+        variant="default"
+        className="px-0 bg-transparent border-none sm:px-0 py-0"
         title={`Selamat Datang Kembali, ${currentUser?.name ?? business.ownerName}`}
         description="Berikut adalah rangkuman aktivitas operasional, penagihan, dan tugas penting bisnis Anda hari ini."
         badge={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-            <Sparkles className="h-3 w-3 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-[var(--color-text-secondary)] uppercase mb-2">
+            <Sparkles className="h-3 w-3" />
             {formatDate(today)}
           </span>
         }
-        statsCard={
-          <div className="flex flex-col gap-2 rounded-2xl bg-white/[0.06] p-4.5 border border-white/[0.08] backdrop-blur-md min-w-[280px]">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-white/80">📈 Kuota Pelanggan Aktif</span>
-              <span className="text-[var(--color-gold-300)]">{currentBusinessUsage.used} / {currentBusinessUsage.limit} Pelanggan</span>
-            </div>
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div 
-                className="absolute bottom-0 left-0 top-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-300"
-                style={{ width: `${Math.min(100, (currentBusinessUsage.limit > 0 ? (currentBusinessUsage.used / currentBusinessUsage.limit) : 0) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-white/50">
-              Kuota diperbarui otomatis pada {formatDate(currentOrderUsage.expiresAt)}.
-            </p>
-          </div>
-        }
         action={
-          <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-            <LinkButton href={ROUTES.orders(business.slug)} variant="accent" size="sm" className="shadow-sm">
+          <div className="flex flex-wrap gap-2 xl:shrink-0">
+            <LinkButton href={ROUTES.orders(business.slug)} variant="primary" size="sm">
               Tambah Order
             </LinkButton>
-            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20 hover:text-white">
+            <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm">
               Tambah Customer
             </LinkButton>
-            <LinkButton href={ROUTES.messages(business.slug)} variant="secondary" size="sm" className="bg-white/10 text-white border-white/[0.15] hover:bg-white/20 hover:text-white">
+            <LinkButton href={ROUTES.messages(business.slug)} variant="secondary" size="sm">
               Pesan Cepat
             </LinkButton>
           </div>
@@ -314,37 +303,16 @@ export function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           
-          // Custom color mappings based on tone
-          let iconBg = "";
-          let borderHover = "";
-          let accentBg = "";
-          if (stat.tone === "info") {
-            iconBg = "bg-blue-50/80 text-[var(--color-info)] border-blue-100";
-            borderHover = "hover:border-blue-500/30 hover:shadow-[0_0_12px_rgba(55,88,145,0.08)]";
-            accentBg = "bg-gradient-to-tr from-blue-50/10 to-transparent";
-          } else if (stat.tone === "warning") {
-            iconBg = "bg-amber-50/80 text-[var(--color-warning)] border-amber-100";
-            borderHover = "hover:border-amber-500/30 hover:shadow-[0_0_12px_rgba(218,159,78,0.08)]";
-            accentBg = "bg-gradient-to-tr from-amber-50/10 to-transparent";
-          } else if (stat.tone === "success") {
-            iconBg = "bg-emerald-50/80 text-[var(--color-success)] border-emerald-100";
-            borderHover = "hover:border-emerald-500/30 hover:shadow-[0_0_12px_rgba(30,122,82,0.08)]";
-            accentBg = "bg-gradient-to-tr from-emerald-50/10 to-transparent";
-          }
-
           return (
-            <Card key={stat.label} className={cn("transition-all duration-300 hover:-translate-y-0.5 border-[var(--color-border)]", borderHover)}>
-              <CardBody className={cn("p-5 flex items-center justify-between gap-4 relative overflow-hidden", accentBg)}>
-                <div className="space-y-1.5 z-10 flex-1 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">{stat.label}</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-black text-[var(--color-text)] tracking-tight whitespace-nowrap overflow-x-auto no-scrollbar">{stat.value}</p>
-                </div>
-                <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border z-10 shadow-sm", iconBg)}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="absolute -right-6 -bottom-6 h-12 w-12 rounded-full bg-slate-500/[0.01] pointer-events-none animate-pulse" />
-              </CardBody>
-            </Card>
+            <div key={stat.label} className="border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] flex items-center justify-between gap-4 p-5">
+              <div className="space-y-1 flex-1 min-w-0">
+                <p className="text-xs font-semibold text-[var(--color-text-secondary)]">{stat.label}</p>
+                <p className="text-xl sm:text-2xl font-bold text-[var(--color-text)] tracking-tight whitespace-nowrap overflow-x-auto no-scrollbar">{stat.value}</p>
+              </div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center text-[var(--color-text-muted)]">
+                <Icon className="h-5 w-5 opacity-70" />
+              </div>
+            </div>
           );
         })}
       </section>
@@ -359,51 +327,29 @@ export function DashboardPage() {
 
       {/* ── ACTION ITEMS ──────────────────────────────── */}
       <section ref={actionSectionRef} className="animate-fade-up-delay-2 scroll-mt-20">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="p-6 space-y-5">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--color-text)]">Perlu Diurus</h2>
-                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                  Aksi penting maksimal 2 klik — fokus ke tugas yang paling mendesak hari ini.
-                </p>
-              </div>
-              {filteredActionItems.length > 0 && (
-                <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-800 border border-amber-200/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                  {filteredActionItems.length} Mendadak
-                </span>
-              )}
+        <div className="space-y-4">
+          <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] pb-3">
+            <div>
+              <h2 className="text-lg font-bold text-[var(--color-text)]">Perlu Diurus</h2>
+              <p className="text-sm text-[var(--color-text-secondary)]">Aksi penting maksimal 2 klik.</p>
             </div>
+            {filteredActionItems.length > 0 && (
+              <span className="inline-flex items-center rounded-full bg-[var(--color-surface-elevated)] px-2.5 py-1 text-xs font-semibold">
+                {filteredActionItems.length} Mendadak
+              </span>
+            )}
+          </div>
 
-
-            {/* Items list */}
-            <div className="space-y-3">
-              {filteredActionItems.length ? (
-                filteredActionItems.map((item) => {
-                  // Categorized left border stripes
-                  let leftBorder = "border-l-4 border-l-slate-300";
-                  if (item.reason.toLowerCase().includes("pembayaran") || item.reason.toLowerCase().includes("tagihan") || item.reason.toLowerCase().includes("dp")) {
-                    leftBorder = "border-l-4 border-l-amber-500";
-                  } else if (item.reason.toLowerCase().includes("ulasan") || item.reason.toLowerCase().includes("selesai")) {
-                    leftBorder = "border-l-4 border-l-emerald-500";
-                  } else if (item.reason.toLowerCase().includes("didiamkan") || item.reason.toLowerCase().includes("follow")) {
-                    leftBorder = "border-l-4 border-l-blue-500";
-                  }
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        "flex flex-col gap-4 rounded-2xl",
-                        "border border-[var(--color-border)]",
-                        "bg-[var(--color-surface)] px-5 py-4",
-                        "transition-all duration-[var(--transition-fast)]",
-                        "hover:border-[var(--color-border-strong)] hover:shadow-sm",
-                        "md:flex-row md:items-center md:justify-between",
-                        leftBorder
-                      )}
-                    >
+          <div className="flex flex-col gap-0 divide-y divide-[var(--color-border)] border-y border-[var(--color-border)] bg-[var(--color-surface)]">
+            {filteredActionItems.length ? (
+              filteredActionItems.map((item) => {
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between px-1"
+                    )}
+                  >
                       {/* Info */}
                       <div className="min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -487,17 +433,18 @@ export function DashboardPage() {
                     </div>
                   );
                 })
-              ) : (
+            ) : (
+              <div className="py-8">
                 <EmptyState
                   icon={<CheckCircle2 className="h-5 w-5" />}
                   title="Semua beres hari ini"
                   description="Belum ada order, booking, atau follow-up untuk tanggal yang dipilih."
                   size="sm"
                 />
-              )}
-            </div>
-          </CardBody>
-        </Card>
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* ── QUICK LINKS ───────────────────────────────── */}

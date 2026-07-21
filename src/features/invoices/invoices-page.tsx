@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ReceiptText, Send, FileSpreadsheet, Plus, ExternalLink, FileText, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
@@ -16,6 +15,7 @@ import { ROUTES } from "@/lib/routes";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { getEntityById } from "@/lib/domain";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useOrders } from "@/hooks/use-orders";
 import { useInvoices } from "@/hooks/use-invoices";
 import { Pagination } from "@/components/ui/pagination";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
@@ -41,8 +41,9 @@ async function copyToClipboard(text: string) {
 
 export function InvoicesPage() {
   const toast = useToast();
-  const { business, orders, canCreateInvoice, readOnlyReason } = useAppData();
-  const { invoices, isLoading, createInvoiceFromOrder } = useInvoices();
+  const { business, readOnlyReason } = useAppData();
+  const { orders } = useOrders();
+  const { invoices, isLoading, createInvoiceFromOrder, canCreateInvoice } = useInvoices();
   const [filter, setFilter] = useState<InvoiceFilter>("ALL");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(invoices[0]?.id ?? "");
   const [selectedOrderId, setSelectedOrderId] = useState(
@@ -156,14 +157,14 @@ export function InvoicesPage() {
         }
         action={
           <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-            <LinkButton href={ROUTES.orders(business.slug)} variant="accent" className="font-bold shadow-sm">
+            <LinkButton href={ROUTES.orders(business.slug)} variant="accent" className="font-bold ">
               <Plus className="h-4 w-4" />
               Buat Nota Baru
             </LinkButton>
             <LinkButton
               href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode) : ROUTES.invoices(business.slug)}
               variant="secondary"
-              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold shadow-sm hover:text-white"
+              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold  hover:text-white"
             >
               <ExternalLink className="h-4 w-4" />
               Buka Link Publik
@@ -174,8 +175,8 @@ export function InvoicesPage() {
 
       {/* SECTION 2: STATS SUMMARY */}
       <section className="animate-fade-up-delay-1">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="p-5">
             <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 text-sm text-[var(--color-text-secondary)]">
                 <div className="flex items-center justify-between gap-3">
@@ -205,15 +206,15 @@ export function InvoicesPage() {
                 </div>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 3: INVOICES GRID */}
       <section className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr] animate-fade-up-delay-2">
         {/* Left Card: Invoice List */}
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-4 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-4 p-5">
             <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
               <div>
                 <h2 className="text-lg font-bold text-[var(--color-text)]">Daftar Riwayat Invoice</h2>
@@ -257,7 +258,7 @@ export function InvoicesPage() {
                       "w-full rounded-2xl border px-4 py-4 text-left transition-all duration-300",
                       leftBorderStripe,
                       active
-                        ? "border-[var(--color-primary-border)] bg-[var(--color-primary-surface)] shadow-md"
+                        ? "border-[var(--color-primary-border)] bg-[var(--color-primary-surface)] "
                         : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:border-[var(--color-border-strong)]"
                     )}
                   >
@@ -303,12 +304,12 @@ export function InvoicesPage() {
                 onPageChange={setCurrentPage}
               />
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
 
         {/* Right Card: Preview Sheet & Form */}
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-5 p-5">
             <div className="border-b border-[var(--color-border)] pb-3">
               <h2 className="text-lg font-bold text-[var(--color-text)]">Preview Lembar Nota</h2>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Tampilan struk digital interaktif yang akan dikirim ke WhatsApp customer.</p>
@@ -402,7 +403,7 @@ export function InvoicesPage() {
                   isLoading={loadingAction === "create-invoice"}
                   onClick={() => void createFromOrder()}
                   disabled={!canCreateInvoice || loadingAction === "create-invoice"}
-                  className="shadow-sm font-bold text-sm px-5 py-2 rounded-xl flex items-center gap-1.5"
+                  className=" font-bold text-sm px-5 py-2 rounded-xl flex items-center gap-1.5"
                 >
                   <FileSpreadsheet className="h-4 w-4" />
                   Buat Nota
@@ -422,8 +423,8 @@ export function InvoicesPage() {
                 </LinkButton>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
     </main>
   );

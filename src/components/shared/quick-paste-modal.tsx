@@ -12,6 +12,8 @@ import { TimeSelect } from "@/components/ui/time-select";
 import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useOrders } from "@/hooks/use-orders";
+import { useCustomers } from "@/hooks/use-customers";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
 import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
 import { formatCurrency } from "@/lib/format";
@@ -28,7 +30,9 @@ type QuickPasteModalProps = {
 
 export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
   const toast = useToast();
-  const { business, customers, createOrder, canCreateOrder } = useAppData();
+  const { business } = useAppData();
+  const { customers } = useCustomers();
+  const { createOrder, canCreateOrder } = useOrders();
 
   const [chatText, setChatText] = useState("");
   const [customerName, setCustomerName] = useState("");

@@ -2,16 +2,15 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus, Search, ClipboardList } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
-import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { useOrders } from "@/hooks/use-orders";
+import { useMessageTemplates } from "@/hooks/use-message-templates";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonCard } from "@/components/shared/loading";
 
@@ -31,8 +30,9 @@ type PaymentFilterValue = "ALL" | PaymentStatus;
 export function OrderManager() {
   const toast = useToast();
   const searchParams = useSearchParams();
-  const { business, canCreateOrder, messageTemplates } = useAppData();
-  const { orders, isLoading, updateOrder } = useOrders();
+  const { business } = useAppData();
+  const { orders, isLoading, updateOrder, canCreateOrder } = useOrders();
+  const { messageTemplates } = useMessageTemplates();
   
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterValue>("ALL");
@@ -163,20 +163,15 @@ export function OrderManager() {
     <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8" id="order-manager">
       {/* SECTION 1: HERO HEADER */}
       <PageHeader
-        variant="hero"
+        variant="default"
+        className="px-0 bg-transparent border-none sm:px-0 py-0"
         title="Daftar Order & Reservasi"
         description="Pantau antrean pesanan masuk, ketersediaan unit slot operasional, status pembayaran uang muka (DP), dan kelola alur kerja dengan mudah."
-        badge={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-            <ClipboardList className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
-            Manajemen Pesanan
-          </span>
-        }
         action={
           <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
-            <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold h-10 flex items-center">
+            <span className="text-[var(--color-text-secondary)] px-4 py-1.5 text-sm font-semibold flex items-center">
               {filteredOrders.length} Order Aktif
-            </Badge>
+            </span>
             <Button
               type="button"
               variant="secondary"
@@ -191,68 +186,61 @@ export function OrderManager() {
         }
       />
 
-      {/* SECTION 2: SEARCH & QUICK CONTROLS */}
-      <section className="animate-fade-up-delay-1">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-              {/* Search & Filters */}
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Cari nama customer, detail order, atau nomor WA..."
-                    className="pl-9"
-                  />
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Filter Status Bayar</span>
-                    <Select
-                      value={paymentFilter}
-                      onValueChange={(value) => setPaymentFilter(value as PaymentFilterValue)}
-                      options={PAYMENT_FILTER_OPTIONS}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pesanan</span>
-                    <FilterChipGroup
-                      options={[
-                        { value: "ALL", label: "Semua Status" },
-                        ...statusOptions.map((opt) => ({ value: opt.value, label: opt.label })),
-                      ]}
-                      value={statusFilter}
-                      onChange={(v) => setStatusFilter(v as FilterValue)}
-                      size="sm"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Stats Cards */}
-              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 flex flex-col justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Order Berjalan</p>
-                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{activeBookingCount}</p>
-                  <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Sedang diproses</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 flex flex-col justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)]">Belum Bayar</p>
-                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{unpaidOrderCount}</p>
-                  <p className="text-[9px] text-[var(--color-warning-text)] font-semibold">Perlu penagihan</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-4 flex flex-col justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-success-text)]">Selesai</p>
-                  <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{completedOrderCount}</p>
-                  <p className="text-[9px] text-[var(--color-success-text)] font-semibold">Ditutup rapi</p>
-                </div>
-              </div>
+      <section className="animate-fade-up-delay-1 pb-6 border-b border-[var(--color-border)]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Cari nama customer, detail order, atau nomor WA..."
+                className="pl-9 bg-[var(--color-surface)] border-[var(--color-border)]"
+              />
             </div>
-          </CardBody>
-        </Card>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Filter Status Bayar</span>
+                <Select
+                  value={paymentFilter}
+                  onValueChange={(value) => setPaymentFilter(value as PaymentFilterValue)}
+                  options={PAYMENT_FILTER_OPTIONS}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Status Pesanan</span>
+                <FilterChipGroup
+                  options={[
+                    { value: "ALL", label: "Semua Status" },
+                    ...statusOptions.map((opt) => ({ value: opt.value, label: opt.label })),
+                  ]}
+                  value={statusFilter}
+                  onChange={(v) => setStatusFilter(v as FilterValue)}
+                  size="sm"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            <div className="border border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex flex-col justify-between rounded-md">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Order Berjalan</p>
+              <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{activeBookingCount}</p>
+              <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Sedang diproses</p>
+            </div>
+            <div className="border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 flex flex-col justify-between rounded-md">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)]">Belum Bayar</p>
+              <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">{unpaidOrderCount}</p>
+              <p className="text-[9px] text-[var(--color-warning-text)] font-semibold">Perlu penagihan</p>
+            </div>
+            <div className="border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-4 flex flex-col justify-between rounded-md">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-success-text)]">Selesai</p>
+              <p className="mt-1 text-2xl font-black text-[var(--color-success-text)] tracking-tight">{completedOrderCount}</p>
+              <p className="text-[9px] text-[var(--color-success-text)] font-semibold">Transaksi beres</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 3: KANBAN BOARD */}

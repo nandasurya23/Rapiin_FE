@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import NextImage from "next/image";
 import { AlertTriangle, PlusCircle, Upload, X, Sparkles, Settings, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useOrders } from "@/hooks/use-orders";
 import { usePermission } from "@/hooks/use-permission";
 import { TeamList } from "@/features/team/components/team-list";
 import { InviteMemberSheet } from "@/features/team/components/invite-member-sheet";
@@ -163,7 +163,8 @@ function buildResources(resourceLabel: string, resourceCount: string, currentRes
 
 export function SettingsPage() {
   const toast = useToast();
-  const { orders, currentUser } = useAppData();
+  const { currentUser } = useAppData();
+  const { orders } = useOrders();
   const { business, saveBusinessSettings } = useBusiness();
   const [form, setForm] = useState<SettingsFormState>(createFormStateFromBusiness(business, currentUser));
   const [errors, setErrors] = useState<FormErrors>({});
@@ -402,8 +403,8 @@ export function SettingsPage() {
         <>
           <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] animate-fade-up-delay-1">
         {/* Left Column: Profil Bisnis */}
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-5 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold text-[var(--color-text)]">Profil Bisnis</h2>
@@ -414,7 +415,7 @@ export function SettingsPage() {
 
             {/* Premium Logo Uploader */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 relative overflow-hidden transition-all duration-300 hover:border-[var(--color-border-strong)]">
-              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
+              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden ">
                 {form.logoUrl ? (
                   <NextImage
                     src={form.logoUrl}
@@ -434,7 +435,7 @@ export function SettingsPage() {
                 <p className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">Format JPG, PNG, atau WEBP. Direkomendasikan rasio persegi 1:1.</p>
                 
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] shadow-sm hover:shadow active:scale-95">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-[var(--color-primary-hover)]  hover:shadow active:scale-95">
                     <Upload className="h-3.5 w-3.5" />
                     Pilih Logo Baru
                     <input
@@ -594,12 +595,12 @@ export function SettingsPage() {
                 Ditampilkan otomatis di Nota Digital pelanggan untuk memudahkan mereka melakukan transfer pembayaran.
               </p>
             </label>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
 
         {/* Right Column: Cara Kerja Bisnis */}
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-5 p-5">
             <div>
               <h2 className="text-lg font-bold text-[var(--color-text)]">Cara Kerja Bisnis</h2>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Tentukan bagaimana customer memilih jadwal, unit slot, atau cukup request order.</p>
@@ -626,14 +627,14 @@ export function SettingsPage() {
             </label>
 
             {form.mode !== "BOOKING_SERVICE" && (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed shadow-sm">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed ">
                 📌 <strong>Mode Request Order:</strong> Customer tidak perlu memilih tanggal dan jam. Form publik akan fokus mengumpulkan detail order/request kebutuhan dari customer.
               </div>
             )}
 
             {form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT" ? (
               <div className="space-y-4">
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed shadow-sm">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed ">
                   📌 <strong>Model Janji Temu (Appointment):</strong> Sangat cocok untuk salon, barber, terapis, klinik, studio foto, dan jasa yang memerlukan reservasi waktu global tanpa alokasi unit tertentu.
                 </div>
                 <label className="block">
@@ -653,19 +654,19 @@ export function SettingsPage() {
             ) : null}
 
             {usesResources ? (
-              <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-4 text-xs text-[var(--color-warning-text)] leading-relaxed shadow-sm">
+              <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-4 text-xs text-[var(--color-warning-text)] leading-relaxed ">
                 ⚠️ <strong>Model Pilihan Tim & Unit:</strong> Customer publik memesan jadwal secara terpusat. Sistem otomatis memvalidasi sisa staf/unit yang tersedia, lalu admin dapat mengalokasikan unit spesifik melalui panel pesanan.
               </div>
             ) : null}
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 4: UNIT / SLOT RESOURCES CONFIG */}
       {usesResources ? (
         <section className="animate-fade-up">
-          <Card className="border-[var(--color-border)] shadow-none">
-            <CardBody className="space-y-5 p-5">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+            <div className="space-y-5 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border)] pb-4">
                 <div>
                   <h2 className="text-lg font-bold text-[var(--color-text)]">Pengaturan Staf & Fasilitas</h2>
@@ -812,15 +813,15 @@ export function SettingsPage() {
                 <PlusCircle className="h-4 w-4" />
                 Tambah Unit Baru
               </button>
-            </CardBody>
-          </Card>
+            </div>
+          </div>
         </section>
       ) : null}
 
       {/* SECTION 4.5: CATALOG CONFIG */}
       <section className="animate-fade-up">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-5 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border)] pb-4">
               <div>
                 <h2 className="text-lg font-bold text-[var(--color-text)]">
@@ -947,12 +948,12 @@ export function SettingsPage() {
               <PlusCircle className="h-4 w-4" />
               Tambah Item Baru
             </button>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
       <section className="animate-fade-up">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-4 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-4 p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h2 className="text-base font-bold text-[var(--color-text)]">Konfirmasi Penyimpanan</h2>
@@ -966,7 +967,7 @@ export function SettingsPage() {
             </div>
 
             {business.operationalModel === "RESOURCE_BOOKING" && form.operationalModel === "APPOINTMENT" ? (
-              <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 text-xs text-[var(--color-warning-text)] leading-relaxed flex items-start gap-3 shadow-sm">
+              <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 text-xs text-[var(--color-warning-text)] leading-relaxed flex items-start gap-3 ">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
                   Unit/slot yang sudah ada sebelumnya tidak akan dihapus. Riwayat pemesanan lama tetap tersimpan dengan baik, namun pemesanan baru yang masuk setelah ini hanya akan dialokasikan ke jadwal global tanpa penugasan unit tertentu.
@@ -975,12 +976,12 @@ export function SettingsPage() {
             ) : null}
 
             <div className="pt-2">
-              <Button type="button" isLoading={isSaving} onClick={() => void handleSave()} className="shadow-sm font-bold text-sm px-6 py-2.5 rounded-xl">
+              <Button type="button" isLoading={isSaving} onClick={() => void handleSave()} className=" font-bold text-sm px-6 py-2.5 rounded-xl">
                 Simpan Semua Pengaturan
               </Button>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
       </>
       )}

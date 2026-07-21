@@ -6,6 +6,8 @@ import { ROUTES } from "@/lib/routes";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { getDaysUntilExpiry, isTrialWarningActive } from "@/lib/subscription";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useCustomers } from "@/hooks/use-customers";
+import { getCustomerUsage } from "@/lib/subscription";
 import { cn } from "@/lib/cn";
 import { useState, useEffect } from "react";
 
@@ -13,10 +15,12 @@ export function SubscriptionBanner() {
   const {
     isSuperAdmin,
     subscriptionForCurrentBusiness,
-    currentBusinessUsage,
     readOnlyReason,
     business,
   } = useAppData();
+
+  const { customers } = useCustomers();
+  const currentBusinessUsage = getCustomerUsage({ business, subscriptions: subscriptionForCurrentBusiness ? [subscriptionForCurrentBusiness] : [], customers });
 
   const [dismissed, setDismissed] = useState(false);
 

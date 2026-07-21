@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, PencilLine, RotateCcw, Users, Sparkles, Phone, Calendar, MessageSquare, Plus } from "lucide-react";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
-import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,8 +38,8 @@ const CUSTOMER_PAGE_SIZE = 6;
 
 export function CustomerManager() {
   const toast = useToast();
-  const { canCreateCustomer, currentBusinessUsage, readOnlyReason } = useAppData();
-  const { customers, isLoading, createCustomer, updateCustomer } = useCustomers();
+  const { readOnlyReason } = useAppData();
+  const { customers, isLoading, createCustomer, updateCustomer, canCreateCustomer, currentBusinessUsage } = useCustomers();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterValue>("ALL");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -211,7 +210,7 @@ export function CustomerManager() {
               variant="secondary"
               onClick={handleCreateNew}
               disabled={!canCreateCustomer}
-              className="shadow-sm font-bold"
+              className=" font-bold"
             >
               <Plus className="mr-2 h-5 w-5" />
               Tambah Pelanggan
@@ -222,8 +221,8 @@ export function CustomerManager() {
 
       {/* SECTION 2: SEARCH & STATS */}
       <section className="animate-fade-up-delay-1">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-5 p-5">
             <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
               {/* Search & Filters */}
               <div className="space-y-4">
@@ -272,8 +271,8 @@ export function CustomerManager() {
                 </div>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 4: CUSTOMERS CRM LIST */}
@@ -298,14 +297,14 @@ export function CustomerManager() {
             }
 
             return (
-              <Card key={customer.id} className={cn("transition-all duration-300 hover:-translate-y-0.5 border-[var(--color-border)] shadow-none", leftBorderStripe, hoverGlow)}>
-                <CardBody className="p-5">
+              <div key={customer.id} className={cn("transition-all duration-300 hover:-translate-y-0.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ", leftBorderStripe, hoverGlow)}>
+                <div className="p-5">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     {/* Left: Avatar & Text details */}
                     <div className="flex items-start gap-4 min-w-0 flex-1">
                       {/* Avatar Circle with initials */}
                       <div className={cn(
-                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white text-xs font-black shadow-sm select-none border border-white/20",
+                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white text-xs font-black  select-none border border-white/20",
                         getAvatarGradient(customer.name)
                       )}>
                         {getInitials(customer.name)}
@@ -379,16 +378,16 @@ export function CustomerManager() {
                       </Button>
                     </div>
                   </div>
-                </CardBody>
-              </Card>
+                </div>
+              </div>
             );
           })
         ) : (
-          <Card className="border-[var(--color-border)] shadow-none">
-            <CardBody className="p-6 text-sm text-[var(--color-text-secondary)] text-center">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+            <div className="p-6 text-sm text-[var(--color-text-secondary)] text-center">
               Belum ada data pelanggan yang sesuai dengan filter pencarian.
-            </CardBody>
-          </Card>
+            </div>
+          </div>
         )}
 
         <div className="pt-2">
@@ -500,7 +499,7 @@ export function CustomerManager() {
               isLoading={isSubmitting}
               onClick={() => void handleSubmit()}
               disabled={isSubmitting || (!editingId && !canCreateCustomer)}
-              className="w-full shadow-sm font-bold text-sm h-11 rounded-xl"
+              className="w-full  font-bold text-sm h-11 rounded-xl"
             >
               {editingId ? "Simpan Perubahan" : "Simpan Pelanggan"}
             </Button>

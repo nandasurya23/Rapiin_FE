@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { Card, CardBody } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -574,8 +573,8 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
   if (!isMatch) {
     return (
       <main className="page-enter mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10">
-        <Card className="w-full">
-          <CardBody className="space-y-4 p-6">
+        <div className="w-full">
+          <div className="space-y-4 p-6">
             <Badge tone="danger">Link tidak ditemukan</Badge>
             <div>
               <h1 className="text-2xl font-semibold text-[var(--color-text)]">Form publik belum cocok</h1>
@@ -589,8 +588,8 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                 Kembali ke App
               </LinkButton>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </main>
     );
   }
@@ -600,8 +599,8 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
       {submitted ? (
         // ── SUCCESS SCREEN ──
         <div className="max-w-xl mx-auto mt-10">
-          <Card className="border-[var(--color-border)] shadow-[var(--shadow-lg)]">
-            <CardBody className="p-6 sm:p-8 space-y-6 text-center">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="p-6 sm:p-8 space-y-6 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
                 <CheckCircle2 className="h-10 w-10 animate-bounce" />
               </div>
@@ -686,16 +685,16 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                   {business.paymentInstructions ? "Kirim Bukti via WhatsApp" : "Kirim Konfirmasi via WhatsApp"}
                 </LinkButton>
               </div>
-            </CardBody>
-          </Card>
+            </div>
+          </div>
         </div>
       ) : (
         // ── FORM STEPS SCREEN ──
         <div className="space-y-6">
           {/* Header Business Info Card */}
-          <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)] overflow-hidden">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
             <div className="h-2 bg-gradient-to-r from-[var(--color-primary)] via-indigo-500 to-purple-500" />
-            <CardBody className="p-5">
+            <div className="p-5">
               <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-4">
                   {business.logoUrl ? (
@@ -727,12 +726,12 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                   </LinkButton>
                 </div>
               </div>
-            </CardBody>
-          </Card>
+            </div>
+          </div>
 
           {/* Form Wizard Step Card */}
-          <Card className="border-[var(--color-border)] shadow-[var(--shadow-md)]">
-            <CardBody className="p-5 sm:p-6">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+            <div className="p-5 sm:p-6">
               {/* Steps Progress Indicator */}
               <div className="flex items-center justify-center gap-2 mb-6 border-b border-[var(--color-border)]/40 pb-5">
                 {steps.map((s, idx) => (
@@ -740,7 +739,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                     <div className={cn(
                       "h-6 w-6 rounded-full flex items-center justify-center text-xs font-black transition",
                       currentStep === s.num
-                        ? "bg-[var(--color-primary)] text-white shadow-sm"
+                        ? "bg-[var(--color-primary)] text-white "
                         : currentStep > s.num
                           ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
                           : "bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]"
@@ -844,7 +843,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                                   setTimeout(() => setCurrentStep(2), 250);
                                 }}
                                 className={cn(
-                                  "rounded-2xl border p-4 text-left transition flex flex-col justify-between h-32 hover:scale-[1.01] active:scale-[0.99] shadow-sm",
+                                  "rounded-2xl border p-4 text-left transition flex flex-col justify-between h-32 hover:scale-[1.01] active:scale-[0.99] ",
                                   isSelected
                                     ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]"
                                     : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
@@ -945,7 +944,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                                       isFull
                                         ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
                                         : isSelected
-                                          ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                          ? "bg-[var(--color-primary)] text-white border-transparent  scale-[1.02]"
                                           : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
                                     )}
                                     disabled={isFull}
@@ -985,7 +984,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                                   className={cn(
                                     "p-3 rounded-xl border text-left transition-all flex justify-between items-center",
                                     form.resourceId === "ANY"
-                                      ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                      ? "bg-[var(--color-primary)] text-white border-transparent  scale-[1.02]"
                                       : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
                                   )}
                                 >
@@ -1016,7 +1015,7 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                                         isUnitFull
                                           ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
                                           : isSelected
-                                            ? "bg-[var(--color-primary)] text-white border-transparent shadow-md scale-[1.02]"
+                                            ? "bg-[var(--color-primary)] text-white border-transparent  scale-[1.02]"
                                             : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
                                       )}
                                       disabled={isUnitFull}
@@ -1267,8 +1266,8 @@ export function PublicOrderForm({ slug, initialBusiness }: { slug: string; initi
                   </div>
                 </div>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
     </main>

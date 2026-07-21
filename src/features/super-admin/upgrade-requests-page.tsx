@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { Card, CardBody } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatDateTime } from "@/lib/format";
@@ -107,9 +106,9 @@ export function SuperAdminUpgradeRequestsPage() {
             const isApproved = request.status === "APPROVED";
 
             return (
-              <Card key={request.id} className="border-[var(--color-border)] shadow-none overflow-hidden">
+              <div key={request.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
                 <div className={`h-1 w-full ${isApproved ? "bg-emerald-500" : isPending ? "bg-amber-400" : "bg-slate-400"}`} />
-                <CardBody className="space-y-5 p-5">
+                <div className="space-y-5 p-5">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-2">
@@ -161,8 +160,8 @@ export function SuperAdminUpgradeRequestsPage() {
                       </Button>
                     </div>
                   ) : null}
-                </CardBody>
-              </Card>
+                </div>
+              </div>
             );
           })
         ) : (

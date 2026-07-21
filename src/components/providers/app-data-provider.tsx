@@ -9,7 +9,6 @@ import { ApiOrderService } from "@/services/order.service";
 import { ApiInvoiceService } from "@/services/invoice.service";
 import { ApiMessageTemplateService } from "@/services/message-template.service";
 import { ApiAdminService, type AdminBusinessDetail } from "@/services/admin.service";
-import type { MessageTemplate } from "@/types/message";
 import { apiFetch } from "@/lib/api-client";
 import { BusinessDTO } from "@/services/business.service";
 import {
@@ -18,12 +17,9 @@ import {
   createSuperAdminActionLog,
   writeAppStorageState,
 } from "@/lib/storage-service";
-import { canCreateCustomer as canCreateCustomerByState, canCreateInvoice, canCreateOrder as canCreateOrderByState, canAccessWriteMode as canWriteMode, getCustomerUsage, getReadOnlyReason, getSubscriptionForBusiness, getOrderUsage } from "@/lib/subscription";
+import { canAccessWriteMode as canWriteMode, getReadOnlyReason, getSubscriptionForBusiness } from "@/lib/subscription";
 import type { AppStorageState, AuthUser } from "@/types/app-state";
 import type { Business, BusinessMode, BusinessResource, NicheTemplate, OperationalModel } from "@/types/business";
-import type { Customer, CustomerStatus } from "@/types/customer";
-import type { Invoice } from "@/types/invoice";
-import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
 import type { BackupRecord, BusinessSubscription, PlanCode, UpgradeRequest, UserRole } from "@/types/subscription";
 
 type OnboardingPayload = {
@@ -62,34 +58,6 @@ type BusinessSettingsInput = Pick<
   | "services"
 >;
 
-type CustomerInput = {
-  name: string;
-  whatsappNumber: string;
-  status: CustomerStatus;
-  source?: string;
-  notes?: string;
-  lastInteractionAt?: string;
-  lastOrderSummary?: string;
-};
-
-type OrderInput = {
-  customerName: string;
-  whatsappNumber: string;
-  title: string;
-  mode: BusinessMode;
-  status: OrderStatus;
-  paymentStatus: PaymentStatus;
-  scheduledDate?: string;
-  scheduledTime?: string;
-  bookingDurationMinutes?: number;
-  bookingHoldExpiresAt?: string;
-  resourceId?: string;
-  resourceNameSnapshot?: string;
-  totalAmount?: number;
-  dpAmount?: number;
-  notes?: string;
-};
-
 type LoginInput = {
   identifier: string;
   password: string;
@@ -118,11 +86,6 @@ type AppDataContextValue = AppStorageState & {
   currentUserRole: UserRole | null;
   isSuperAdmin: boolean;
   subscriptionForCurrentBusiness: BusinessSubscription | null;
-  currentBusinessUsage: ReturnType<typeof getCustomerUsage>;
-  currentOrderUsage: ReturnType<typeof getOrderUsage>;
-  canCreateCustomer: boolean;
-  canCreateOrder: boolean;
-  canCreateInvoice: boolean;
   canAccessWriteMode: boolean;
   readOnlyReason: string | null;
   businessDirectory: Array<{
@@ -141,18 +104,8 @@ type AppDataContextValue = AppStorageState & {
   requestForgotPassword: (email: string) => Promise<{ ok: true; message: string } | { ok: false; message: string }>;
   resetPassword: (payload: ResetPasswordInput) => Promise<{ ok: true } | { ok: false; message: string }>;
   logout: () => Promise<void>;
-  createCustomer: (payload: CustomerInput) => Promise<Customer>;
-  updateCustomer: (id: string, payload: CustomerInput) => Promise<Customer | null>;
-  deleteCustomer: (id: string) => Promise<void>;
-  createOrder: (payload: OrderInput) => Promise<Order>;
-  updateOrder: (id: string, payload: Partial<OrderInput>) => Promise<Order | null>;
-  deleteOrder: (id: string) => Promise<void>;
-  createInvoiceFromOrder: (orderId: string, notes?: string) => Promise<Invoice | null>;
-  createMessageTemplate: (payload: { category: string; title: string; content: string }) => Promise<MessageTemplate>;
-  updateMessageTemplate: (id: string, payload: { title: string; content: string }) => Promise<MessageTemplate | null>;
-  deleteMessageTemplate: (id: string) => Promise<void>;
   submitPublicOrder: (input: PublicOrderInput) => Promise<unknown>;
-  createBackup: () => BackupRecord;
+  createBackup: () => Promise<BackupRecord>;
   restoreBackup: (backupPayload: string) => boolean;
   requestUpgrade: (toPlan: PlanCode, paymentNote?: string) => Promise<UpgradeRequest>;
   approveUpgrade: (requestId: string, adminNote?: string) => Promise<null>;
@@ -216,20 +169,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const business = await businessService.getBusinessById("");
         if (!business) return;
 
-        const [orders, customers, invoices, messageTemplates] = await Promise.all([
-          orderService.getOrders(business.id),
-          customerService.getCustomers(business.id),
-          invoiceService.getInvoices(business.id),
-          messageTemplateService.getTemplates(business.id),
-        ]);
-
         setState((prev) => ({
           ...prev,
           business,
-          orders,
-          customers,
-          invoices,
-          messageTemplates,
           subscriptions: (business as Business & { subscriptions?: BusinessSubscription[] }).subscriptions || prev.subscriptions,
           upgradeRequests: (business as Business & { upgradeRequests?: UpgradeRequest[] }).upgradeRequests || prev.upgradeRequests,
         }));
@@ -281,7 +223,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   // Live queries from React Query
   const { data: queryBusiness } = useQuery({
-    queryKey: ["business", state.auth.currentUserId],
+    queryKey: ["business"],
     queryFn: () => businessService.getBusinessById(""),
     enabled: hydrated && !!state.auth.currentUserId && state.auth.users.find(u => u.id === state.auth.currentUserId)?.role !== "SUPER_ADMIN",
     staleTime: 5 * 60 * 1000, // 5 minutes stale time for business settings
@@ -289,39 +231,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const business = queryBusiness || state.business;
 
-  const { data: queryOrders } = useQuery({
-    queryKey: ["orders", business?.id],
-    queryFn: () => orderService.getOrders(business?.id || ""),
-    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
-  });
-
-  const orders = queryOrders || state.orders;
-
-  const { data: queryCustomers } = useQuery({
-    queryKey: ["customers", business?.id],
-    queryFn: () => customerService.getCustomers(business?.id || ""),
-    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
-  });
-
-  const customers = queryCustomers || state.customers;
-
-  const { data: queryInvoices } = useQuery({
-    queryKey: ["invoices", business?.id],
-    queryFn: () => invoiceService.getInvoices(business?.id || ""),
-    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
-  });
-
-  const invoices = queryInvoices || state.invoices;
-
-  const { data: queryMessageTemplates } = useQuery({
-    queryKey: ["messageTemplates", business?.id],
-    queryFn: () => messageTemplateService.getTemplates(business?.id || ""),
-    enabled: hydrated && !!state.auth.currentUserId && !!business?.id && business.id !== "biz_default",
-    staleTime: 5 * 60 * 1000, // 5 minutes stale time for message templates
-  });
-
-  const messageTemplates = queryMessageTemplates || state.messageTemplates;
-
+  // Domains removed from God object
+  
   const currentUser = useMemo(() => state.auth.users.find((user) => user.id === state.auth.currentUserId) ?? null, [state.auth.currentUserId, state.auth.users]);
   const subscriptionForCurrentBusiness = useMemo(
     () => getSubscriptionForBusiness(state.subscriptions, business.id),
@@ -329,17 +240,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   );
   const currentUserRole = currentUser?.role ?? null;
   const isSuperAdmin = currentUserRole === "SUPER_ADMIN";
-  const currentBusinessUsage = useMemo(
-    () => getCustomerUsage({ business, customers, subscriptions: state.subscriptions }),
-    [business, customers, state.subscriptions]
-  );
-  const currentOrderUsage = useMemo(
-    () => getOrderUsage({ business, subscriptions: state.subscriptions, orders }),
-    [business, state.subscriptions, orders]
-  );
-  const canCreateCustomer = canCreateCustomerByState({ business, customers, subscriptions: state.subscriptions });
-  const canCreateOrder = canCreateOrderByState({ business, subscriptions: state.subscriptions, orders });
-  const canCreateInvoiceValue = canCreateInvoice({ business, subscriptions: state.subscriptions });
   const canAccessWriteMode = canWriteMode(subscriptionForCurrentBusiness);
   const readOnlyReason = getReadOnlyReason(subscriptionForCurrentBusiness);
 
@@ -353,7 +253,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           business,
           owner: state.auth.users.find((user) => user.role === "OWNER" && user.businessId === business.id) ?? null,
           subscription: subscriptionForCurrentBusiness,
-          customerCount: customers.length,
+          customerCount: 0,
           backupCount: state.backupRecords.filter((record) => record.businessId === business.id).length,
           latestBackup:
             state.backupRecords
@@ -362,7 +262,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         },
       ];
     },
-    [currentUserRole, state, subscriptionForCurrentBusiness, business, customers]
+    [currentUserRole, state, subscriptionForCurrentBusiness, business]
   );
 
   const updateBusiness = useCallback(async (payload: Partial<Business>) => {
@@ -496,156 +396,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return authService.resetPassword(payload.email, payload.token, payload.newPassword);
   }, []);
 
-  const createCustomer = useCallback(async (payload: CustomerInput) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    if (!canCreateCustomer) {
-      throw new Error(`Batas customer plan ini sudah penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`);
-    }
-    const customer = await customerService.createCustomer({
-      ...payload,
-      businessId: state.business.id,
-    });
-    setState((current) => ({
-      ...current,
-      customers: [...current.customers, customer],
-    }));
-    queryClient.invalidateQueries({ queryKey: ["customers"] });
-    return customer;
-  }, [canAccessWriteMode, readOnlyReason, canCreateCustomer, currentBusinessUsage, state.business.id, queryClient]);
-
-  const updateCustomer = useCallback(async (id: string, payload: CustomerInput) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    const customer = await customerService.updateCustomer(id, payload);
-    if (customer) {
-      setState((current) => ({
-        ...current,
-        customers: current.customers.map((c) => (c.id === id ? customer : c)),
-      }));
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-    }
-    return customer;
-  }, [canAccessWriteMode, readOnlyReason, queryClient]);
-
-  const deleteCustomer = useCallback(async (id: string) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    await customerService.deleteCustomer(id);
-    setState((current) => ({
-      ...current,
-      customers: current.customers.filter((c) => c.id !== id),
-    }));
-    queryClient.invalidateQueries({ queryKey: ["customers"] });
-  }, [canAccessWriteMode, readOnlyReason, queryClient]);
-
-  const createOrder = useCallback(async (payload: OrderInput) => {
-    if (!canCreateOrder) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    const order = await orderService.createOrder({
-      ...payload,
-      businessId: state.business.id,
-    });
-    setState((current) => ({
-      ...current,
-      orders: [...current.orders, order],
-    }));
-    queryClient.invalidateQueries({ queryKey: ["orders"] });
-    return order;
-  }, [canCreateOrder, readOnlyReason, state.business.id, queryClient]);
-
-  const updateOrder = useCallback(async (id: string, payload: Partial<OrderInput>) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    const order = await orderService.updateOrder(id, payload);
-    if (order) {
-      setState((current) => ({
-        ...current,
-        orders: current.orders.map((o) => (o.id === id ? order : o)),
-      }));
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    }
-    return order;
-  }, [canAccessWriteMode, readOnlyReason, queryClient]);
-
-  const deleteOrder = useCallback(async (id: string) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    await orderService.deleteOrder(id);
-    setState((current) => ({
-      ...current,
-      orders: current.orders.filter((o) => o.id !== id),
-    }));
-    queryClient.invalidateQueries({ queryKey: ["orders"] });
-  }, [canAccessWriteMode, readOnlyReason, queryClient]);
-
-  const createInvoiceFromOrder = useCallback(async (orderId: string, notes?: string) => {
-    if (!canCreateInvoiceValue) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    const invoice = await invoiceService.createInvoiceFromOrder(orderId, notes);
-    if (invoice) {
-      const [orders, invoices] = await Promise.all([
-        orderService.getOrders(state.business.id),
-        invoiceService.getInvoices(state.business.id),
-      ]);
-      setState((current) => ({
-        ...current,
-        orders,
-        invoices,
-      }));
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    }
-    return invoice;
-  }, [canCreateInvoiceValue, readOnlyReason, state.business.id, queryClient]);
-
-  const createMessageTemplate = useCallback(async (payload: { category: string; title: string; content: string }) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    const newTemplate = await messageTemplateService.createTemplate(payload);
-    setState((current) => ({
-      ...current,
-      messageTemplates: [...current.messageTemplates, newTemplate],
-    }));
-    queryClient.invalidateQueries({ queryKey: ["messageTemplates"] });
-    return newTemplate;
-  }, [canAccessWriteMode, readOnlyReason, queryClient]);
-
-  const updateMessageTemplate = useCallback(async (id: string, payload: { title: string; content: string }) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    const updated = await messageTemplateService.updateTemplate(id, payload);
-    if (updated) {
-      setState((current) => ({
-        ...current,
-        messageTemplates: current.messageTemplates.map((t) => (t.id === id ? updated : t)),
-      }));
-      queryClient.invalidateQueries({ queryKey: ["messageTemplates"] });
-    }
-    return updated;
-  }, [canAccessWriteMode, readOnlyReason, queryClient]);
-
-  const deleteMessageTemplate = useCallback(async (id: string) => {
-    if (!canAccessWriteMode) {
-      throw new Error(readOnlyReason || "Mode baca saja aktif.");
-    }
-    await messageTemplateService.deleteTemplate(id);
-    setState((current) => ({
-      ...current,
-      messageTemplates: current.messageTemplates.filter((t) => t.id !== id),
-    }));
-    queryClient.invalidateQueries({ queryKey: ["messageTemplates"] });
-  }, [canAccessWriteMode, readOnlyReason, queryClient]);
-
 
 
   const submitPublicOrder = useCallback(async (input: PublicOrderInput) => {
@@ -660,20 +410,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return response;
   }, [state.business.slug, state.business.mode, state.business.operationalModel]);
 
-  const createBackup = useCallback(() => {
+  const createBackup = useCallback(async () => {
+    const [orders, customers, invoices, messageTemplates] = await Promise.all([
+      orderService.getOrders(state.business.id),
+      customerService.getCustomers(state.business.id),
+      invoiceService.getInvoices(state.business.id),
+      messageTemplateService.getTemplates(state.business.id),
+    ]);
+
     const payload = JSON.stringify({
       business: state.business,
-      customers: state.customers,
-      orders: state.orders,
-      invoices: state.invoices,
-      messageTemplates: state.messageTemplates,
-      publicSubmissions: state.publicSubmissions,
+      customers,
+      orders,
+      invoices,
+      messageTemplates,
+      publicSubmissions: [],
       generatedAt: new Date().toISOString(),
     });
     const nextRecord = createBackupRecord({
       businessId: state.business.id,
       snapshotVersion: state.version,
-      summary: `${state.customers.length} customer • ${state.orders.length} order • ${state.invoices.length} nota`,
+      summary: `${customers.length} customer • ${orders.length} order • ${invoices.length} nota`,
       payload,
     });
 
@@ -695,7 +452,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }));
 
     return nextRecord;
-  }, [state.business, state.customers, state.orders, state.invoices, state.messageTemplates, state.publicSubmissions, state.version]);
+  }, [state.business, state.version]);
 
   const restoreBackup = useCallback((backupPayload: string): boolean => {
     try {
@@ -708,11 +465,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const nextState = {
           ...current,
           business: { ...current.business, ...parsed.business },
-          customers: Array.isArray(parsed.customers) ? parsed.customers : current.customers,
-          orders: Array.isArray(parsed.orders) ? parsed.orders : current.orders,
-          invoices: Array.isArray(parsed.invoices) ? parsed.invoices : current.invoices,
-          messageTemplates: Array.isArray(parsed.messageTemplates) ? parsed.messageTemplates : current.messageTemplates,
-          publicSubmissions: Array.isArray(parsed.publicSubmissions) ? parsed.publicSubmissions : current.publicSubmissions,
         };
         writeAppStorageState(nextState);
         return nextState;
@@ -852,20 +604,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const value: AppDataContextValue = useMemo(() => ({
     ...state,
     business,
-    customers,
-    orders,
-    invoices,
-    messageTemplates,
     hydrated,
     currentUser,
     currentUserRole,
     isSuperAdmin,
     subscriptionForCurrentBusiness,
-    currentBusinessUsage,
-    currentOrderUsage,
-    canCreateCustomer,
-    canCreateOrder,
-    canCreateInvoice: canCreateInvoiceValue,
     canAccessWriteMode,
     readOnlyReason,
     businessDirectory,
@@ -877,16 +620,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     requestForgotPassword,
     resetPassword,
     logout,
-    createCustomer,
-    updateCustomer,
-    deleteCustomer,
-    createOrder,
-    updateOrder,
-    deleteOrder,
-    createInvoiceFromOrder,
-    createMessageTemplate,
-    updateMessageTemplate,
-    deleteMessageTemplate,
     submitPublicOrder,
     createBackup,
     restoreBackup,
@@ -904,20 +637,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }), [
     state,
     business,
-    customers,
-    orders,
-    invoices,
-    messageTemplates,
     hydrated,
     currentUser,
     currentUserRole,
     isSuperAdmin,
     subscriptionForCurrentBusiness,
-    currentBusinessUsage,
-    currentOrderUsage,
-    canCreateCustomer,
-    canCreateOrder,
-    canCreateInvoiceValue,
     canAccessWriteMode,
     readOnlyReason,
     businessDirectory,
@@ -929,16 +653,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     requestForgotPassword,
     resetPassword,
     logout,
-    createCustomer,
-    updateCustomer,
-    deleteCustomer,
-    createOrder,
-    updateOrder,
-    deleteOrder,
-    createInvoiceFromOrder,
-    createMessageTemplate,
-    updateMessageTemplate,
-    deleteMessageTemplate,
     submitPublicOrder,
     createBackup,
     restoreBackup,

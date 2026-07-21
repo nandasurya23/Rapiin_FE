@@ -1,18 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiOrderService, type OrderDTO } from "@/services/order.service";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { canCreateOrder as canCreateOrderByState, getOrderUsage } from "@/lib/subscription";
 
 const orderService = new ApiOrderService();
 
 export function useOrders() {
   const queryClient = useQueryClient();
-  const { business, canAccessWriteMode, readOnlyReason, canCreateOrder } = useAppData();
+  const { business, canAccessWriteMode, readOnlyReason, subscriptions } = useAppData();
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", business?.id],
     queryFn: () => orderService.getOrders(business?.id || ""),
     enabled: !!business?.id && business.id !== "biz_default",
   });
+
+  const canCreateOrder = canCreateOrderByState({ business: business!, subscriptions, orders });
+  const currentOrderUsage = getOrderUsage({ business: business!, subscriptions, orders });
 
   const createMutation = useMutation({
     mutationFn: async (payload: Omit<OrderDTO, "id" | "createdAt" | "updatedAt" | "businessId" | "customerId">) => {
@@ -56,6 +60,8 @@ export function useOrders() {
   return {
     orders,
     isLoading,
+    canCreateOrder,
+    currentOrderUsage,
     createOrder: (payload: Omit<OrderDTO, "id" | "createdAt" | "updatedAt" | "businessId" | "customerId">) => createMutation.mutateAsync(payload),
     updateOrder: (id: string, payload: Partial<Omit<OrderDTO, "id" | "createdAt" | "updatedAt" | "businessId">>) => updateMutation.mutateAsync({ id, payload }),
     deleteOrder: (id: string) => deleteMutation.mutateAsync(id),

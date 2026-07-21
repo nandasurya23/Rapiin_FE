@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { CalendarDays, MessageCircleMore, PhoneCall, ExternalLink, Sparkles, Loader2, Clock, Info, ShoppingBag, ArrowRight } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -61,8 +60,8 @@ export function PublicBusinessPage({ slug, initialBusiness }: { slug: string; in
   if (!business) {
     return (
       <main className="page-enter mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10">
-        <Card className="w-full">
-          <CardBody className="space-y-4 p-6">
+        <div className="w-full">
+          <div className="space-y-4 p-6">
             <Badge tone="danger">Bisnis Tidak Ditemukan</Badge>
             <div>
               <h1 className="text-2xl font-semibold text-[var(--color-text)]">Link bisnis belum cocok</h1>
@@ -70,8 +69,8 @@ export function PublicBusinessPage({ slug, initialBusiness }: { slug: string; in
                 Slug yang dibuka tidak sesuai dengan bisnis yang terdaftar di sistem.
               </p>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </main>
     );
   }
@@ -168,8 +167,8 @@ export function PublicBusinessPage({ slug, initialBusiness }: { slug: string; in
       {/* ── SECTION 2: CATALOG & ACTIONS LAYOUT ── */}
       <section className="grid gap-6 lg:grid-cols-[1.18fr_0.82fr] animate-fade-up-delay-1">
         {/* Left Column: Services list */}
-        <Card className="border-[var(--color-border)] shadow-none rounded-[2rem]">
-          <CardBody className="p-6 space-y-5">
+        <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-[var(--color-border)]/50 pb-3">
               <div className="space-y-0.5">
                 <h2 className="text-xl font-black text-[var(--color-text)] flex items-center gap-2">
@@ -187,7 +186,7 @@ export function PublicBusinessPage({ slug, initialBusiness }: { slug: string; in
                   <a
                     key={item.id}
                     href={`${publicOrderLink}?item=${encodeURIComponent(item.id)}`}
-                    className="group flex flex-col justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-elevated)] hover:shadow-sm"
+                    className="group flex flex-col justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-elevated)] hover:"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1">
@@ -229,26 +228,26 @@ export function PublicBusinessPage({ slug, initialBusiness }: { slug: string; in
                       Daftar layanan atau katalog produk belum dikonfigurasikan. Anda tetap dapat langsung melakukan pemesanan melalui formulir online kami.
                     </p>
                   </div>
-                  <LinkButton href={publicOrderLink} className="mx-auto inline-flex shadow-sm">
+                  <LinkButton href={publicOrderLink} className="mx-auto inline-flex ">
                     Isi Formulir Pemesanan Langsung
                   </LinkButton>
                 </div>
               )}
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
 
         {/* Right Column: Quick Action Cards */}
         <div className="space-y-6">
-          <Card className="border-[var(--color-border)] shadow-none rounded-[2rem]">
-            <CardBody className="p-6 space-y-4">
+          <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="p-6 space-y-4">
               <div className="border-b border-[var(--color-border)]/50 pb-3">
                 <h2 className="text-lg font-black text-[var(--color-text)]">Aksi Cepat</h2>
                 <p className="text-xs text-[var(--color-text-secondary)]">Hubungi admin atau buka formulir pemesanan.</p>
               </div>
 
               <div className="grid gap-3">
-                <LinkButton href={publicOrderLink} className="w-full flex justify-center py-2.5 font-extrabold text-xs shadow-sm">
+                <LinkButton href={publicOrderLink} className="w-full flex justify-center py-2.5 font-extrabold text-xs ">
                   <ExternalLink className="h-4 w-4" />
                   {getPublicFormTitle(business)}
                 </LinkButton>
@@ -284,8 +283,8 @@ export function PublicBusinessPage({ slug, initialBusiness }: { slug: string; in
                   </div>
                 </div>
               </div>
-            </CardBody>
-          </Card>
+            </div>
+          </div>
         </div>
       </section>
 

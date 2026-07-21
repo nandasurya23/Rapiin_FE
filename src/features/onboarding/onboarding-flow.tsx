@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Sparkles } from "lucide-react";
-import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast-provider";
@@ -248,8 +247,8 @@ export function OnboardingFlow() {
           }
         />
 
-        <Card className="w-full border-[var(--color-border)] shadow-[var(--shadow-md)]">
-          <CardBody className="space-y-6 p-6 sm:p-8">
+        <div className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="space-y-6 p-6 sm:p-8">
 
           {step === 1 ? (
             <div className="grid gap-5">
@@ -317,7 +316,7 @@ export function OnboardingFlow() {
                     }}
                     className={`rounded-2xl border p-4 text-left transition-all duration-200 relative flex flex-col justify-between ${
                       !form.usesResources
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 shadow-sm"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 "
                         : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
                     }`}
                   >
@@ -343,7 +342,7 @@ export function OnboardingFlow() {
                     }}
                     className={`rounded-2xl border p-4 text-left transition-all duration-200 relative flex flex-col justify-between ${
                       form.usesResources
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 shadow-sm"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 "
                         : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
                     }`}
                   >
@@ -473,8 +472,8 @@ export function OnboardingFlow() {
               </Button>
             ) : null}
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </div>
       </div>
     </div>
   );

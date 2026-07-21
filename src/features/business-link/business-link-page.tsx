@@ -2,7 +2,6 @@
 
 import { ClipboardCopy, Link2, QrCode, Share2, ExternalLink, PhoneCall, MapPinned, Sparkles, Clock, Phone, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Card, CardBody } from "@/components/ui/card";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
@@ -49,13 +48,13 @@ export function BusinessLinkPage() {
         }
         action={
           <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-            <LinkButton href={publicUrl} variant="accent" className="font-bold shadow-sm">
+            <LinkButton href={publicUrl} variant="accent" className="font-bold ">
               Lihat Halaman Publik
             </LinkButton>
             <Button
               type="button"
               variant="secondary"
-              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold shadow-sm hover:text-white"
+              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold  hover:text-white"
               isLoading={loadingAction === "copy-link"}
               onClick={async () => {
                 setLoadingAction("copy-link");
@@ -73,7 +72,7 @@ export function BusinessLinkPage() {
             <Button
               type="button"
               variant="secondary"
-              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold shadow-sm hover:text-white"
+              className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold  hover:text-white"
               isLoading={loadingAction === "share-wa"}
               onClick={async () => {
                 setLoadingAction("share-wa");
@@ -91,8 +90,8 @@ export function BusinessLinkPage() {
 
       {/* SECTION 2: LINK ACTIVE PREVIEW & CONFIGS */}
       <section className="animate-fade-up-delay-1">
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="p-5">
             <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
               {/* Copy URL panel */}
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 space-y-4">
@@ -111,7 +110,7 @@ export function BusinessLinkPage() {
                     className={cn(
                       "flex-1 rounded-lg py-1.5 text-[11px] font-extrabold transition-all",
                       linkType === "FORM"
-                        ? "bg-[var(--color-primary)] text-white shadow-sm"
+                        ? "bg-[var(--color-primary)] text-white "
                         : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                     )}
                   >
@@ -127,7 +126,7 @@ export function BusinessLinkPage() {
                     className={cn(
                       "flex-1 rounded-lg py-1.5 text-[11px] font-extrabold transition-all",
                       linkType === "PROFILE"
-                        ? "bg-[var(--color-primary)] text-white shadow-sm"
+                        ? "bg-[var(--color-primary)] text-white "
                         : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                     )}
                   >
@@ -176,15 +175,15 @@ export function BusinessLinkPage() {
                 </div>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 3: MOCKUP MOBILE SCREEN & DETAILS */}
       <section className="grid gap-6 2xl:grid-cols-[1.08fr_0.92fr] animate-fade-up-delay-2">
         {/* Left Card: Phone Viewport Preview */}
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-5 p-5">
             <div className="border-b border-[var(--color-border)] pb-3">
               <h2 className="text-lg font-bold text-[var(--color-text)]">Preview Landing Page Publik</h2>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">{getPublicPageSubtitle(business)}</p>
@@ -242,12 +241,12 @@ export function BusinessLinkPage() {
                 </div>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
 
         {/* Right Card: Info Bisnis */}
-        <Card className="border-[var(--color-border)] shadow-none">
-          <CardBody className="space-y-5 p-5">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+          <div className="space-y-5 p-5">
             <div className="border-b border-[var(--color-border)] pb-3">
               <h2 className="text-lg font-bold text-[var(--color-text)]">Informasi Kontak Bisnis</h2>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Kontak operasional yang akan diakses oleh customer.</p>
@@ -295,8 +294,8 @@ export function BusinessLinkPage() {
                 Ubah Info Bisnis
               </LinkButton>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
     </main>
   );

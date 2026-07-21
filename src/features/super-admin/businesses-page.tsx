@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button, LinkButton } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
@@ -141,8 +140,8 @@ export function SuperAdminBusinessesPage() {
 
       {/* QUICK STATS PANELS */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-[var(--color-border)] shadow-none bg-[var(--color-surface)]">
-          <CardBody className="p-4 flex items-center justify-between">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Total Terdaftar</p>
               <p className="text-2xl font-black text-[var(--color-text)] mt-1">{totalItems}</p>
@@ -150,11 +149,11 @@ export function SuperAdminBusinessesPage() {
             <div className="h-10 w-10 rounded-xl bg-[var(--color-info-surface)] border border-[var(--color-info-border)] flex items-center justify-center text-[var(--color-info-text)]">
               <Building2 className="h-5 w-5" />
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="border-[var(--color-border)] shadow-none bg-[var(--color-surface)]">
-          <CardBody className="p-4 flex items-center justify-between">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Sesi Aktif</p>
               <p className="text-2xl font-black text-[var(--color-success-text)] mt-1">{activeCount}</p>
@@ -162,11 +161,11 @@ export function SuperAdminBusinessesPage() {
             <div className="h-10 w-10 rounded-xl bg-[var(--color-success-surface)] border border-[var(--color-success-border)] flex items-center justify-center text-[var(--color-success-text)]">
               <ShieldCheck className="h-5 w-5" />
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="border-[var(--color-border)] shadow-none bg-[var(--color-surface)]">
-          <CardBody className="p-4 flex items-center justify-between">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Menunggu Approval</p>
               <p className="text-2xl font-black text-[var(--color-warning-text)] mt-1">{pendingUpgradeCount}</p>
@@ -174,11 +173,11 @@ export function SuperAdminBusinessesPage() {
             <div className="h-10 w-10 rounded-xl bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] flex items-center justify-center text-[var(--color-warning-text)]">
               <ShieldAlert className="h-5 w-5" />
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="border-[var(--color-border)] shadow-none bg-[var(--color-surface)]">
-          <CardBody className="p-4 flex items-center justify-between">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Ditangguhkan</p>
               <p className="text-2xl font-black text-[var(--color-danger-text)] mt-1">{suspendedCount}</p>
@@ -186,8 +185,8 @@ export function SuperAdminBusinessesPage() {
             <div className="h-10 w-10 rounded-xl bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] flex items-center justify-center text-[var(--color-danger-text)]">
               <ShieldX className="h-5 w-5" />
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SYSTEM TELEMETRY */}
