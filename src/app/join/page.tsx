@@ -4,7 +4,6 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertCircle, ShieldAlert, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast-provider";
 import { teamService } from "@/services/team.service";
@@ -106,8 +105,8 @@ export default function JoinTeamPage({ searchParams }: { searchParams: Promise<{
   if (validationError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-4">
-        <Card className="max-w-md w-full border-red-500/20 shadow-lg animate-fade-up">
-          <CardBody className="p-6 text-center space-y-4">
+        <div className="max-w-md w-full border-red-500/20 shadow-sm animate-fade-up">
+          <div className="p-6 text-center space-y-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 mx-auto">
               <ShieldAlert className="h-6 w-6 text-red-500" />
             </div>
@@ -122,8 +121,8 @@ export default function JoinTeamPage({ searchParams }: { searchParams: Promise<{
             >
               Kembali ke Login
             </Button>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -133,8 +132,8 @@ export default function JoinTeamPage({ searchParams }: { searchParams: Promise<{
   if (isExpired) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-4">
-        <Card className="max-w-md w-full border-amber-500/20 shadow-lg animate-fade-up">
-          <CardBody className="p-6 text-center space-y-4">
+        <div className="max-w-md w-full border-amber-500/20 shadow-sm animate-fade-up">
+          <div className="p-6 text-center space-y-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 mx-auto">
               <AlertCircle className="h-6 w-6 text-amber-500" />
             </div>
@@ -149,8 +148,8 @@ export default function JoinTeamPage({ searchParams }: { searchParams: Promise<{
             >
               Kembali ke Login
             </Button>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -159,8 +158,8 @@ export default function JoinTeamPage({ searchParams }: { searchParams: Promise<{
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-4 py-12">
-      <Card className="max-w-lg w-full border-[var(--color-border)] shadow-xl animate-fade-up">
-        <CardBody className="p-8 space-y-6">
+      <div className="max-w-lg w-full border-[var(--color-border)] shadow-sm animate-fade-up">
+        <div className="p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-extrabold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
@@ -270,8 +269,8 @@ export default function JoinTeamPage({ searchParams }: { searchParams: Promise<{
               </Button>
             </div>
           </form>
-        </CardBody>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

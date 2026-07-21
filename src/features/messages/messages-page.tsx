@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, RotateCcw, Send, Users, PencilLine, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
-import { Card, CardBody } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";

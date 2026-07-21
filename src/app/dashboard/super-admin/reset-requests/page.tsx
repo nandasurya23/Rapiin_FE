@@ -3,5 +3,5 @@
 import { SuperAdminResetRequestsPage } from "@/features/super-admin/reset-requests-page";
 
 export default function SuperAdminResetRequestsRoute() {
-  return <SuperAdminResetRequestsPage />;
+ return <SuperAdminResetRequestsPage />;
 }

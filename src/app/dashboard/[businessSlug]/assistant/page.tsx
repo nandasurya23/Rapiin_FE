@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { LinkButton } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { ROUTES } from "@/lib/routes";
@@ -47,11 +46,11 @@ export default function AssistantPage() {
       />
 
       <section className="flex flex-col items-center justify-center py-12 px-4 text-center max-w-2xl mx-auto">
-        <Card className="w-full border-amber-500/20 bg-gradient-to-b from-[var(--color-surface-elevated)] to-[var(--color-surface)] shadow-[var(--shadow-lg)] overflow-hidden relative">
+        <div className="w-full border-amber-500/20 bg-gradient-to-b from-[var(--color-surface-elevated)] to-[var(--color-surface)] shadow-sm overflow-hidden relative">
           {/* Accent glow top */}
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600" />
           
-          <CardBody className="p-8 sm:p-12 space-y-6">
+          <div className="p-8 sm:p-12 space-y-6">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/25">
               <Sparkles className="h-8 w-8 text-amber-500 animate-pulse" />
             </div>
@@ -76,8 +75,8 @@ export default function AssistantPage() {
                 <span className="text-xs font-medium text-[var(--color-text-secondary)]">Sedang disempurnakan oleh tim Rapiin</span>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       </section>
     </main>
   );
