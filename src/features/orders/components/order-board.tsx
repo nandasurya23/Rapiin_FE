@@ -70,18 +70,45 @@ export function OrderBoard({
   }
  }
 
+ // Mouse drag-to-scroll support for desktop
+ const [isMouseDown, setIsMouseDown] = useState(false);
+ const [startX, setStartX] = useState(0);
+ const [scrollLeft, setScrollLeft] = useState(0);
+
  return (
   <section className="space-y-4">
    <div className="flex items-center justify-between gap-3 px-1 border-b border-[var(--color-border)] pb-3">
     <div>
      <h2 className="text-lg font-bold text-[var(--color-text)]">Board Alur Status Pesanan</h2>
-     <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Pantau status pesanan masuk dan geser posisi alurnya dengan mudah.</p>
+     <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Pantau status pesanan masuk. Geser horizontal (drag/scroll) untuk melihat semua kolom.</p>
     </div>
     <Badge tone="neutral" className="font-extrabold">{statusOptions.length} Status Board</Badge>
    </div>
 
-   <div className="overflow-x-auto pb-2 no-scrollbar">
-    <div className="flex gap-4">
+   <div
+    className="overflow-x-auto pb-4 pt-1 cursor-grab active:cursor-grabbing select-none focus:outline-none"
+    onMouseDown={(e) => {
+     // Only trigger horizontal container drag scroll if not dragging a card directly
+     if ((e.target as HTMLElement).closest("[draggable='true']")) return;
+     setIsMouseDown(true);
+     setStartX(e.pageX - e.currentTarget.offsetLeft);
+     setScrollLeft(e.currentTarget.scrollLeft);
+    }}
+    onMouseLeave={() => {
+     setIsMouseDown(false);
+    }}
+    onMouseUp={() => {
+     setIsMouseDown(false);
+    }}
+    onMouseMove={(e) => {
+     if (!isMouseDown) return;
+     e.preventDefault();
+     const x = e.pageX - e.currentTarget.offsetLeft;
+     const walk = (x - startX) * 1.5;
+     e.currentTarget.scrollLeft = scrollLeft - walk;
+    }}
+   >
+    <div className="flex gap-4 min-w-max pb-2">
      {statusOptions.map((option) => {
       const laneOrders = orders.filter((order) => {
        if (option.value === "WAITING_DP" || option.value === "ORDER_BARU" || option.value === "REQUEST_MASUK") {

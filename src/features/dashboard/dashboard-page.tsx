@@ -342,14 +342,14 @@ export function DashboardPage() {
       )}
      </div>
 
-     <div className="flex flex-col gap-0 divide-y divide-[var(--color-border)] border-y border-[var(--color-border)] bg-[var(--color-surface)]">
+     <div className="flex flex-col divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs overflow-hidden">
       {filteredActionItems.length ? (
        filteredActionItems.map((item) => {
         return (
          <div
           key={item.id}
           className={cn(
-           "flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between px-1"
+           "flex flex-col gap-3 p-4 sm:p-5 md:flex-row md:items-center md:justify-between transition-colors hover:bg-[var(--color-surface-elevated)]/50"
           )}
          >
            {/* Info */}
