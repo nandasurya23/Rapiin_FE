@@ -122,15 +122,6 @@ export function OrderBoard({
           laneOrders.map((order) => {
            const waConfig = getWhatsAppConfig(order);
            
-           let statusIndicator = "bg-stone-300";
-           if (order.paymentStatus === "PAID") {
-            statusIndicator = "bg-emerald-500";
-           } else if (order.paymentStatus === "DP_PAID") {
-            statusIndicator = "bg-blue-500";
-           } else if (order.paymentStatus === "UNPAID") {
-            statusIndicator = "bg-rose-500";
-           }
-
            const isDraggable = order.status !== "SELESAI" && order.status !== "BATAL";
 
            return (
@@ -151,12 +142,9 @@ export function OrderBoard({
             >
              {/* <div className={cn("absolute left-0 top-3 bottom-3 w-1 rounded-full", statusIndicator)} /> */}
              <div className="flex items-start gap-3">
-              <div className={cn(
-               "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white text-[10px] font-black select-none border border-white/20",
-               getAvatarGradient(order.customerName)
-              )}>
-               {getInitials(order.customerName)}
-              </div>
+               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-elevated)] text-[var(--color-text)] font-semibold text-xs border border-[var(--color-border)] select-none">
+                {getInitials(order.customerName)}
+               </div>
               <div className="min-w-0 flex-1">
                <p className="truncate font-bold text-sm text-[var(--color-text)] tracking-tight">{order.customerName}</p>
                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)] truncate font-semibold">{order.title}</p>

@@ -43,6 +43,7 @@ type OrderFormState = {
  scheduledTime: string;
  bookingDurationMinutes: string;
  resourceId: string;
+ serviceId: string;
  totalAmount: string;
  dpAmount: string;
  notes: string;
@@ -61,6 +62,7 @@ function createDefaultForm(business: Business): OrderFormState {
   scheduledTime: "",
   bookingDurationMinutes: "60",
   resourceId: business.operationalModel === "RESOURCE_BOOKING" ? "ANY" : "",
+  serviceId: "",
   totalAmount: "",
   dpAmount: "",
   notes: "",
@@ -138,6 +140,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
       scheduledTime: order.scheduledTime ?? "",
       bookingDurationMinutes: String(order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES),
       resourceId: order.resourceId ?? (business.operationalModel === "RESOURCE_BOOKING" ? "ANY" : ""),
+      serviceId: order.serviceId ?? "",
       totalAmount: order.totalAmount ? String(order.totalAmount) : "",
       dpAmount: order.dpAmount ? String(order.dpAmount) : "",
       notes: order.notes ?? "",
@@ -354,7 +357,6 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
   setError("");
   setIsSubmitting(true);
   try {
-   await new Promise((resolve) => setTimeout(resolve, 250));
    const nextHoldExpiresAt = form.mode === "BOOKING_SERVICE" && form.paymentStatus === "UNPAID" && form.status === "WAITING_DP"
     ? new Date(Date.now() + BOOKING_HOLD_MINUTES * 60 * 1000).toISOString()
     : undefined;
@@ -373,6 +375,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
      scheduledTime: form.scheduledTime || undefined,
      bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
      bookingHoldExpiresAt: nextHoldExpiresAt,
+     serviceId: form.serviceId || undefined,
      // Jika owner memilih "Umum" (ANY) atau hanya ada 1 unit aktif, alokasikan otomatis
      resourceId: isResourceBookingMode
       ? (activeResources.length <= 1
@@ -407,6 +410,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     scheduledTime: form.scheduledTime || undefined,
     bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
     bookingHoldExpiresAt: nextHoldExpiresAt,
+    serviceId: form.serviceId || undefined,
     resourceId: isResourceBookingMode
      ? (activeResources.length <= 1
        ? activeResources[0]?.id
@@ -444,16 +448,16 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
 
     {/* Auto Parser */}
     {!editingId && (
-     <div className="space-y-2">
-      {!showPasteChat ? (
-       <button 
-        type="button" 
-        onClick={() => setShowPasteChat(true)}
-        className="inline-flex items-center justify-center gap-2 rounded-md h-8 px-3 w-full text-xs font-bold border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-       >
-        <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
-        Isi form otomatis dari Chat WA
-       </button>
+      <div className="space-y-2">
+       {!showPasteChat ? (
+        <button 
+         type="button" 
+         onClick={() => setShowPasteChat(true)}
+         className="inline-flex items-center justify-between rounded-lg p-3 w-full text-xs font-semibold border border-[var(--color-primary)]/20 bg-[var(--color-primary-surface)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-text-inverse)] transition-all duration-200"
+        >
+         <span className="font-bold">✨ Punya pesan chat WA dari pelanggan?</span>
+         <span className="underline text-[11px]">Tempel & Isi Otomatis →</span>
+        </button>
       ) : (
        <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/50 p-4 space-y-3 dark:border-indigo-900/60 dark:bg-indigo-950/20 animate-fade-in">
         <div className="flex items-center justify-between">
@@ -580,11 +584,14 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
          updateFormField("title", val);
          const item = catalogList.find((i) => i.name === val);
          if (item) {
+          updateFormField("serviceId", item.id || "");
           const duration = inferCatalogDurationMinutes(item);
           if (duration) updateFormField("bookingDurationMinutes", String(duration));
           
           const price = parseIndonesianNumber(item.priceLabel ?? "");
           if (price) updateFormField("totalAmount", String(price));
+         } else {
+          updateFormField("serviceId", "");
          }
         }} 
         options={catalogList.map((i) => ({ value: i.name, label: i.name }))}

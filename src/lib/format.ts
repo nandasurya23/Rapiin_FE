@@ -131,3 +131,13 @@ export function formatPercent(value: number | null | undefined) {
 
   return `${value}%`;
 }
+
+export function formatRupiahInput(value: string): string {
+  const numericValue = value.replace(/[^\d]/g, "");
+  if (/^\d+$/.test(numericValue) || value === "") {
+    if (!numericValue) return "";
+    return `Rp ${new Intl.NumberFormat("id-ID").format(parseInt(numericValue, 10))}`;
+  }
+  return value;
+}
+

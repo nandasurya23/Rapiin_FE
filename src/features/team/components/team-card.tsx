@@ -19,11 +19,11 @@ export function TeamCard({ member, onEdit, showActions }: TeamCardProps) {
   .slice(0, 2);
 
  return (
-  <div className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:shadow-sm">
+  <div className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--color-border-strong)] hover:shadow-sm">
    {/* Header */}
    <div className="flex items-start justify-between gap-4">
     <div className="flex items-center gap-3">
-     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary-surface)] border border-[var(--color-border-strong)] text-sm font-bold text-[var(--color-primary)]">
+     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-surface)] border border-[var(--color-border-strong)] text-xs font-bold text-[var(--color-primary)]">
       {initials}
      </div>
      <div className="min-w-0">

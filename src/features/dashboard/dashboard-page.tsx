@@ -278,25 +278,27 @@ export function DashboardPage() {
     title={`Selamat Datang Kembali, ${currentUser?.name ?? business.ownerName}`}
     description="Berikut adalah rangkuman aktivitas operasional, penagihan, dan tugas penting bisnis Anda hari ini."
     badge={
-     <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-[var(--color-text-secondary)] uppercase mb-2">
-      <Sparkles className="h-3 w-3" />
-      {formatDate(today)}
-     </span>
-    }
-    action={
-     <div className="flex flex-wrap gap-2 xl:shrink-0">
-      <LinkButton href={ROUTES.orders(business.slug)} variant="primary" size="sm">
-       Tambah Order
-      </LinkButton>
-      <LinkButton href={ROUTES.customers(business.slug)} variant="secondary" size="sm">
-       Tambah Customer
-      </LinkButton>
-      <LinkButton href={ROUTES.messages(business.slug)} variant="secondary" size="sm">
-       Pesan Cepat
-      </LinkButton>
+     <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-surface)] border border-[var(--color-primary)]/20 px-3 py-1 text-xs font-semibold text-[var(--color-primary)] mb-1">
+      <Sparkles className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+      <span>{business.name}</span>
      </div>
     }
    />
+
+   {/* ── PROACTIVE BUSINESS INSIGHT ───────────────────── */}
+   <div className="rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary-surface)] p-4 text-xs sm:text-sm text-[var(--color-text)] flex items-start gap-3.5 shadow-xs">
+    <Sparkles className="h-5 w-5 shrink-0 text-[var(--color-primary)] mt-0.5" />
+    <div className="flex-1 space-y-1">
+     <p className="font-bold text-[var(--color-primary)]">
+      💡 Ringkasan Rekomendasi Bisnis Hari Ini
+     </p>
+     <p className="text-[var(--color-text-secondary)] leading-relaxed text-xs">
+      {filteredActionItems.length > 0
+       ? `Ada ${filteredActionItems.length} tindakan penting yang perlu di-follow up (tagihan/pembayaran). Mengingatkan pelanggan tepat waktu dapat meningkatkan kelancaran kas hingga 80%.`
+       : "Semua tagihan dan jadwal hari ini sudah rapi. Bagikan link booking ke calon pelanggan untuk menambah pesanan!"}
+     </p>
+    </div>
+   </div>
 
    {/* ── STANDALONE METRICS GRID ──────────────────────── */}
    <section className="grid gap-4 sm:grid-cols-3 animate-fade-up-delay-1">
@@ -371,16 +373,16 @@ export function DashboardPage() {
             <WhatsAppButton
              phoneNumber={item.phone}
              message={item.message}
-             label="Hubungi via WA"
-             className="h-9 px-3 text-xs font-bold rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] flex-1 sm:flex-none justify-center"
+             label="Hubungi WA"
+             className="h-9 px-3 text-xs font-bold rounded-md flex-1 sm:flex-none justify-center"
             />
             <Button
              type="button"
-             variant="secondary"
+             variant="ghost"
              size="sm"
              onClick={() => void handleCopyMessage(item.message)}
              title="Salin draf pesan WA"
-             className="h-9 px-3 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] flex-none"
+             className="h-9 w-9 p-0 rounded-md flex-none"
             >
              <Copy className="h-4 w-4" />
             </Button>
@@ -394,20 +396,20 @@ export function DashboardPage() {
                 const isWaitingDp = item.status === "WAITING_DP";
                 void handleMarkOrderPaid(item.id, isWaitingDp ? "DP" : "FULL");
                }}
-               className="font-bold border-[var(--color-border)] h-9 px-3 text-xs rounded-xl flex-1 sm:flex-none justify-center"
+               className="font-medium border-[var(--color-border)] h-9 px-3 text-xs rounded-md flex-1 sm:flex-none justify-center"
               >
-               {item.status === "WAITING_DP" ? "DP Lunas" : "Bayar Lunas"}
+               {item.status === "WAITING_DP" ? "DP Lunas" : "Lunas"}
               </Button>
               {item.status !== "SELESAI" && (
                <Button
                 type="button"
-                variant="secondary"
+                variant="ghost"
                 size="sm"
                 onClick={() => void handleMarkOrderDone(item.id)}
                 title="Tandai order selesai"
-                className="font-bold border-[var(--color-border)] h-9 px-3 text-xs rounded-xl flex-1 sm:flex-none justify-center"
+                className="font-medium h-9 px-3 text-xs rounded-md flex-1 sm:flex-none justify-center"
                >
-                Tandai Selesai
+                Selesai
                </Button>
               )}
              </>

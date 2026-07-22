@@ -40,18 +40,16 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
    <div
     ref={modalRef}
     className={cn(
-     "w-full max-w-md overflow-hidden flex flex-col rounded-2xl relative animate-in zoom-in-95 duration-200",
-     "bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] text-white",
-     "border border-white/[0.08] shadow-[var(--shadow-modal)]"
+     "w-full max-w-md overflow-hidden flex flex-col rounded-xl relative animate-in zoom-in-95 duration-200",
+     "bg-slate-900 text-white",
+     "border border-slate-800 shadow-[var(--shadow-modal)]"
     )}
    >
-    <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600" />
     
     {/* Header with Close */}
-    <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
+    <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800">
      <div className="flex items-center gap-2">
-      <Sparkles className="h-4.5 w-4.5 text-amber-400 animate-pulse" />
-      <span className="text-xs font-black uppercase tracking-wider text-amber-300">Asisten Pintar</span>
+      <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-primary)]">Asisten Pintar</span>
      </div>
      <button
       onClick={onClose}

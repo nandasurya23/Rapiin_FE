@@ -23,20 +23,17 @@ export function PageHeader({
  if (variant === "hero") {
   return (
    <div className={cn(
-    "relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] border border-white/[0.08] px-6 py-6 sm:px-8 sm:py-8 text-white animate-fade-up",
+    "relative overflow-hidden rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] px-6 py-6 sm:px-8 sm:py-8 text-[var(--color-text)] shadow-xs animate-fade-up",
     className
    )}>
-    <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-500/20 blur-3xl pointer-events-none" />
-    <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none" />
-
     <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-     <div className="space-y-3">
+     <div className="space-y-2">
       {badge}
-      <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
+      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl text-[var(--color-text)]">
        {title}
       </h1>
       {description ? (
-       <p className="max-w-xl text-sm text-white/70 leading-relaxed">
+       <p className="max-w-xl text-sm text-[var(--color-text-secondary)] leading-relaxed">
         {description}
        </p>
       ) : null}

@@ -34,6 +34,7 @@ export type Order = Timestamped & {
   bookingHoldExpiresAt?: string;
   resourceId?: ID;
   resourceNameSnapshot?: string;
+  serviceId?: ID;
   totalAmount?: number;
   dpAmount?: number;
   notes?: string;
