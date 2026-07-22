@@ -391,27 +391,35 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
 
  const positionedOrders = useMemo(() => {
   const sorted = [...selectedOrders].sort((a, b) => (a.scheduledTime || "").localeCompare(b.scheduledTime || ""));
+
   return sorted.map((order) => {
    const [h, m] = (order.scheduledTime || "08:00").split(":").map(Number);
    const start = h * 60 + m;
    const end = start + (order.bookingDurationMinutes || 60);
 
-   const overlaps = sorted.filter((other) => {
-    if (other.id === order.id) return false;
+   const overlappingGroup = sorted.filter((other) => {
     const [oh, om] = (other.scheduledTime || "08:00").split(":").map(Number);
     const ostart = oh * 60 + om;
     const oend = ostart + (other.bookingDurationMinutes || 60);
     return start < oend && end > ostart;
    });
 
-   const hasOverlap = overlaps.length > 0;
-   const positionIdx = overlaps.findIndex((o) => o.id < order.id) > -1 ? 1 : 0;
+   const totalInGroup = Math.max(1, overlappingGroup.length);
+   const orderIndexInGroup = overlappingGroup.findIndex((o) => o.id === order.id);
+
+   const widthPercent = 100 / totalInGroup;
+   const leftPercent = orderIndexInGroup * widthPercent;
 
    return {
     order,
     top: ((start - startOffsetMinutes) * 64) / 60,
-    height: ((order.bookingDurationMinutes || 60) * 64) / 60,
-    leftClass: hasOverlap ? (positionIdx === 0 ? "left-1 w-[47%]" : "left-[51%] w-[47%]") : "left-1 right-1",
+    height: Math.max(36, ((order.bookingDurationMinutes || 60) * 64) / 60),
+    style: {
+     top: `${((start - startOffsetMinutes) * 64) / 60}px`,
+     height: `${Math.max(36, ((order.bookingDurationMinutes || 60) * 64) / 60)}px`,
+     left: `calc(${leftPercent}% + 4px)`,
+     width: `calc(${widthPercent}% - 8px)`,
+    },
    };
   });
  }, [selectedOrders, startOffsetMinutes]);
@@ -758,7 +766,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
              ))}
 
              {/* Order blocks */}
-             {positionedOrders.map(({ order, top, height, leftClass }) => (
+             {positionedOrders.map(({ order, style }) => (
               <button
                key={order.id}
                type="button"
@@ -768,10 +776,9 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                }}
                className={cn(
                 "absolute rounded-xl border p-2 text-left flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
-                leftClass,
                 getTimelineCardClasses(order.status, order.paymentStatus)
                )}
-               style={{ top: `${top}px`, height: `${height}px` }}
+               style={style}
               >
                <div className="min-w-0 w-full space-y-1">
                 <div className="flex items-center justify-between gap-1 w-full">
