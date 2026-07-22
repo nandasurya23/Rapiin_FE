@@ -215,23 +215,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
 
 
- // Removed state sync to localStorage to ensure backend is the sole source of truth
-
  function setAppState(updater: (current: AppStorageState) => AppStorageState) {
   setState((current) => updater(current));
  }
 
- // Live queries from React Query
  const { data: queryBusiness } = useQuery({
   queryKey: ["business"],
   queryFn: () => businessService.getBusinessById(""),
   enabled: hydrated && !!state.auth.currentUserId && state.auth.users.find(u => u.id === state.auth.currentUserId)?.role !== "SUPER_ADMIN",
-  staleTime: 5 * 60 * 1000, // 5 minutes stale time for business settings
+  staleTime: 5 * 60 * 1000,
  });
 
  const business = queryBusiness || state.business;
-
- // Domains removed from God object
  
  const currentUser = useMemo(() => state.auth.users.find((user) => user.id === state.auth.currentUserId) ?? null, [state.auth.currentUserId, state.auth.users]);
  const subscriptionForCurrentBusiness = useMemo(
@@ -265,33 +260,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   [currentUserRole, state, subscriptionForCurrentBusiness, business]
  );
 
- const updateBusiness = useCallback(async (payload: Partial<Business>) => {
-  if (!canAccessWriteMode) {
-   throw new Error(readOnlyReason || "Mode baca saja aktif.");
-  }
-  const updated = await businessService.updateBusiness(state.business.id, payload);
-  if (updated) {
-   setState((current) => ({
-    ...current,
-    business: updated,
-   }));
-   queryClient.invalidateQueries({ queryKey: ["business"] });
-  }
- }, [canAccessWriteMode, readOnlyReason, state.business.id, queryClient]);
+  const updateBusiness = useCallback(async (payload: Partial<Business>) => {
+   if (!canAccessWriteMode) {
+    throw new Error(readOnlyReason || "Mode baca saja aktif.");
+   }
+   const updated = await businessService.updateBusiness(business.id, payload);
+   if (updated) {
+    setState((current) => ({
+     ...current,
+     business: updated,
+    }));
+    queryClient.invalidateQueries({ queryKey: ["business"] });
+   }
+  }, [canAccessWriteMode, readOnlyReason, business.id, queryClient]);
 
- const saveBusinessSettings = useCallback(async (payload: BusinessSettingsInput) => {
-  if (!canAccessWriteMode) {
-   throw new Error(readOnlyReason || "Mode baca saja aktif.");
-  }
-  const updated = await businessService.updateBusiness(state.business.id, payload);
-  if (updated) {
-   setState((current) => ({
-    ...current,
-    business: updated,
-   }));
-   queryClient.invalidateQueries({ queryKey: ["business"] });
-  }
- }, [canAccessWriteMode, readOnlyReason, state.business.id, queryClient]);
+  const saveBusinessSettings = useCallback(async (payload: BusinessSettingsInput) => {
+   if (!canAccessWriteMode) {
+    throw new Error(readOnlyReason || "Mode baca saja aktif.");
+   }
+   const updated = await businessService.updateBusiness(business.id, payload);
+   if (updated) {
+    setState((current) => ({
+     ...current,
+     business: updated,
+    }));
+    queryClient.invalidateQueries({ queryKey: ["business"] });
+   }
+  }, [canAccessWriteMode, readOnlyReason, business.id, queryClient]);
 
  const completeOnboarding = useCallback(async (payload: OnboardingPayload) => {
   const response = await apiFetch<BusinessDTO>("/api/business/onboarding", {

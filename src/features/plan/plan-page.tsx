@@ -219,15 +219,15 @@ export function PlanPage() {
           setSelectedPlan(plan.code);
          }
         }}
-        className={`group relative flex flex-col justify-between rounded-2xl border bg-[var(--color-surface)] p-6 transition-all duration-300 hover:shadow-sm ${
+        className={`group relative flex flex-col justify-between rounded-xl border bg-[var(--color-surface)] p-6 transition-all duration-300 hover:shadow-xs ${
          plan.code === "PREMIUM" ? "opacity-65 cursor-not-allowed" : "cursor-pointer"
         } ${cardBorder} ${
-         !isCurrent && plan.code !== "FREE_TRIAL" && plan.code !== "PREMIUM" ? "hover:-translate-y-1" : ""
+         !isCurrent && plan.code !== "FREE_TRIAL" && plan.code !== "PREMIUM" ? "hover:-translate-y-0.5" : ""
         }`}
        >
         {/* Popular Badge */}
         {details.isPopular && (
-         <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[var(--color-accent)] to-[#AF752E] px-4 py-1 text-[9px] font-extrabold uppercase tracking-widest text-white border border-amber-300/20">
+         <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--color-accent)] px-3 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-accent-text)] border border-[var(--color-accent)]">
           Terpopuler
          </span>
         )}
@@ -236,7 +236,7 @@ export function PlanPage() {
          {/* Header */}
          <div className="flex items-start justify-between gap-4">
           <div>
-           <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border ${details.accentColor}`}>
+           <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${details.accentColor}`}>
             <Icon className="h-5 w-5" />
            </span>
            <h3 className="mt-3 text-lg font-bold text-[var(--color-text)]">{plan.label}</h3>

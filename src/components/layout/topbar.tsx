@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
+import { Bell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { QuickAddMenu } from "@/components/shared/quick-add-menu";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { cn } from "@/lib/cn";
@@ -102,18 +102,16 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: T
        onClick={onOpenAssistant}
        title="Asisten Pintar — Input Cepat (⌘K)"
        className={cn(
-        "hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold",
-        "bg-gradient-to-r from-[#122a57] to-[#0c1d3b] text-amber-300",
-        "border border-amber-400/30",
-        "hover:from-[#1a3a73] hover:to-[#122a57] hover:text-amber-200",
+        "hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold",
+        "bg-[var(--color-primary-surface)] text-[var(--color-primary)]",
+        "border border-[var(--color-primary)]/20",
+        "hover:bg-[var(--color-primary)] hover:text-[var(--color-text-inverse)]",
         "transition-all duration-200",
-        "disabled:opacity-40 disabled:cursor-not-allowed",
-        "shadow-[0_0_12px_rgba(218,159,78,0.15)]"
+        "disabled:opacity-40 disabled:cursor-not-allowed"
        )}
       >
-       <Sparkles className="h-3.5 w-3.5 text-amber-300" />
        <span>Asisten Pintar</span>
-       <kbd className="hidden lg:inline-flex items-center rounded border border-amber-400/20 bg-amber-400/10 px-1 text-[9px] font-mono text-amber-400/80">⌘K</kbd>
+       <kbd className="hidden lg:inline-flex items-center rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1 text-[9px] font-mono text-[var(--color-text-secondary)]">⌘K</kbd>
       </button>
      ) : null}
 

@@ -7,7 +7,10 @@ export function getPlanDefinition(planCode: PlanCode) {
   return PLAN_DEFINITIONS.find((plan) => plan.code === planCode) ?? PLAN_DEFINITIONS[0];
 }
 
-export function getSubscriptionForBusiness(subscriptions: BusinessSubscription[], businessId: string) {
+export function getSubscriptionForBusiness(subscriptions: BusinessSubscription[] | undefined | null, businessId: string) {
+  if (!Array.isArray(subscriptions)) {
+    return null;
+  }
   return subscriptions.find((subscription) => subscription.businessId === businessId) ?? subscriptions[0] ?? null;
 }
 

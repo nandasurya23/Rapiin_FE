@@ -187,17 +187,16 @@ export function OnboardingFlow() {
     whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
     resourceCount: form.usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
     resources: form.usesResources ? form.resources : [],
-    defaultBookingDurationMinutes: undefined,
+    defaultBookingDurationMinutes: Number(form.defaultBookingDurationMinutes) || 60,
    });
    toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
-   await new Promise((resolve) => setTimeout(resolve, 180));
    let redirectUrl = `/dashboard/${response?.slug || business.slug}`;
    if (action === "new-order") {
     redirectUrl = `/dashboard/${response?.slug || business.slug}/orders?action=new-order`;
    } else if (action === "share-link") {
     redirectUrl = `/dashboard/${response?.slug || business.slug}/business-link`;
    }
-   window.location.href = redirectUrl;
+   router.push(redirectUrl);
   } catch (err) {
    toast.error("Gagal memproses onboarding", err instanceof Error ? err.message : "Kesalahan sistem.");
   } finally {

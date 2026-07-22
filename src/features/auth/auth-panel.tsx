@@ -6,23 +6,18 @@ import { CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import { ROUTES } from "@/lib/routes";
 import { Button, LinkButton } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { isValidEmail, isValidEmailOrPhone, isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 import { cn } from "@/lib/cn";
+import { LoginFormFields } from "./components/login-form";
+import { RegisterFormFields } from "./components/register-form";
+import { ForgotPasswordFormFields } from "./components/forgot-password-form";
+import { ResetPasswordFormFields } from "./components/reset-password-form";
 
-/**
- * mode:
- *  "login"     — Login dengan email / nomor HP
- *  "register"    — Daftar akun baru (owner)
- *  "request-reset" — Step 1: Kirim email untuk request link reset password
- *  "reset-password" — Step 2: Gunakan token dari email untuk set password baru
- */
+
 type AuthPanelProps = {
  mode: "login" | "register" | "request-reset" | "reset-password";
- /** Token dari URL query param untuk mode "reset-password" */
  resetToken?: string;
  initialEmail?: string;
  roleFilter?: "OWNER" | "SUPER_ADMIN";
@@ -42,7 +37,6 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [error, setError] = useState("");
  const [pwdValue, setPwdValue] = useState("");
- // For request-reset: show success state after sending email
  const [requestResetSent, setRequestResetSent] = useState(false);
  const [resetEmail, setResetEmail] = useState(initialEmail);
  const [tokenValue, setTokenValue] = useState(resetToken);
@@ -57,7 +51,6 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
   }
  }, [currentUser, router]);
 
- // Local state for inline validation errors and touch state
  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
 
@@ -97,7 +90,6 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
    else if (!isValidPhoneNumber(num)) err = "Nomor WhatsApp tidak valid (contoh: 08123456789).";
   } else if (name === "password") {
    if (!value) err = "Password wajib diisi.";
-   // Sync dengan BE: minimal 8 karakter
    else if (value.length < 8) err = "Password minimal 8 karakter.";
   } else if (name === "newPassword") {
    if (!value) err = "Password baru wajib diisi.";
@@ -141,7 +133,6 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
   if (mode === "login") {
    const identifierRaw = String(formData.get("identifier") ?? "");
    const password = String(formData.get("password") ?? "");
-   // Normalize: email → lowercase; phone → digits only
    const identifier = identifierRaw.includes("@")
     ? identifierRaw.trim().toLowerCase()
     : normalizePhoneNumber(identifierRaw);
@@ -293,13 +284,9 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
     className={cn(
      "hidden lg:flex lg:flex-col lg:justify-between lg:w-[420px] xl:w-[480px] shrink-0",
      "relative overflow-hidden",
-     "bg-gradient-to-br from-[#0c1d3b] via-[#122a57] to-[#09152b] px-10 py-12"
+     "bg-slate-900 border-r border-slate-800 px-10 py-12"
     )}
    >
-    {/* Decorative background orbs */}
-    <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
-    <div className="absolute -left-16 bottom-1/3 h-48 w-48 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
-    <div className="absolute right-8 bottom-16 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
 
     {/* Logo */}
     <div className="relative flex items-center mb-2">
@@ -407,289 +394,55 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
 
          {/* ─── REGISTER FIELDS ─── */}
          {mode === "register" ? (
-          <>
-           <label className="block">
-            <div className="flex justify-between items-center mb-1.5">
-             <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Owner</span>
-             {touchedFields.name && !fieldErrors.name && (
-              <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-             )}
-            </div>
-            <Input
-             name="name"
-             placeholder="Nama kamu"
-             required
-             hasError={touchedFields.name && !!fieldErrors.name}
-             onBlur={(e) => handleBlur("name", e.target.value)}
-             onChange={(e) => handleChange("name", e.target.value)}
-            />
-            {touchedFields.name && fieldErrors.name ? (
-             <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.name}</span>
-            ) : (
-             <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">Nama lengkap penanggung jawab bisnis.</span>
-            )}
-           </label>
-           <label className="block">
-            <div className="flex justify-between items-center mb-1.5">
-             <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Email</span>
-             {touchedFields.email && !fieldErrors.email && (
-              <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-             )}
-            </div>
-            <Input
-             name="email"
-             type="email"
-             placeholder="owner@bisnis.com"
-             required
-             hasError={touchedFields.email && !!fieldErrors.email}
-             onBlur={(e) => handleBlur("email", e.target.value)}
-             onChange={(e) => handleChange("email", e.target.value)}
-            />
-            {touchedFields.email && fieldErrors.email ? (
-             <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.email}</span>
-            ) : (
-             <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">Digunakan untuk konfirmasi & masuk sistem.</span>
-            )}
-           </label>
-           <label className="block">
-            <div className="flex justify-between items-center mb-1.5">
-             <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nomor WhatsApp</span>
-             {touchedFields.phoneNumber && !fieldErrors.phoneNumber && (
-              <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-             )}
-            </div>
-            <Input
-             name="phoneNumber"
-             placeholder="08123456789"
-             required
-             hasError={touchedFields.phoneNumber && !!fieldErrors.phoneNumber}
-             onBlur={(e) => handleBlur("phoneNumber", e.target.value)}
-             onChange={(e) => {
-              e.target.value = e.target.value.replace(/[^\d]/g, "");
-              handleChange("phoneNumber", e.target.value);
-             }}
-            />
-            {touchedFields.phoneNumber && fieldErrors.phoneNumber ? (
-             <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.phoneNumber}</span>
-            ) : (
-             <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">Format: 08123456789 atau 628123456789. Digunakan untuk notifikasi WA.</span>
-            )}
-           </label>
-          </>
+          <RegisterFormFields
+           pwdValue={pwdValue}
+           pwdStrength={pwdStrength}
+           touchedFields={touchedFields}
+           fieldErrors={fieldErrors}
+           handleBlur={handleBlur}
+           handleChange={handleChange}
+           setPwdValue={setPwdValue}
+          />
          ) : null}
 
          {/* ─── LOGIN: identifier field ─── */}
          {mode === "login" ? (
-          <label className="block">
-           <div className="flex justify-between items-center mb-1.5">
-            <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Email / Nomor HP</span>
-            {touchedFields.identifier && !fieldErrors.identifier && (
-             <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-            )}
-           </div>
-           <Input
-            name="identifier"
-            placeholder="contoh@mail.com atau 08123456789"
-            required
-            hasError={touchedFields.identifier && !!fieldErrors.identifier}
-            onBlur={(e) => handleBlur("identifier", e.target.value)}
-            onChange={(e) => handleChange("identifier", e.target.value)}
-           />
-           {touchedFields.identifier && fieldErrors.identifier && (
-            <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.identifier}</span>
-           )}
-          </label>
+          <LoginFormFields
+           touchedFields={touchedFields}
+           fieldErrors={fieldErrors}
+           handleBlur={handleBlur}
+           handleChange={handleChange}
+          />
          ) : null}
 
          {/* ─── REQUEST-RESET: email field ─── */}
          {mode === "request-reset" ? (
-          <label className="block">
-           <div className="flex justify-between items-center mb-1.5">
-            <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Email Terdaftar</span>
-            {touchedFields["request-reset-email"] && !fieldErrors["request-reset-email"] && (
-             <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-            )}
-           </div>
-           <Input
-            name="request-reset-email"
-            type="email"
-            placeholder="email@bisnis.com"
-            required
-            hasError={touchedFields["request-reset-email"] && !!fieldErrors["request-reset-email"]}
-            onBlur={(e) => handleBlur("request-reset-email", e.target.value)}
-            onChange={(e) => handleChange("request-reset-email", e.target.value)}
-           />
-           {touchedFields["request-reset-email"] && fieldErrors["request-reset-email"] ? (
-            <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors["request-reset-email"]}</span>
-           ) : (
-            <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">Token reset akan dikirim ke email ini.</span>
-           )}
-          </label>
+          <ForgotPasswordFormFields
+           touchedFields={touchedFields}
+           fieldErrors={fieldErrors}
+           handleBlur={handleBlur}
+           handleChange={handleChange}
+          />
          ) : null}
 
          {/* ─── RESET-PASSWORD: email + OTP + new password ─── */}
          {mode === "reset-password" ? (
-          <>
-           <label className="block">
-            <div className="flex justify-between items-center mb-1.5">
-             <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Email Akun</span>
-             {touchedFields.email && !fieldErrors.email && (
-              <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-             )}
-            </div>
-            <Input
-             name="email"
-             type="email"
-             placeholder="email@bisnis.com"
-             required
-             value={resetEmail}
-             hasError={touchedFields.email && !!fieldErrors.email}
-             onBlur={(e) => handleBlur("email", e.target.value)}
-             onChange={(e) => {
-              setResetEmail(e.target.value);
-              handleChange("email", e.target.value);
-             }}
-            />
-            {touchedFields.email && fieldErrors.email ? (
-             <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.email}</span>
-            ) : null}
-           </label>
-
-           <label className="block">
-            <div className="flex justify-between items-center mb-1.5">
-             <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Kode Reset (OTP 6-Digit)</span>
-             {touchedFields.token && !fieldErrors.token && (
-              <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-             )}
-            </div>
-            <Input
-             name="token"
-             type="text"
-             maxLength={6}
-             placeholder="Contoh: 123456"
-             required
-             value={tokenValue}
-             hasError={touchedFields.token && !!fieldErrors.token}
-             onBlur={(e) => handleBlur("token", e.target.value)}
-             onChange={(e) => {
-              const val = e.target.value.replace(/[^0-9]/g, "");
-              setTokenValue(val);
-              handleChange("token", val);
-             }}
-            />
-            {touchedFields.token && fieldErrors.token ? (
-             <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.token}</span>
-            ) : (
-             <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">Masukkan 6 digit kode OTP yang dikirim ke email atau diberikan Admin.</span>
-            )}
-           </label>
-
-           <label className="block">
-            <div className="flex justify-between items-center mb-1.5">
-             <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Password Baru</span>
-            </div>
-            <PasswordInput
-             name="newPassword"
-             placeholder="Password baru (min. 8 karakter)"
-             required
-             value={pwdValue}
-             hasError={touchedFields.newPassword && !!fieldErrors.newPassword}
-             onBlur={(e) => handleBlur("newPassword", e.target.value)}
-             onChange={(e) => {
-              setPwdValue(e.target.value);
-              handleChange("newPassword", e.target.value);
-             }}
-            />
-            {touchedFields.newPassword && fieldErrors.newPassword ? (
-             <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.newPassword}</span>
-            ) : null}
-
-            {pwdValue && (
-             <div className="mt-2.5 space-y-1.5">
-              <div className="flex justify-between items-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-               <span>Kekuatan Password:</span>
-               <span className={cn(
-                pwdStrength.label === "Lemah" && "text-red-500",
-                pwdStrength.label === "Sedang" && "text-amber-500",
-                pwdStrength.label === "Kuat" && "text-emerald-500"
-               )}>
-                {pwdStrength.label}
-               </span>
-              </div>
-              <div className="h-1.5 w-full bg-[var(--color-border)] rounded-full overflow-hidden flex gap-0.5">
-               <div className={cn("h-full flex-1 transition-all duration-300", pwdStrength.score >= 1 ? pwdStrength.color : "bg-transparent")} />
-               <div className={cn("h-full flex-1 transition-all duration-300", pwdStrength.score >= 3 ? pwdStrength.color : "bg-transparent")} />
-               <div className={cn("h-full flex-1 transition-all duration-300", pwdStrength.score >= 5 ? pwdStrength.color : "bg-transparent")} />
-              </div>
-             </div>
-            )}
-           </label>
-
-           <label className="block">
-            <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Konfirmasi Password Baru</span>
-            <PasswordInput
-             name="confirmPassword"
-             placeholder="Ulangi password baru"
-             required
-             hasError={touchedFields.confirmPassword && !!fieldErrors.confirmPassword}
-             onBlur={(e) => handleBlur("confirmPassword", e.target.value)}
-             onChange={(e) => handleChange("confirmPassword", e.target.value)}
-            />
-            {touchedFields.confirmPassword && fieldErrors.confirmPassword ? (
-             <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.confirmPassword}</span>
-            ) : null}
-           </label>
-          </>
+          <ResetPasswordFormFields
+           resetEmail={resetEmail}
+           tokenValue={tokenValue}
+           pwdValue={pwdValue}
+           pwdStrength={pwdStrength}
+           touchedFields={touchedFields}
+           fieldErrors={fieldErrors}
+           setResetEmail={setResetEmail}
+           setTokenValue={setTokenValue}
+           setPwdValue={setPwdValue}
+           handleBlur={handleBlur}
+           handleChange={handleChange}
+          />
          ) : null}
 
-         {/* ─── PASSWORD field (login & register only) ─── */}
-         {(mode === "login" || mode === "register") ? (
-          <label className="block">
-           <div className="flex justify-between items-center mb-1.5">
-            <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Password</span>
-            {mode === "register" && touchedFields.password && !fieldErrors.password && (
-             <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">✓ Valid</span>
-            )}
-           </div>
-           <PasswordInput
-            name="password"
-            placeholder="Masukkan password"
-            required
-            value={mode === "register" ? pwdValue : undefined}
-            hasError={touchedFields.password && !!fieldErrors.password}
-            onBlur={(e) => handleBlur("password", e.target.value)}
-            onChange={(e) => {
-             if (mode === "register") setPwdValue(e.target.value);
-             handleChange("password", e.target.value);
-            }}
-           />
-           {touchedFields.password && fieldErrors.password ? (
-            <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{fieldErrors.password}</span>
-           ) : (
-            <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">Gunakan password yang kuat (minimal 8 karakter).</span>
-           )}
 
-           {mode === "register" && pwdValue && (
-            <div className="mt-2.5 space-y-1.5">
-             <div className="flex justify-between items-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-              <span>Kekuatan Password:</span>
-              <span className={cn(
-               pwdStrength.label === "Lemah" && "text-red-500",
-               pwdStrength.label === "Sedang" && "text-amber-500",
-               pwdStrength.label === "Kuat" && "text-emerald-500"
-              )}>
-               {pwdStrength.label}
-              </span>
-             </div>
-             <div className="h-1.5 w-full bg-[var(--color-border)] rounded-full overflow-hidden flex gap-0.5">
-              <div className={cn("h-full flex-1 transition-all duration-300", pwdStrength.score >= 1 ? pwdStrength.color : "bg-transparent")} />
-              <div className={cn("h-full flex-1 transition-all duration-300", pwdStrength.score >= 3 ? pwdStrength.color : "bg-transparent")} />
-              <div className={cn("h-full flex-1 transition-all duration-300", pwdStrength.score >= 5 ? pwdStrength.color : "bg-transparent")} />
-             </div>
-            </div>
-           )}
-          </label>
-         ) : null}
 
          {/* ─── ERROR BANNER ─── */}
          {error ? (

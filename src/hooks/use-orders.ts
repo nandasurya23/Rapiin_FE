@@ -40,7 +40,23 @@ export function useOrders() {
       }
       return orderService.updateOrder(id, payload);
     },
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      await queryClient.cancelQueries({ queryKey: ["orders"] });
+      const previousOrders = queryClient.getQueryData<OrderDTO[]>(["orders", business?.id]);
+      if (previousOrders) {
+        queryClient.setQueryData<OrderDTO[]>(
+          ["orders", business?.id],
+          previousOrders.map((o) => (o.id === id ? ({ ...o, ...payload } as OrderDTO) : o))
+        );
+      }
+      return { previousOrders };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousOrders) {
+        queryClient.setQueryData(["orders", business?.id], context.previousOrders);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });

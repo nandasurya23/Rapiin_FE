@@ -22,6 +22,7 @@ export interface OrderDTO {
   bookingHoldExpiresAt?: string;
   resourceId?: string;
   resourceNameSnapshot?: string;
+  serviceId?: string;
   totalAmount?: number;
   dpAmount?: number;
   notes?: string;
