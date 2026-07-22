@@ -126,7 +126,7 @@ export function OrderBoard({
           laneOrders.map((order) => {
            const waConfig = getWhatsAppConfig(order);
            
-           const isDraggable = order.status !== "SELESAI" && order.status !== "BATAL";
+           const isDraggable = true;
 
            return (
             <div
