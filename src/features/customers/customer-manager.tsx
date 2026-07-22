@@ -195,14 +195,14 @@ export function CustomerManager() {
     title="CRM & Manajemen Pelanggan"
     description="Kelola kontak, rekam riwayat interaksi, dan identifikasi pelanggan loyal (CRM). Semua pelanggan yang tersimpan bisa ditelepon atau dikirimi template WhatsApp dalam 1 klik."
     badge={
-     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-      <Users className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
+     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
+      <Users className="h-3.5 w-3.5 text-[var(--color-accent-hover)] animate-pulse" />
       Database Pelanggan
      </span>
     }
     action={
      <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
-      <Badge tone="info" className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-xs font-bold h-10 flex items-center">
+      <Badge tone="info" className="bg-[var(--color-info-surface)] text-[var(--color-info-text)] border-[var(--color-info-border)] px-4 py-1.5 text-xs font-bold h-10 flex items-center">
        {currentBusinessUsage?.used ?? 0} / {currentBusinessUsage?.limit === Infinity ? "∞" : currentBusinessUsage?.limit} Pelanggan
       </Badge>
       <Button

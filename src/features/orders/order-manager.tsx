@@ -31,7 +31,7 @@ export function OrderManager() {
  const toast = useToast();
  const searchParams = useSearchParams();
  const { business } = useAppData();
- const { orders, isLoading, updateOrder, canCreateOrder } = useOrders();
+ const { orders, isLoading, updateOrder, deleteOrder, canCreateOrder } = useOrders();
  const { messageTemplates } = useMessageTemplates();
  
  const [query, setQuery] = useState("");
@@ -87,6 +87,15 @@ export function OrderManager() {
    toast.success("Status order berhasil diperbarui!");
   } catch (err) {
    toast.error("Gagal memperbarui status", err instanceof Error ? err.message : "");
+  }
+ }
+
+ async function handleDeleteOrder(order: Order) {
+  try {
+   await deleteOrder(order.id);
+   toast.success("Pesanan berhasil dihapus!");
+  } catch (err) {
+   toast.error("Gagal menghapus pesanan", err instanceof Error ? err.message : "");
   }
  }
 
@@ -257,6 +266,7 @@ export function OrderManager() {
       statusOptions={statusOptions}
       onUpdateStatus={onStatusChangeRequest}
       onEdit={handleEditOrder}
+      onDelete={handleDeleteOrder}
       getWhatsAppConfig={getWhatsAppButtonConfig}
      />
     )}

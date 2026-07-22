@@ -90,15 +90,15 @@ export function SuperAdminResetRequestsPage() {
     title="Permintaan Reset Password"
     description="Bantu pengguna yang lupa password secara manual dengan menyalin link reset unik dan kirim via WhatsApp."
     badge={
-     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-300">
-      <Key className="h-3.5 w-3.5" />
+     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[var(--color-warning-text)]">
+      <Key className="h-3.5 w-3.5 text-[var(--color-accent-hover)]" />
       Reset Password
      </span>
     }
     statsCard={
-     <div className="rounded-2xl bg-white/10 border border-white/[0.12] px-5 py-3 flex flex-col">
-      <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/50">Total Request</p>
-      <p className="text-2xl font-black text-white mt-0.5">{totalItems}</p>
+     <div className="rounded-2xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] px-5 py-3 flex flex-col">
+      <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Total Request</p>
+      <p className="text-2xl font-black text-[var(--color-text)] mt-0.5">{totalItems}</p>
      </div>
     }
    />

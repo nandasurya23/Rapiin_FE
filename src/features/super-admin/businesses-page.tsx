@@ -131,8 +131,8 @@ export function SuperAdminBusinessesPage() {
     title="Manajemen Bisnis"
     description="Kelola data tenant, limitasi subscription, status suspend, dan unduh backup database."
     badge={
-     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-300">
-      <ShieldAlert className="h-3.5 w-3.5 text-amber-400" />
+     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[var(--color-warning-text)]">
+      <ShieldAlert className="h-3.5 w-3.5 text-[var(--color-accent-hover)]" />
       Control Center
      </span>
     }

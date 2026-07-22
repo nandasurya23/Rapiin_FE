@@ -271,19 +271,19 @@ export function SettingsPage() {
           title="Atur Cara Kerja Bisnis Anda"
           description="Halaman ini menjadi sumber data utama (source of truth) untuk form publik, order admin, kalender, dan ketersediaan slot bisnis."
           badge={
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-              <Settings className="h-3.5 w-3.5 animate-spin-slow text-[var(--color-accent)]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
+              <Settings className="h-3.5 w-3.5 animate-spin-slow text-[var(--color-accent-hover)]" />
               Pengaturan Operasional
             </span>
           }
           action={
             <div className="flex flex-wrap gap-2.5 xl:shrink-0">
-              <Badge tone="info" className="bg-white/10 text-white border-white/20 px-3 py-1 text-xs font-bold">
+              <Badge tone="info" className="bg-[var(--color-info-surface)] text-[var(--color-info-text)] border-[var(--color-info-border)] px-3 py-1 text-xs font-bold">
                 Mode: {form.mode === "BOOKING_SERVICE" ? "Booking Jasa" : "Request Order"}
               </Badge>
               <Badge
                 tone={usesResources ? "warning" : "success"}
-                className="bg-white/10 text-white border-white/20 px-3 py-1 text-xs font-bold"
+                className={usesResources ? "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)] border-[var(--color-warning-border)] px-3 py-1 text-xs font-bold" : "bg-[var(--color-success-surface)] text-[var(--color-success-text)] border-[var(--color-success-border)] px-3 py-1 text-xs font-bold"}
               >
                 {usesResources ? `${form.resourceLabel || "Unit"} Aktif` : "Tanpa Unit Khusus"}
               </Badge>

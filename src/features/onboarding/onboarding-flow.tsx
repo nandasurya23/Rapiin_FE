@@ -222,8 +222,8 @@ export function OnboardingFlow() {
      title={currentStepInfo.title}
      description={currentStepInfo.subtitle}
      badge={
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
-       <Sparkles className="h-3 w-3" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-warning-text)]">
+       <Sparkles className="h-3 w-3 text-[var(--color-accent-hover)]" />
        Setup Bisnis
       </span>
      }
@@ -234,12 +234,12 @@ export function OnboardingFlow() {
          <div
           key={s}
           className={`h-1.5 w-6 rounded-full transition-all duration-300 ${
-           s < step ? "bg-amber-400" : s === step ? "bg-white" : "bg-white/20"
+           s < step ? "bg-[var(--color-primary)]" : s === step ? "bg-[var(--color-accent-hover)]" : "bg-[var(--color-border)]"
           }`}
          />
         ))}
        </div>
-       <span className="rounded-xl bg-white/10 border border-white/[0.12] px-3 py-1 text-xs font-extrabold text-white">
+       <span className="rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border-strong)] px-3 py-1 text-xs font-extrabold text-[var(--color-text)]">
         {progress}
        </span>
       </div>
