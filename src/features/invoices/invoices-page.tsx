@@ -150,8 +150,8 @@ export function InvoicesPage() {
     title="Nota Rapi & Siap Dibagikan"
     description="Buat invoice tagihan atau tanda terima DP otomatis dari data order, preview tampilan secara langsung, dan kirimkan format link publik ke customer lewat WhatsApp."
     badge={
-     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-      <ReceiptText className="h-3.5 w-3.5 text-[var(--color-accent)]" />
+     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
+      <ReceiptText className="h-3.5 w-3.5 text-[var(--color-accent-hover)]" />
       Manajemen Nota Tagihan
      </span>
     }
@@ -164,7 +164,7 @@ export function InvoicesPage() {
       <LinkButton
        href={selectedInvoice ? ROUTES.invoice(selectedInvoice.invoiceCode, selectedInvoice.integritySeal) : ROUTES.invoices(business.slug)}
        variant="secondary"
-       className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold hover:text-white"
+       className="font-bold"
       >
        <ExternalLink className="h-4 w-4" />
        Buka Link Publik

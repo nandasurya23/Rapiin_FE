@@ -41,8 +41,8 @@ export function BusinessLinkPage() {
     title="Bagikan Link Bisnis Anda"
     description="Rapiin menyediakan landing page khusus bagi pelanggan Anda untuk melihat list layanan catalog, dan melakukan reservasi booking secara instan."
     badge={
-     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-      <Link2 className="h-3.5 w-3.5 text-[var(--color-accent)]" />
+     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
+      <Link2 className="h-3.5 w-3.5 text-[var(--color-accent-hover)]" />
       {linkType === "FORM" ? "Link Form Booking" : "Link Profil Publik"}
      </span>
     }
@@ -54,7 +54,7 @@ export function BusinessLinkPage() {
       <Button
        type="button"
        variant="secondary"
-       className="bg-white/10 text-white hover:bg-white/20 border-white/10 font-bold hover:text-white"
+       className="font-bold"
        isLoading={loadingAction === "copy-link"}
        onClick={async () => {
         setLoadingAction("copy-link");

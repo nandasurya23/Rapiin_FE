@@ -31,8 +31,8 @@ export default function AssistantPage() {
         title="Rapiin Input Helper Console"
         description="Operasionalkan bisnis Anda secara cepat menggunakan pencocokan kata kunci kalimat offline. Tambah order, ubah status pembayaran, terbitkan nota, atau tambah customer dalam hitungan detik secara lokal."
         badge={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-            <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent)] animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
+            <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent-hover)] animate-pulse" />
             Asisten Pintar Perintah
           </span>
         }

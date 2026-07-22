@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, Clock, Copy, PencilLine, ReceiptText } from "lucide-react";
+import { Calendar, Clock, Copy, PencilLine, ReceiptText, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
@@ -45,6 +45,7 @@ interface OrderBoardProps {
  statusOptions: { value: OrderStatus; label: string; tone?: StatusTone }[];
  onUpdateStatus: (order: Order, nextStatus: OrderStatus) => void;
  onEdit: (order: Order) => void;
+ onDelete?: (order: Order) => void;
  getWhatsAppConfig: (order: Order) => { label: string; message: string };
 }
 
@@ -53,9 +54,11 @@ export function OrderBoard({
  statusOptions,
  onUpdateStatus,
  onEdit,
+ onDelete,
  getWhatsAppConfig,
 }: OrderBoardProps) {
  const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
+ const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
  const toast = useToast();
 
  async function handleCopyMessage(message: string) {
@@ -102,6 +105,7 @@ export function OrderBoard({
          onDragOver={(e) => {
           if (isValidDropTarget) {
            e.preventDefault();
+           e.dataTransfer.dropEffect = "move";
           }
          }}
          onDrop={(e) => {
@@ -113,8 +117,8 @@ export function OrderBoard({
          }}
          className={cn(
           "flex-1 min-h-[400px] rounded-xl transition-all duration-200",
-          "flex flex-col gap-3",
-          isValidDropTarget && "border-2 border-dashed border-[var(--color-primary)]/40 bg-[var(--color-primary)]/[0.02]",
+          "flex flex-col gap-3 p-1",
+          isValidDropTarget && "border-2 border-dashed border-[var(--color-primary)] bg-[var(--color-primary)]/[0.05]",
           draggedOrder && !isValidDropTarget && "opacity-40"
          )}
         >
@@ -130,13 +134,14 @@ export function OrderBoard({
              draggable={isDraggable}
              onDragStart={(e) => {
               setDraggedOrder(order);
-              e.dataTransfer.setData("orderId", order.id);
+              e.dataTransfer.setData("text/plain", order.id);
+              e.dataTransfer.effectAllowed = "move";
              }}
              onDragEnd={() => {
               setDraggedOrder(null);
              }}
              className={cn(
-              "p-3.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl transition-all duration-300 relative shadow-sm hover:shadow hover:border-[var(--color-border-strong)]",
+              "p-3.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl transition-all duration-300 relative shadow-sm hover:shadow hover:border-[var(--color-border-strong)] select-none",
               isDraggable ? "cursor-grab active:cursor-grabbing" : "opacity-90 cursor-default"
              )}
             >
@@ -230,6 +235,17 @@ export function OrderBoard({
                <PencilLine className="h-4 w-4" />
                Ubah
               </Button>
+              {onDelete && (
+               <Button
+                type="button"
+                variant="ghost"
+                className="h-9 px-2.5 rounded-xl text-[var(--color-danger)] hover:bg-[var(--color-danger-surface)] hover:text-[var(--color-danger-hover)] text-xs font-bold"
+                onClick={() => setDeletingOrder(order)}
+                title="Hapus order"
+               >
+                <Trash2 className="h-4 w-4" />
+               </Button>
+              )}
               <select
                value={order.status}
                onChange={(e) => onUpdateStatus(order, e.target.value as OrderStatus)}
@@ -258,6 +274,39 @@ export function OrderBoard({
      })}
     </div>
    </div>
+
+   {/* DELETE CONFIRMATION MODAL */}
+   {deletingOrder && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
+     <div className="w-full max-w-md rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-6 shadow-xl space-y-4">
+      <h3 className="text-lg font-bold text-[var(--color-text)]">Hapus Pesanan?</h3>
+      <p className="text-sm text-[var(--color-text-secondary)]">
+       Apakah Anda yakin ingin menghapus pesanan &quot;<strong className="text-[var(--color-text)]">{deletingOrder.title}</strong>&quot; untuk <strong className="text-[var(--color-text)]">{deletingOrder.customerName}</strong>? Tindakan ini tidak dapat dibatalkan.
+      </p>
+      <div className="flex justify-end gap-2.5 pt-2">
+       <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setDeletingOrder(null)}
+       >
+        Batal
+       </Button>
+       <Button
+        type="button"
+        variant="danger"
+        onClick={() => {
+         if (onDelete && deletingOrder) {
+          onDelete(deletingOrder);
+         }
+         setDeletingOrder(null);
+        }}
+       >
+        Ya, Hapus
+       </Button>
+      </div>
+     </div>
+    </div>
+   )}
   </section>
  );
 }

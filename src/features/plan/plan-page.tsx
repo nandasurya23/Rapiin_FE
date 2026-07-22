@@ -136,8 +136,8 @@ export function PlanPage() {
      title="Kelola Langganan & Keamanan Data"
      description="Pantau masa trial, kapasitas customer, status backup database lokal, dan kirim permintaan upgrade secara instan tanpa hambatan."
      badge={
-      <div className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-gold-300)] border border-white/[0.1] backdrop-blur-md uppercase">
-       <Sparkles className="h-3 w-3 animate-pulse" />
+      <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
+       <Sparkles className="h-3 w-3 text-[var(--color-accent-hover)] animate-pulse" />
        Plan & Backup System
       </div>
      }
