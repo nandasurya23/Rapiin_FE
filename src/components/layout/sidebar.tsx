@@ -152,7 +152,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="absolute -top-3 left-3 right-3 h-px bg-white/[0.06]" />
        )}
        {!collapsed && (
-        <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--color-gold-300)]/60 mb-2 mt-1">
+        <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--color-gold-300)] opacity-60 mb-2 mt-1">
          {group}
         </h3>
        )}
