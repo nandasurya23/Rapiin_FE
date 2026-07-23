@@ -6,7 +6,7 @@ interface ConfirmFinishOrderDialogProps {
  order: Order | null;
  isOpen: boolean;
  onClose: () => void;
- onConfirm: (order: Order, status: OrderStatus, paymentStatus?: PaymentStatus, dpAmount?: number, totalAmount?: number) => void;
+ onConfirm: (order: Order, status: OrderStatus, paymentStatus?: PaymentStatus, dpAmount?: number, totalAmount?: number, paymentMethod?: "CASH" | "NON_CASH") => void;
 }
 
 export function ConfirmFinishOrderDialog({ order, isOpen, onClose, onConfirm }: ConfirmFinishOrderDialogProps) {
@@ -29,14 +29,26 @@ export function ConfirmFinishOrderDialog({ order, isOpen, onClose, onConfirm }: 
      <Button variant="secondary" onClick={onClose}>
       Batal
      </Button>
+     <div className="flex gap-2">
       <Button 
+       className="bg-[var(--color-success)] hover:bg-[var(--color-success)]/90"
        onClick={() => {
-        onConfirm(order, "SELESAI", "PAID", order.totalAmount, order.totalAmount);
+        onConfirm(order, "SELESAI", "PAID", order.totalAmount, order.totalAmount, "CASH");
         onClose();
        }}
       >
-      Ya, Selesaikan
-     </Button>
+       Selesai (Tunai)
+      </Button>
+      <Button 
+       className="bg-blue-600 hover:bg-blue-700"
+       onClick={() => {
+        onConfirm(order, "SELESAI", "PAID", order.totalAmount, order.totalAmount, "NON_CASH");
+        onClose();
+       }}
+      >
+       Selesai (QRIS/Trf)
+      </Button>
+     </div>
     </DialogFooter>
    </DialogContent>
   </Dialog>

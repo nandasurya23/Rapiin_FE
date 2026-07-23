@@ -31,7 +31,12 @@ export function MobileBottomNav() {
  const moreItems = isSuperAdmin 
   ? [] 
   : getMobileMoreItems(business.slug).filter(item => {
-    const matchesPlan = item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM";
+    let matchesPlan = true;
+    if (item.href === ROUTES.assistant(business.slug)) {
+      matchesPlan = subscriptionForCurrentBusiness?.planCode === "PREMIUM";
+    } else if (item.href === ROUTES.invoiceChecker(business.slug)) {
+      matchesPlan = subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL";
+    }
     const hasAccess = canAccessRoute(item.href, business.slug);
     return matchesPlan && hasAccess;
    });

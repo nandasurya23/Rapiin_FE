@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ShieldAlert, ShieldCheck, ShieldOff, UploadCloud, FileSearch } from "lucide-react";
+import { Search, ShieldAlert, ShieldCheck, ShieldOff, FileSearch } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ApiAdminService } from "@/services/admin.service";
 import { ApiInvoiceService } from "@/services/invoice.service";
-
+import { QRScanner } from "@/components/shared/qr-scanner";
 
 interface InvoiceCheckerPageProps {
   role: "SUPER_ADMIN" | "OWNER";
@@ -76,12 +76,12 @@ export function InvoiceCheckerPage({ role }: InvoiceCheckerPageProps) {
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${activeTab === "auto" ? "bg-[var(--color-gold-500)]/10 text-[var(--color-gold-500)] shadow-sm" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`}
           >
             <FileSearch className="w-4 h-4" />
-            Smart Scan (Pro)
+            QR & Image Scan
           </button>
         </div>
 
         {activeTab === "manual" ? (
-          <form onSubmit={handleSearch} className="flex gap-3 items-end">
+          <form id="invoice-search-form" onSubmit={handleSearch} className="flex gap-3 items-end">
             <div className="flex-1 space-y-1.5">
               <label className="text-sm font-medium text-[var(--color-text)]">Kode Nota</label>
               <div className="relative">
@@ -99,17 +99,28 @@ export function InvoiceCheckerPage({ role }: InvoiceCheckerPageProps) {
             </Button>
           </form>
         ) : (
-          <div className="border-2 border-dashed border-[var(--color-border)] rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors cursor-pointer group" onClick={() => toast.info("Fitur Smart Scan sedang dalam tahap pengembangan.")}>
-            <div className="w-12 h-12 rounded-full bg-[var(--color-gold-500)]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <UploadCloud className="w-6 h-6 text-[var(--color-gold-500)]" />
-            </div>
-            <h3 className="text-base font-semibold text-[var(--color-text)] mb-1">Upload Bukti Transfer</h3>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-4 max-w-[320px]">
-              Sistem akan memindai dan mencocokkan nominal dari gambar bukti transfer pelanggan secara otomatis.
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <p className="text-sm text-[var(--color-text-secondary)] text-center max-w-sm mb-2">
+              Arahkan kamera ke QR Code nota, atau pilih upload gambar screenshot nota.
             </p>
-            <Button variant="primary" type="button" className="bg-[var(--color-gold-500)] hover:bg-[var(--color-gold-600)] text-black">
-              Pilih Gambar
-            </Button>
+            <QRScanner 
+              onScanSuccess={(code) => {
+                const cleanedCode = code.trim().toUpperCase();
+                setSearchCode(cleanedCode);
+                setActiveTab("manual");
+                
+                // Programmatically trigger search
+                setTimeout(() => {
+                  const form = document.getElementById("invoice-search-form");
+                  if (form) {
+                    form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                  }
+                }, 100);
+              }}
+              onScanError={(err) => {
+                console.debug("QR Scan Error (non-critical):", err);
+              }}
+            />
           </div>
         )}
 

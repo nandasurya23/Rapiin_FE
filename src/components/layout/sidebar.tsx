@@ -32,13 +32,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
  } = useAppData();
  const { logout } = useAuth();
  const { canAccessRoute } = usePermission();
- const navItems = isSuperAdmin 
-  ? SUPER_ADMIN_NAV_ITEMS 
-  : getAppNavItems(business.slug).filter(item => {
-    const matchesPlan = item.href !== ROUTES.assistant(business.slug) || subscriptionForCurrentBusiness?.planCode === "PREMIUM";
-    const hasAccess = canAccessRoute(item.href, business.slug);
-    return matchesPlan && hasAccess;
-   });
+  const navItems = isSuperAdmin 
+   ? SUPER_ADMIN_NAV_ITEMS 
+   : getAppNavItems(business.slug).filter(item => {
+     let matchesPlan = true;
+     if (item.href === ROUTES.assistant(business.slug)) {
+       matchesPlan = subscriptionForCurrentBusiness?.planCode === "PREMIUM";
+     } else if (item.href === ROUTES.invoiceChecker(business.slug)) {
+       matchesPlan = subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL";
+     }
+     const hasAccess = canAccessRoute(item.href, business.slug);
+     return matchesPlan && hasAccess;
+    });
 
  const planLabel = PLAN_LABELS[subscriptionForCurrentBusiness?.planCode ?? "FREE_TRIAL"];
 
@@ -133,57 +138,76 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
      collapsed ? "px-2" : "px-3"
     )}
    >
-    <div className="space-y-0.5">
-     {navItems.map((item) => {
-      const active = item.href === ROUTES.dashboard(business?.slug || "")
-       ? pathname === item.href
-       : pathname.startsWith(item.href);
-      const Icon = item.icon;
+    <div className="space-y-6">
+     {Object.entries(
+      navItems.reduce((acc, item) => {
+       const groupName = item.group || "Lainnya";
+       if (!acc[groupName]) acc[groupName] = [];
+       acc[groupName].push(item);
+       return acc;
+      }, {} as Record<string, typeof navItems>)
+     ).map(([group, items], index) => (
+      <div key={group} className="space-y-1 relative">
+       {index > 0 && !collapsed && (
+        <div className="absolute -top-3 left-3 right-3 h-px bg-white/[0.06]" />
+       )}
+       {!collapsed && (
+        <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--color-gold-300)]/60 mb-2 mt-1">
+         {group}
+        </h3>
+       )}
+       {items.map((item) => {
+        const active = item.href === ROUTES.dashboard(business?.slug || "")
+         ? pathname === item.href
+         : pathname.startsWith(item.href);
+        const Icon = item.icon;
 
-      return (
-       <Link
-        key={item.href}
-        href={item.href}
-        aria-label={item.label}
-        title={collapsed ? item.label : undefined}
-        className={cn(
-         "group flex items-center gap-3 rounded-[var(--radius-md)]",
-         "text-sm font-medium",
-         "transition-all duration-[var(--transition-fast)]",
-         "outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold-300)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-navy-900)]",
+        return (
+         <Link
+          key={item.href}
+          href={item.href}
+          aria-label={item.label}
+          title={collapsed ? item.label : undefined}
+          className={cn(
+           "group flex items-center gap-3 rounded-[var(--radius-md)]",
+           "text-sm font-medium",
+           "transition-all duration-[var(--transition-fast)]",
+           "outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold-300)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-navy-900)]",
 
-         collapsed ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto" : "px-3 py-2.5",
+           collapsed ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto" : "px-3 py-2.5",
 
-         active
-          ? [
-            "bg-[var(--color-navy-800)]",
-            "text-white",
-            !collapsed && "border-l-2 border-[var(--color-gold-500)] pl-[10px]",
-           ]
-          : [
-            "text-white/60 border-l-2 border-transparent",
-            "hover:bg-white/[0.06] hover:text-white",
-            collapsed && "border-l-0",
-           ]
-        )}
-       >
-        <Icon
-         className={cn(
-          "h-[18px] w-[18px] shrink-0 transition-colors",
-          active ? "text-[var(--color-gold-300)]" : "text-white/50 group-hover:text-white/80"
-         )}
-        />
-        <span
-         className={cn(
-          "truncate transition-all duration-300",
-          collapsed ? "w-0 opacity-0 overflow-hidden" : "opacity-100"
-         )}
-        >
-         {item.label}
-        </span>
-       </Link>
-      );
-     })}
+           active
+            ? [
+              "bg-[var(--color-navy-800)]",
+              "text-white",
+              !collapsed && "border-l-2 border-[var(--color-gold-500)] pl-[10px]",
+             ]
+            : [
+              "text-white/60 border-l-2 border-transparent",
+              "hover:bg-white/[0.06] hover:text-white",
+              collapsed && "border-l-0",
+             ]
+          )}
+         >
+          <Icon
+           className={cn(
+            "h-[18px] w-[18px] shrink-0 transition-colors",
+            active ? "text-[var(--color-gold-300)]" : "text-white/50 group-hover:text-white/80"
+           )}
+          />
+          <span
+           className={cn(
+            "truncate transition-all duration-300",
+            collapsed ? "w-0 opacity-0 overflow-hidden" : "opacity-100"
+           )}
+          >
+           {item.label}
+          </span>
+         </Link>
+        );
+       })}
+      </div>
+     ))}
     </div>
    </nav>
 

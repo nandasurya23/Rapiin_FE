@@ -150,6 +150,23 @@ export function PublicInvoicePage({
    return;
   }
 
+  // Inject watermark
+  let watermarkEl = document.getElementById("invoice-watermark");
+  if (!watermarkEl) {
+   watermarkEl = document.createElement("div");
+   watermarkEl.id = "invoice-watermark";
+   watermarkEl.style.position = "absolute";
+   watermarkEl.style.bottom = "8px";
+   watermarkEl.style.right = "12px";
+   watermarkEl.style.fontSize = "10px";
+   watermarkEl.style.fontWeight = "600";
+   watermarkEl.style.color = "rgba(0,0,0,0.5)";
+   watermarkEl.style.zIndex = "99";
+   node.style.position = "relative";
+   node.appendChild(watermarkEl);
+  }
+  watermarkEl.innerText = `Dicetak pada: ${new Date().toLocaleString("id-ID")} WIB`;
+
   setLoadingAction("share-image");
   try {
    const htmlToImage = await import("html-to-image");
@@ -193,6 +210,23 @@ export function PublicInvoicePage({
    toast.error("Gagal mendeteksi elemen nota");
    return;
   }
+
+  // Inject watermark
+  let watermarkEl = document.getElementById("invoice-watermark");
+  if (!watermarkEl) {
+   watermarkEl = document.createElement("div");
+   watermarkEl.id = "invoice-watermark";
+   watermarkEl.style.position = "absolute";
+   watermarkEl.style.bottom = "8px";
+   watermarkEl.style.right = "12px";
+   watermarkEl.style.fontSize = "10px";
+   watermarkEl.style.fontWeight = "600";
+   watermarkEl.style.color = "rgba(0,0,0,0.5)";
+   watermarkEl.style.zIndex = "99";
+   node.style.position = "relative";
+   node.appendChild(watermarkEl);
+  }
+  watermarkEl.innerText = `Dicetak pada: ${new Date().toLocaleString("id-ID")} WIB`;
 
   setLoadingAction("download-image");
   try {
@@ -334,45 +368,55 @@ export function PublicInvoicePage({
        message={shareMessage}
        label="Tanya / Konfirmasi ke Admin"
       />
-      <Button
-       type="button"
-       isLoading={loadingAction === "share-image"}
-       onClick={handleShareImage}
-       className="rounded-xl h-12 font-bold"
-      >
-       <Share2 className="h-4 w-4" />
-       Bagikan Gambar Nota
-      </Button>
-      <div className="grid grid-cols-2 gap-3">
-       <Button
-        type="button"
-        variant="secondary"
-        isLoading={loadingAction === "download-image"}
-        onClick={handleDownloadImage}
-        className="rounded-xl h-11 font-bold text-xs"
-       >
-        <Download className="h-4 w-4" />
-        Unduh (.PNG)
-       </Button>
-       <Button
-        type="button"
-        variant="secondary"
-        isLoading={loadingAction === "copy-share-message"}
-        onClick={async () => {
-         setLoadingAction("copy-share-message");
-         try {
-          await copyToClipboard(shareMessage);
-          toast.success("Teks nota disalin");
-         } finally {
-          setLoadingAction(null);
-         }
-        }}
-        className="rounded-xl h-11 font-bold text-xs"
-       >
-        <Send className="h-4 w-4" />
-        Salin Teks
-       </Button>
-      </div>
+      {(invoice.paymentStatus === "PAID" || invoice.paymentStatus === "DP_PAID") ? (
+       <>
+        <Button
+         type="button"
+         isLoading={loadingAction === "share-image"}
+         onClick={handleShareImage}
+         className="rounded-xl h-12 font-bold"
+        >
+         <Share2 className="h-4 w-4" />
+         Bagikan Gambar Nota
+        </Button>
+        <div className="grid grid-cols-2 gap-3">
+         <Button
+          type="button"
+          variant="secondary"
+          isLoading={loadingAction === "download-image"}
+          onClick={handleDownloadImage}
+          className="rounded-xl h-11 font-bold text-xs"
+         >
+          <Download className="h-4 w-4" />
+          Unduh (.PNG)
+         </Button>
+         <Button
+          type="button"
+          variant="secondary"
+          isLoading={loadingAction === "copy-share-message"}
+          onClick={async () => {
+           setLoadingAction("copy-share-message");
+           try {
+            await copyToClipboard(shareMessage);
+            toast.success("Teks nota disalin");
+           } finally {
+            setLoadingAction(null);
+           }
+          }}
+          className="rounded-xl h-11 font-bold text-xs"
+         >
+          <Send className="h-4 w-4" />
+          Salin Teks
+         </Button>
+        </div>
+       </>
+      ) : (
+       <div className="bg-[var(--color-surface-elevated)] p-4 rounded-xl border border-[var(--color-border)] text-center">
+        <p className="text-sm font-medium text-[var(--color-text-secondary)]">
+         Fitur unduh nota belum tersedia karena pesanan ini masih berstatus <strong>Belum Bayar</strong>.
+        </p>
+       </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4 mt-2">
        <LinkButton href={ROUTES.publicBusiness(business.slug)} variant="ghost" className="text-xs py-1.5 px-3 h-auto hover:bg-[var(--color-surface-elevated)] text-[var(--color-text-secondary)]">

@@ -39,6 +39,7 @@ type OrderFormState = {
  mode: BusinessMode;
  status: OrderStatus;
  paymentStatus: PaymentStatus;
+ paymentMethod: "CASH" | "NON_CASH" | "";
  scheduledDate: string;
  scheduledTime: string;
  bookingDurationMinutes: string;
@@ -58,6 +59,7 @@ function createDefaultForm(business: Business): OrderFormState {
   mode: business.mode,
   status: ORDER_STATUS_BY_MODE[business.mode]?.[0]?.value || "WAITING_DP",
   paymentStatus: "UNPAID",
+  paymentMethod: "",
   scheduledDate: "",
   scheduledTime: "",
   bookingDurationMinutes: "60",
@@ -136,6 +138,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
       mode: order.mode,
       status: order.status,
       paymentStatus: order.paymentStatus,
+      paymentMethod: (order as unknown as { paymentMethod?: "CASH" | "NON_CASH" }).paymentMethod ?? "",
       scheduledDate: order.scheduledDate ?? "",
       scheduledTime: order.scheduledTime ?? "",
       bookingDurationMinutes: String(order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES),
@@ -386,6 +389,11 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
    return;
   }
 
+  if (form.paymentStatus === "PAID" && !form.paymentMethod) {
+   setError("Metode pembayaran (Tunai/Non-Tunai) wajib dipilih untuk pesanan lunas.");
+   return;
+  }
+
   setError("");
   setIsSubmitting(true);
   try {
@@ -403,6 +411,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
      mode: form.mode,
      status: form.status,
      paymentStatus: form.paymentStatus,
+     paymentMethod: form.paymentStatus === "PAID" ? (form.paymentMethod as "CASH" | "NON_CASH") : undefined,
      scheduledDate: form.scheduledDate || undefined,
      scheduledTime: form.scheduledTime || undefined,
      bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
@@ -438,6 +447,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     mode: form.mode,
     status: form.status,
     paymentStatus: form.paymentStatus,
+    paymentMethod: form.paymentStatus === "PAID" ? (form.paymentMethod as "CASH" | "NON_CASH") : undefined,
     scheduledDate: form.scheduledDate || undefined,
     scheduledTime: form.scheduledTime || undefined,
     bookingDurationMinutes: form.mode === "BOOKING_SERVICE" ? bookingDurationMinutes : undefined,
@@ -665,6 +675,23 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
          <Select value={form.paymentStatus} onValueChange={(val) => updateFormField("paymentStatus", val as PaymentStatus)} options={Object.entries(PAYMENT_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
         </div>
        </div>
+
+       {form.paymentStatus === "PAID" && (
+        <div className="grid gap-4 sm:grid-cols-2">
+         <div className="col-start-2 animate-in fade-in zoom-in-95 duration-200">
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-primary)]">Metode Pembayaran</label>
+          <Select 
+           value={form.paymentMethod} 
+           onValueChange={(val) => updateFormField("paymentMethod", val as "CASH" | "NON_CASH")} 
+           options={[
+            { value: "CASH", label: "Tunai (Cash)" },
+            { value: "NON_CASH", label: "Non-Tunai (QRIS/Transfer)" }
+           ]} 
+           placeholder="Pilih metode"
+          />
+         </div>
+        </div>
+       )}
 
        <div className="grid gap-4 sm:grid-cols-2">
         <div>

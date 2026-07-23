@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { PaymentStatusBadge } from "@/components/shared/status-badge";
 import { INVOICE_LEGAL_COPY, isInvoiceIntegrityValid } from "@/lib/invoice";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
@@ -77,10 +78,29 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
       <p className="text-sm font-semibold text-[var(--color-text)] shrink-0">{formatCurrency(invoice.totalAmount)}</p>
      </div>
      
-     <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--color-border)]">
-      <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Total Tagihan</span>
-      <span className="text-lg font-bold tracking-tight text-[var(--color-text)]">{formatCurrency(invoice.totalAmount)}</span>
-     </div>
+     {invoice.paymentStatus === "DP_PAID" && order?.dpAmount ? (
+      <div className="mt-4 pt-4 border-t border-[var(--color-border)] space-y-2">
+       <div className="flex justify-between items-center">
+        <span className="text-sm font-medium text-[var(--color-text-secondary)]">Total Tagihan</span>
+        <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(invoice.totalAmount)}</span>
+       </div>
+       <div className="flex justify-between items-center">
+        <span className="text-sm font-medium text-[var(--color-success)]">Telah Dibayar (DP)</span>
+        <span className="text-sm font-semibold text-[var(--color-success)]">-{formatCurrency(order.dpAmount)}</span>
+       </div>
+       <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
+        <span className="text-sm font-semibold text-[var(--color-danger)]">Sisa Tagihan</span>
+        <span className="text-lg font-bold tracking-tight text-[var(--color-danger)]">
+         {formatCurrency((Number(invoice.totalAmount) || 0) - (Number(order.dpAmount) || 0))}
+        </span>
+       </div>
+      </div>
+     ) : (
+      <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--color-border)]">
+       <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Total Tagihan</span>
+       <span className="text-lg font-bold tracking-tight text-[var(--color-text)]">{formatCurrency(invoice.totalAmount)}</span>
+      </div>
+     )}
     </div>
 
     {invoice.paymentStatus !== "PAID" && business.paymentInstructions && (
@@ -120,6 +140,21 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
        <p className="text-[10px] uppercase text-[var(--color-text-muted)] font-semibold tracking-wider">Kode Verifikasi</p>
        <p className="font-mono text-xs font-semibold text-[var(--color-text)] break-all">{invoice.verificationCode}</p>
       </div>
+     </div>
+
+     {/* QR Code */}
+     <div className="mt-4 flex flex-col items-center justify-center">
+      <div className="bg-white p-2 rounded-lg shadow-sm border border-[var(--color-border)] inline-block">
+       <QRCodeSVG 
+        value={invoice.invoiceCode} 
+        size={96}
+        level="H"
+        includeMargin={false}
+       />
+      </div>
+      <p className="text-[10px] text-[var(--color-text-secondary)] font-medium max-w-[200px] mx-auto mt-2 text-center leading-relaxed">
+       Gunakan Rapiin Scanner (Admin) untuk memindai nota ini
+      </p>
      </div>
     </div>
 
