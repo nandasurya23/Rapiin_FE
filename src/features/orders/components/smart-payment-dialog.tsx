@@ -11,7 +11,7 @@ interface SmartPaymentDialogProps {
  onClose: () => void;
  order: Order | null;
  nextStatus: OrderStatus | null;
- onConfirm: (order: Order, nextStatus: OrderStatus, paymentStatus?: PaymentStatus, dpAmount?: number, totalAmount?: number) => void;
+ onConfirm: (order: Order, nextStatus: OrderStatus, paymentStatus?: PaymentStatus, dpAmount?: number, totalAmount?: number, paymentMethod?: "CASH" | "NON_CASH") => void;
 }
 
 export function SmartPaymentDialog({ isOpen, onClose, order, nextStatus, onConfirm }: SmartPaymentDialogProps) {
@@ -34,12 +34,21 @@ export function SmartPaymentDialog({ isOpen, onClose, order, nextStatus, onConfi
  const parsedTotal = parseIndonesianNumber(totalAmountStr) || 0;
  const parsedCustomDp = parseIndonesianNumber(customDpStr) || 0;
 
- const handleLunas = () => {
+ const handleLunasCash = () => {
   if (parsedTotal <= 0) {
    setError("Total tagihan harus lebih dari 0.");
    return;
   }
-  onConfirm(order, nextStatus, "PAID", parsedTotal, parsedTotal);
+  onConfirm(order, nextStatus, "PAID", parsedTotal, parsedTotal, "CASH");
+  onClose();
+ };
+
+ const handleLunasNonCash = () => {
+  if (parsedTotal <= 0) {
+   setError("Total tagihan harus lebih dari 0.");
+   return;
+  }
+  onConfirm(order, nextStatus, "PAID", parsedTotal, parsedTotal, "NON_CASH");
   onClose();
  };
 
@@ -105,15 +114,26 @@ export function SmartPaymentDialog({ isOpen, onClose, order, nextStatus, onConfi
 
      {!showCustomDp ? (
       <div className="grid gap-2">
-       <Button 
-        type="button" 
-        onClick={handleLunas} 
-        disabled={parsedTotal <= 0}
-        className="w-full justify-between h-12 bg-[var(--color-success)] hover:bg-[var(--color-success)]/90 text-white font-bold"
-       >
-        <span>Tandai LUNAS</span>
-        <span>{formatCurrency(parsedTotal)}</span>
-       </Button>
+       <div className="grid grid-cols-2 gap-2">
+        <Button 
+         type="button" 
+         onClick={handleLunasCash} 
+         disabled={parsedTotal <= 0}
+         className="w-full h-12 bg-[var(--color-success)] hover:bg-[var(--color-success)]/90 text-white font-bold flex flex-col items-center justify-center gap-0.5 leading-tight"
+        >
+         <span>LUNAS (Tunai)</span>
+         <span className="text-[10px] font-medium opacity-90">{formatCurrency(parsedTotal)}</span>
+        </Button>
+        <Button 
+         type="button" 
+         onClick={handleLunasNonCash} 
+         disabled={parsedTotal <= 0}
+         className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold flex flex-col items-center justify-center gap-0.5 leading-tight shadow-sm"
+        >
+         <span>LUNAS (QRIS/Trf)</span>
+         <span className="text-[10px] font-medium opacity-90">{formatCurrency(parsedTotal)}</span>
+        </Button>
+       </div>
        
        <Button 
         type="button" 

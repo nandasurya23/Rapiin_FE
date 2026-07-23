@@ -47,6 +47,7 @@ interface OrderBoardProps {
  onDelete?: (order: Order) => void;
  getWhatsAppConfig: (order: Order) => { label: string; message: string };
  isResourceBooking?: boolean;
+ businessSlug: string;
 }
 
 export function OrderBoard({
@@ -57,6 +58,7 @@ export function OrderBoard({
  onDelete,
  getWhatsAppConfig,
  isResourceBooking,
+ businessSlug,
 }: OrderBoardProps) {
  const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
@@ -246,7 +248,7 @@ export function OrderBoard({
                label={waConfig.label}
               />
               <LinkButton
-               href={`${ROUTES.invoices}?orderId=${order.id}`}
+               href={`${ROUTES.invoices(businessSlug)}?orderId=${order.id}`}
                variant="secondary"
                className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
               >

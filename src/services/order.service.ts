@@ -16,6 +16,7 @@ export interface OrderDTO {
   mode: BusinessMode;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  paymentMethod?: "CASH" | "NON_CASH";
   scheduledDate?: string;
   scheduledTime?: string;
   bookingDurationMinutes?: number;

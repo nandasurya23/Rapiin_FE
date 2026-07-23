@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, FileText } from "lucide-react";
 import { FilterChipGroup } from "@/components/ui/filter-chip";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -24,6 +24,7 @@ import { OrderBoard } from "./components/order-board";
 import { OrderFormSheet } from "./components/order-form-sheet";
 import { ConfirmFinishOrderDialog } from "./components/confirm-finish-order-dialog";
 import { SmartPaymentDialog } from "./components/smart-payment-dialog";
+import { ShiftReportDialog } from "./components/shift-report-dialog";
 
 type FilterValue = "ALL" | OrderStatus;
 type PaymentFilterValue = "ALL" | PaymentStatus;
@@ -31,7 +32,7 @@ type PaymentFilterValue = "ALL" | PaymentStatus;
 export function OrderManager() {
  const toast = useToast();
  const searchParams = useSearchParams();
- const { business } = useAppData();
+ const { business, subscriptionForCurrentBusiness } = useAppData();
  const { orders, isLoading, updateOrder, deleteOrder, canCreateOrder } = useOrders();
  const { messageTemplates } = useMessageTemplates();
  
@@ -41,6 +42,7 @@ export function OrderManager() {
  const [mode, setMode] = useState<BusinessMode>(business.mode);
  
  const [isFormOpen, setIsFormOpen] = useState(false);
+ const [isShiftReportOpen, setIsShiftReportOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [finishingOrder, setFinishingOrder] = useState<Order | null>(null);
  const [smartPaymentOrder, setSmartPaymentOrder] = useState<{ order: Order; nextStatus: OrderStatus } | null>(null);
@@ -99,17 +101,18 @@ export function OrderManager() {
   }
  }
 
- async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus, nextPaymentStatus?: PaymentStatus, dpAmount?: number, totalAmount?: number) {
+ async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus, nextPaymentStatus?: PaymentStatus, dpAmount?: number, totalAmount?: number, paymentMethod?: "CASH" | "NON_CASH") {
   try {
    let finalStatus = nextStatus;
    if (nextPaymentStatus === "PAID") {
     finalStatus = "SELESAI";
    }
 
-   const payload: Partial<Order> = { status: finalStatus };
+   const payload: Partial<Order> & { paymentMethod?: "CASH" | "NON_CASH" } = { status: finalStatus };
    if (nextPaymentStatus) payload.paymentStatus = nextPaymentStatus;
    if (dpAmount !== undefined) payload.dpAmount = dpAmount;
    if (totalAmount !== undefined) payload.totalAmount = totalAmount;
+   if (paymentMethod !== undefined) payload.paymentMethod = paymentMethod;
 
    await updateOrder(order.id, payload);
    toast.success(finalStatus === "SELESAI" ? "Pesanan lunas dan diselesaikan!" : "Status order berhasil diperbarui!");
@@ -209,6 +212,17 @@ export function OrderManager() {
       <span className="text-[var(--color-text-secondary)] px-4 py-1.5 text-sm font-semibold flex items-center">
        {filteredOrders.length} Order Aktif
       </span>
+      {subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL" && (
+       <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setIsShiftReportOpen(true)}
+        className="shadow-sm font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 hover:text-amber-900 border-amber-200"
+       >
+        <FileText className="mr-2 h-5 w-5" />
+        Tutup Shift
+       </Button>
+      )}
       <Button
        type="button"
        variant="secondary"
@@ -297,6 +311,7 @@ export function OrderManager() {
       onDelete={handleDeleteOrder}
       getWhatsAppConfig={getWhatsAppButtonConfig}
       isResourceBooking={business.operationalModel === "RESOURCE_BOOKING"}
+      businessSlug={business.slug}
      />
     )}
    </section>
@@ -323,6 +338,13 @@ export function OrderManager() {
     order={smartPaymentOrder?.order ?? null}
     nextStatus={smartPaymentOrder?.nextStatus ?? null}
     onConfirm={handleUpdateOrderStatus}
+   />
+
+   {/* SECTION 7: SHIFT REPORT DIALOG */}
+   <ShiftReportDialog
+    isOpen={isShiftReportOpen}
+    onClose={() => setIsShiftReportOpen(false)}
+    onSuccess={() => window.location.reload()}
    />
   </main>
  );
