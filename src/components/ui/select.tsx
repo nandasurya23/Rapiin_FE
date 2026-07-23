@@ -108,11 +108,11 @@ export function Select({
    {/* Dropdown */}
    {open ? (
     <div
-     id={menuId}
-     role="listbox"
-     className={cn(
-      "absolute left-0 right-0 z-50 mt-1.5",
-      "overflow-hidden rounded-[var(--radius-lg)]",
+      id={menuId}
+      role="listbox"
+      className={cn(
+       "absolute left-0 right-0 z-[100] mt-1.5",
+       "overflow-hidden rounded-[var(--radius-lg)]",
       "border border-[var(--color-border-strong)]",
       "bg-[var(--color-surface)]",
       " ",

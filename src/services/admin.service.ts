@@ -100,6 +100,20 @@ export class ApiAdminService {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async fetchAuditLogs(page = 1, limit = 50, search?: string) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.append("search", search);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return apiFetch<PaginatedResponse<any>>(`/api/admin/audit-logs?${params.toString()}`, { rawResponse: true });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async lookupInvoice(code: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return apiFetch<any>(`/api/admin/invoices/lookup?code=${code}`, { rawResponse: true });
+  }
+
   static async fetchBusinesses(
     page: number,
     limit: number,

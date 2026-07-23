@@ -3,19 +3,16 @@ import { apiFetch } from "@/lib/api-client";
 
 export default async function PublicInvoicePage({
  params,
- searchParams,
 }: {
- params: Promise<{ invoiceCode: string }>;
- searchParams: Promise<{ seal?: string }>;
+ params: Promise<{ id: string }>;
 }) {
- const { invoiceCode } = await params;
- const { seal } = await searchParams;
+ const { id } = await params;
 
  let initialData = null;
- if (invoiceCode && seal) {
+ if (id) {
   try {
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const response = await apiFetch<any>(`/api/public/invoice/${invoiceCode}?seal=${seal}`);
+   const response = await apiFetch<any>(`/api/public/invoice/${id}`);
    if (response) {
     initialData = {
      invoice: response,
@@ -28,5 +25,5 @@ export default async function PublicInvoicePage({
   }
  }
 
- return <PublicInvoiceView invoiceCode={invoiceCode} initialData={initialData} />;
+ return <PublicInvoiceView id={id} initialData={initialData} />;
 }

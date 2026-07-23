@@ -149,7 +149,7 @@ export class ApiBusinessService implements BusinessService {
       body: JSON.stringify(payload),
     });
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("rapiin-storage-sync"));
+
     }
     return this.mapper.toDomain(response);
   }

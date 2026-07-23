@@ -34,6 +34,8 @@ export interface InvoiceService {
   getInvoiceById(id: string): Promise<Invoice | null>;
   createInvoice(payload: Omit<InvoiceDTO, "id" | "createdAt" | "updatedAt" | "verificationCode" | "integritySeal" | "invoiceCode">): Promise<Invoice>;
   createInvoiceFromOrder(orderId: string, notes?: string): Promise<Invoice | null>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lookupInvoice(code: string): Promise<any | null>;
 }
 
 export class ApiInvoiceService implements InvoiceService {
@@ -60,6 +62,17 @@ export class ApiInvoiceService implements InvoiceService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async lookupInvoice(code: string): Promise<any | null> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return await apiFetch<any>(`/api/invoices/lookup?code=${code}`);
+    } catch (err) {
+      logServiceError("Failed to lookup invoice", err);
+      return null;
+    }
+  }
+
   async createInvoice(payload: Omit<InvoiceDTO, "id" | "createdAt" | "updatedAt" | "verificationCode" | "integritySeal" | "invoiceCode">): Promise<Invoice> {
     try {
       const response = await apiFetch<InvoiceDTO>("/api/invoices", {
@@ -67,7 +80,7 @@ export class ApiInvoiceService implements InvoiceService {
         body: JSON.stringify({ orderId: payload.orderId, notes: payload.notes }),
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
       return this.mapper.toDomain(response);
     } catch (err) {
@@ -83,7 +96,7 @@ export class ApiInvoiceService implements InvoiceService {
         body: JSON.stringify({ orderId, notes }),
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
       return this.mapper.toDomain(response);
     } catch (err) {

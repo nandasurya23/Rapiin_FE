@@ -141,7 +141,7 @@ export function DatePicker({
      id={menuId}
      role="dialog"
      aria-label="Date picker"
-     className="absolute left-0 right-0 z-50 mt-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 "
+     className="absolute left-0 right-0 z-[100] mt-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 "
     >
      <div className="flex items-center justify-between gap-2">
       <button

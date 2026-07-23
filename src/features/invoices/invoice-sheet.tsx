@@ -120,10 +120,6 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
        <p className="text-[10px] uppercase text-[var(--color-text-muted)] font-semibold tracking-wider">Kode Verifikasi</p>
        <p className="font-mono text-xs font-semibold text-[var(--color-text)] break-all">{invoice.verificationCode}</p>
       </div>
-      <div>
-       <p className="text-[10px] uppercase text-[var(--color-text-muted)] font-semibold tracking-wider">Segel Integritas</p>
-       <p className="font-mono text-[10px] text-[var(--color-text-secondary)] break-all">{invoice.integritySeal}</p>
-      </div>
      </div>
     </div>
 

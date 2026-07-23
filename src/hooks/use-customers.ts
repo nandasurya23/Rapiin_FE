@@ -5,7 +5,7 @@ import { canCreateCustomer as canCreateCustomerByState, getCustomerUsage } from 
 
 const customerService = new ApiCustomerService();
 
-export function useCustomers() {
+export function useCustomers(options?: { enablePolling?: boolean; intervalMs?: number }) {
   const queryClient = useQueryClient();
   const { business, canAccessWriteMode, readOnlyReason, subscriptions } = useAppData();
 
@@ -13,6 +13,8 @@ export function useCustomers() {
     queryKey: ["customers", business?.id],
     queryFn: () => customerService.getCustomers(business?.id || ""),
     enabled: !!business?.id && business.id !== "biz_default",
+    refetchInterval: options?.enablePolling ? (options.intervalMs ?? 30000) : false,
+    refetchOnWindowFocus: options?.enablePolling ? true : undefined,
   });
 
   const canCreateCustomer = canCreateCustomerByState({ business: business!, subscriptions, customers });

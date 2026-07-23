@@ -187,26 +187,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    if (user) {
     const onboardingCompleted = user.onboardingCompleted ?? false;
 
-    let businessData = null;
-    if (user.role !== "SUPER_ADMIN") {
-     try {
-      businessData = await businessService.getBusinessById("");
-     } catch {
-     }
-    }
-
-    setState((prev) => ({
-     ...prev,
-     business: businessData || prev.business,
-     subscriptions: businessData ? (businessData as Business & { subscriptions?: BusinessSubscription[] }).subscriptions || prev.subscriptions : prev.subscriptions,
-     upgradeRequests: businessData ? (businessData as Business & { upgradeRequests?: UpgradeRequest[] }).upgradeRequests || prev.upgradeRequests : prev.upgradeRequests,
-     auth: {
-      ...prev.auth,
-      currentUserId: user.id,
-      onboardingCompleted,
-      users: [user],
-     },
-    }));
+     setState((prev) => ({
+      ...prev,
+      auth: {
+       ...prev.auth,
+       currentUserId: user.id,
+       onboardingCompleted,
+       users: [user],
+      },
+     }));
    }
    setHydrated(true);
   }
@@ -227,11 +216,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
  });
 
  const business = queryBusiness || state.business;
+ const subscriptions = queryBusiness ? (queryBusiness as Business & { subscriptions?: BusinessSubscription[] }).subscriptions || state.subscriptions : state.subscriptions;
+ const upgradeRequests = queryBusiness ? (queryBusiness as Business & { upgradeRequests?: UpgradeRequest[] }).upgradeRequests || state.upgradeRequests : state.upgradeRequests;
  
  const currentUser = useMemo(() => state.auth.users.find((user) => user.id === state.auth.currentUserId) ?? null, [state.auth.currentUserId, state.auth.users]);
  const subscriptionForCurrentBusiness = useMemo(
-  () => getSubscriptionForBusiness(state.subscriptions, business.id),
-  [business.id, state.subscriptions]
+  () => getSubscriptionForBusiness(subscriptions, business.id),
+  [business.id, subscriptions]
  );
  const currentUserRole = currentUser?.role ?? null;
  const isSuperAdmin = currentUserRole === "SUPER_ADMIN";
@@ -599,6 +590,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
  const value: AppDataContextValue = useMemo(() => ({
   ...state,
   business,
+  subscriptions,
+  upgradeRequests,
   hydrated,
   currentUser,
   currentUserRole,
@@ -632,6 +625,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
  }), [
   state,
   business,
+  subscriptions,
+  upgradeRequests,
   hydrated,
   currentUser,
   currentUserRole,
