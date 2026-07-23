@@ -24,7 +24,7 @@ import {
  isBookingSlotFull,
  getResourceBookingDetailsForDate,
 } from "@/lib/booking";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { parseIndonesianNumber } from "@/lib/number";
 import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS, getValidStatusOptions } from "@/lib/constants/orders";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
@@ -277,6 +277,38 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
  }, [business.openingHours]);
 
  const getCandidateAvailability = (time: string) => {
+  if (business?.openingHours && business.openingHours.includes("-")) {
+   const [start, end] = business.openingHours.split("-").map((t) => t.trim());
+   if (start && end) {
+    const [targetH, targetM] = time.split(":").map(Number);
+    const targetMin = targetH * 60 + targetM;
+    const finishMin = targetMin + bookingDurationMinutes;
+
+    const [startH, startM] = start.split(":").map(Number);
+    const startMin = startH * 60 + startM;
+
+    const [endH, endM] = end.split(":").map(Number);
+    const endMin = endH * 60 + endM;
+
+    if (targetMin < startMin || finishMin > endMin) {
+     return {
+      count: 1,
+      holdCount: 0,
+      paidCount: 1,
+      remaining: 0,
+      isFull: true,
+      hasHold: false,
+      overlappingOrders: [],
+      earliestHoldExpiresAt: null,
+      availableResourceCount: 0,
+      busyResourceCount: 1,
+      totalResourceCount: 1,
+      unavailableResourceIds: []
+     };
+    }
+   }
+  }
+
   if (isResourceBookingMode) {
    if (form.resourceId && form.resourceId !== "ANY") {
     return getResourceAvailabilityForSelection(orders, form.resourceId, form.scheduledDate, time, bookingDurationMinutes, editingId);
@@ -436,6 +468,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
 
  const title = editingId ? "Edit Pesanan" : "Tambah Pesanan Baru";
  const desc = "Lengkapi detail pesanan di bawah ini.";
+ const isSimplifiedEditMode = isResourceBookingMode && !!editingId;
 
  return (
   <Sheet isOpen={isOpen} onClose={onClose} title={title} description={desc} side="right">
@@ -479,7 +512,23 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     )}
 
     {/* Customer Info */}
-    <div className="space-y-4">
+    {isSimplifiedEditMode ? (
+     <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
+      <div className="flex justify-between items-start">
+       <div>
+        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Pelanggan</p>
+        <p className="text-sm font-black text-[var(--color-text)] tracking-tight">{form.customerName}</p>
+        <p className="text-xs font-semibold text-[var(--color-text-secondary)] mt-0.5">{form.whatsappNumber}</p>
+       </div>
+       <div className="text-right">
+        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Layanan</p>
+        <p className="text-xs font-bold text-[var(--color-text)]">{form.title || (form.serviceId && catalogList.find(c => c.id === form.serviceId)?.name) || "Custom"}</p>
+        <p className="text-sm font-black text-[var(--color-primary)] mt-0.5">Rp {formatCurrency(parseIndonesianNumber(form.totalAmount) || 0)}</p>
+       </div>
+      </div>
+     </div>
+    ) : (
+     <div className="space-y-4">
      <h3 className="text-sm font-bold border-b border-[var(--color-border)] pb-2 text-[var(--color-text)]">Info Pelanggan</h3>
      <div className="grid gap-4 sm:grid-cols-2">
       <div className="relative">
@@ -570,9 +619,11 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
       </div>
      </div>
     </div>
+   )}
 
     {/* Order Details */}
-    <div className="space-y-4">
+    {!isSimplifiedEditMode && (
+     <div className="space-y-4">
      <h3 className="text-sm font-bold border-b border-[var(--color-border)] pb-2 text-[var(--color-text)]">Detail Order</h3>
      
      <div>
@@ -633,6 +684,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
       </>
      ) : null}
     </div>
+    )}
 
     {/* Scheduling */}
     <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4">
@@ -646,7 +698,13 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
        <div className="grid gap-3 sm:grid-cols-2">
         <div>
          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Tanggal</label>
-         <DatePicker value={form.scheduledDate} onValueChange={(val) => updateFormField("scheduledDate", val)} />
+         {isSimplifiedEditMode ? (
+          <div className="h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 flex items-center text-sm font-semibold text-[var(--color-text-secondary)]">
+           {form.scheduledDate ? formatDate(form.scheduledDate) : "Belum ditentukan"}
+          </div>
+         ) : (
+          <DatePicker value={form.scheduledDate} onValueChange={(val) => updateFormField("scheduledDate", val)} />
+         )}
         </div>
 
         <div>
@@ -662,8 +720,18 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
 
        {isResourceBookingMode && activeResources.length > 1 && form.scheduledDate && resourceDetailsForDate.length > 0 && (
         <div className="space-y-3 mt-4 pt-4 border-t border-[var(--color-border)]/50">
-         <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">Pilih {business.resourceLabel || "Unit"}</span>
-         <div className="grid gap-2 sm:grid-cols-2">
+         <span className="block text-xs font-bold uppercase text-[var(--color-text-secondary)]">
+          {isSimplifiedEditMode ? `${business.resourceLabel || "Unit"} Terpilih` : `Pilih ${business.resourceLabel || "Unit"}`}
+         </span>
+         
+         {isSimplifiedEditMode ? (
+          <div className="p-3 rounded-xl border bg-[var(--color-primary)] text-white shadow-sm">
+           <div className="font-bold text-sm">
+            {form.resourceId === "ANY" ? "Sistem Memilihkan (Bebas)" : resourceDetailsForDate.find(r => r.resourceId === form.resourceId)?.resourceName || form.resourceId}
+           </div>
+          </div>
+         ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
           <button
            type="button"
            onClick={() => {
@@ -691,41 +759,56 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
           </button>
           {resourceDetailsForDate.map((res) => {
            const isSelected = form.resourceId === res.resourceId;
-           const isFull = res.isFull;
+           const hasBookings = res.bookings && res.bookings.length > 0;
 
            return (
             <button
              key={res.resourceId}
              type="button"
              onClick={() => {
-              if (!isFull) {
-               updateFormField("resourceId", res.resourceId);
-               updateFormField("scheduledTime", "");
-              }
+              updateFormField("resourceId", res.resourceId);
+              updateFormField("scheduledTime", "");
              }}
              className={cn(
-              "p-3 rounded-xl border text-left transition-all flex justify-between items-center",
-              isFull
-               ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
-               : isSelected
-                ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.02]"
-                : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+              "p-3 rounded-xl border text-left transition-all flex flex-col justify-start items-stretch",
+              isSelected
+               ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.02]"
+               : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
              )}
-             disabled={isFull}
             >
-             <div>
+             <div className="flex justify-between items-center w-full">
               <span className="text-sm font-bold block">{res.resourceName}</span>
               <span className={cn(
                "text-[10px] tracking-wide uppercase font-extrabold mt-0.5 block",
-               isFull ? "text-red-500/60" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
+               isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
               )}>
-               {isFull ? "Semua Jadwal Penuh" : res.hasHold ? "Tersedia Sebagian" : "Tersedia"}
+               {hasBookings ? "Cek Jam Kosong" : "Tersedia"}
               </span>
              </div>
+             {hasBookings && (
+              <div className={`mt-2 text-[10px] space-y-0.5 text-left border-t pt-1.5 ${isSelected ? "border-white/20 text-white/90" : "border-[var(--color-border)] text-orange-600/80"}`}>
+               <span className="font-semibold block mb-1">Jadwal Terisi:</span>
+               {res.bookings.map((b, i) => {
+                if (!b.scheduledTime) return null;
+                const [h, m] = b.scheduledTime.split(":").map(Number);
+                const dur = b.bookingDurationMinutes || 60;
+                const total = h * 60 + m + dur;
+                const endH = Math.floor(total / 60) % 24;
+                const endM = total % 60;
+                const endStr = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+                return (
+                 <div key={i}>
+                  • {b.scheduledTime} s/d {endStr}
+                 </div>
+                );
+               })}
+              </div>
+             )}
             </button>
            );
           })}
          </div>
+         )}
         </div>
        )}
 
@@ -750,17 +833,17 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
              className={cn(
               "py-2 px-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-0.5",
               isFull
-               ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
+               ? "bg-red-50 border-red-200 text-red-500 cursor-not-allowed opacity-70"
                : isSelected
                 ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.02]"
                 : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
              )}
              disabled={isFull}
             >
-             <span className="text-xs font-bold">{time}</span>
+             <span className={cn("text-xs font-bold", isFull && "line-through")}>{time}</span>
              <span className={cn(
               "text-[8px] tracking-wide uppercase font-extrabold",
-              isFull ? "Penuh" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
+              isFull ? "text-red-500/80" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
              )}>
               {isFull ? "Penuh" : avail.hasHold ? "Ditahan" : "Tersedia"}
              </span>
@@ -801,7 +884,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
 
     {error && <p className="text-sm font-bold text-[var(--color-danger)] bg-[var(--color-danger-surface)] p-3 rounded-xl border border-[var(--color-danger-border)]">{error}</p>}
     
-    <div className="pt-4 border-t border-[var(--color-border)] flex items-center justify-end gap-3 sticky bottom-0 bg-[var(--color-surface)] pb-2">
+    <div className="pt-4 border-t border-[var(--color-border)] flex items-center justify-end gap-3 sticky bottom-0 bg-[var(--color-surface)] pb-2 mt-4">
      <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
       Batal
      </Button>

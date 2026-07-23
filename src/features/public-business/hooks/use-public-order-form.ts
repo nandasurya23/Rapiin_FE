@@ -342,6 +342,10 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
         next.quantity = String(parsedQuantity);
       }
 
+      if (name === "service" || name === "product" || name === "requestDetail" || name === "bookingDurationMinutes") {
+        next.serviceId = "";
+      }
+
       return next;
     });
   }
@@ -440,6 +444,48 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     }
   }
 
+  const getCandidateAvailability = (time: string) => {
+    if (business?.openingHours && business.openingHours.includes("-")) {
+      const [start, end] = business.openingHours.split("-").map((t) => t.trim());
+      if (start && end) {
+        const [targetH, targetM] = time.split(":").map(Number);
+        const targetMin = targetH * 60 + targetM;
+        const finishMin = targetMin + bookingDurationMinutes;
+
+        const [startH, startM] = start.split(":").map(Number);
+        const startMin = startH * 60 + startM;
+
+        const [endH, endM] = end.split(":").map(Number);
+        const endMin = endH * 60 + endM;
+
+        if (targetMin < startMin || finishMin > endMin) {
+          return {
+            count: 1,
+            holdCount: 0,
+            paidCount: 1,
+            remaining: 0,
+            isFull: true,
+            hasHold: false,
+            overlappingOrders: [],
+            earliestHoldExpiresAt: null,
+            availableResourceCount: 0,
+            busyResourceCount: 1,
+            totalResourceCount: 1,
+            unavailableResourceIds: []
+          };
+        }
+      }
+    }
+
+    if (business?.operationalModel === "RESOURCE_BOOKING" && form.resourceId && form.resourceId !== "ANY") {
+      return getResourceAvailabilityForSelection(orders, form.resourceId, form.scheduledDate, time, bookingDurationMinutes);
+    }
+    if (business?.operationalModel === "RESOURCE_BOOKING") {
+      return getResourceBookingAvailability(orders, business.resources ?? [], form.scheduledDate, time, bookingDurationMinutes);
+    }
+    return getBookingAvailability(orders, form.scheduledDate, time, bookingDurationMinutes, undefined, undefined, business?.bookingCapacity);
+  };
+
   return {
     business,
     loading,
@@ -455,10 +501,11 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     canCreateOrder,
     bookingDurationMinutes,
     bookingAvailability,
-    resourceBookingAvailability,
     activeAvailability,
     resourceDetailsForDate,
+    resourceBookingAvailability,
     slotHint,
+    getCandidateAvailability,
     updateField,
     handleSelectCatalogItem,
     handleClearCatalogItem,

@@ -8,8 +8,12 @@ export default async function BusinessSlugOrderPage({ params }: { params: Promis
  let business: Business | null = null;
  try {
   business = await apiFetch<Business>(`/api/public/b/${businessSlug}`);
- } catch (err) {
-  console.error("Failed to fetch business in Server Component:", err);
+ } catch (err: unknown) {
+  if ((err as { status?: number })?.status !== 404) {
+   console.error(`[DEBUG] Failed to fetch business for slug '${businessSlug}' in Server Component:`, err);
+  } else {
+   console.warn(`[DEBUG] 404 returned for slug '${businessSlug}'`);
+  }
  }
 
  return <PublicOrderForm slug={businessSlug} initialBusiness={business} />;

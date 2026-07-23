@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import {
  getResourceBookingDetailsForDate,
  getBookingSlotsForDate,
- getResourceBookingAvailability,
+ isBookingHoldActive,
 } from "@/lib/booking";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -37,6 +37,14 @@ import {
   weekdayLabels,
   weekdayShortLabels,
 } from "./utils/calendar-utils";
+
+function getEndTimeStr(startTime: string = "08:00", durationMinutes: number = 60) {
+  const [hStr, mStr] = startTime.split(":");
+  const totalMins = Number(hStr || 8) * 60 + Number(mStr || 0) + durationMinutes;
+  const endH = Math.floor(totalMins / 60) % 24;
+  const endM = totalMins % 60;
+  return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+}
 
 type DashboardCalendarProps = {
   business: Business;
@@ -117,10 +125,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
   () => getResourceBookingDetailsForDate(selectedOrders, business.resources ?? [], selectedDate),
   [business.resources, selectedOrders, selectedDate]
  );
- const selectedResourceAvailability = useMemo(
-  () => getResourceBookingAvailability(selectedOrders, business.resources ?? [], selectedDate, "00:00", 24 * 60),
-  [business.resources, selectedOrders, selectedDate]
- );
+
  const hasFullSlot = selectedSlotSummaries.some((slot) => slot.isFull);
  const hasHoldSlot = selectedSlotSummaries.some((slot) => slot.holdCount > 0);
  const isResourceMode = business.operationalModel === "RESOURCE_BOOKING" && business.usesResources;
@@ -368,37 +373,47 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
 
  const timelineColumns = useMemo(() => {
   const list = [...activeResources];
-  const hasUnassigned = selectedOrders.some((o) => !o.resourceId || o.resourceId === "ANY");
+  const hasUnassigned = selectedOrders.some((o) => o.status !== "SELESAI" && (!o.resourceId || o.resourceId === "ANY"));
   if (hasUnassigned) {
    list.push({
     id: "ANY",
-    name: "Umum",
+    name: isResourceMode ? "Belum Ditetapkan" : "Umum",
     isActive: true,
    });
   }
   return list;
- }, [activeResources, selectedOrders]);
+ }, [activeResources, selectedOrders, isResourceMode]);
 
  const [startHour, endHour] = useMemo(() => {
   if (!business.openingHours) return [7, 21];
   const [startStr, endStr] = business.openingHours.split(" - ");
-  const s = parseInt(startStr?.split(":")[0], 10);
-  const e = parseInt(endStr?.split(":")[0], 10);
-  return [Number.isNaN(s) ? 7 : s, Number.isNaN(e) ? 21 : e];
+  let s = parseInt(startStr?.split(":")[0], 10);
+  let e = parseInt(endStr?.split(":")[0], 10);
+  if (Number.isNaN(s)) s = 7;
+  if (Number.isNaN(e)) e = 21;
+  if (e < s) e += 24;
+  return [s, e];
  }, [business.openingHours]);
 
  const startOffsetMinutes = startHour * 60;
 
  const positionedOrders = useMemo(() => {
-  const sorted = [...selectedOrders].sort((a, b) => (a.scheduledTime || "").localeCompare(b.scheduledTime || ""));
+  const activeOrders = selectedOrders.filter((o) => o.status !== "SELESAI");
+  const sorted = [...activeOrders].sort((a, b) => (a.scheduledTime || "").localeCompare(b.scheduledTime || ""));
 
   return sorted.map((order) => {
-   const [h, m] = (order.scheduledTime || "08:00").split(":").map(Number);
+   const timeParts = (order.scheduledTime || "08:00").split(":");
+   let h = Number(timeParts[0]);
+   const m = Number(timeParts[1]);
+   if (h < startHour) h += 24;
    const start = h * 60 + m;
    const end = start + (order.bookingDurationMinutes || 60);
 
    const overlappingGroup = sorted.filter((other) => {
-    const [oh, om] = (other.scheduledTime || "08:00").split(":").map(Number);
+    const otherParts = (other.scheduledTime || "08:00").split(":");
+    let oh = Number(otherParts[0]);
+    const om = Number(otherParts[1]);
+    if (oh < startHour) oh += 24;
     const ostart = oh * 60 + om;
     const oend = ostart + (other.bookingDurationMinutes || 60);
     return start < oend && end > ostart;
@@ -422,7 +437,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
     },
    };
   });
- }, [selectedOrders, startOffsetMinutes]);
+ }, [selectedOrders, startOffsetMinutes, startHour]);
 
  const hoursLength = Math.max(1, endHour - startHour + 1);
  const hours = Array.from({ length: hoursLength }, (_, i) => i + startHour);
@@ -507,9 +522,9 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
          const count = orderCountByDate[dateKey] ?? 0;
          const cellOrders = orders.filter((o) => o.scheduledDate === dateKey);
          const dateSlotSummaries = getBookingSlotsForDate(cellOrders, dateKey, null, new Date(), business.bookingCapacity);
-         const dateResourceAvailability = getResourceBookingAvailability(cellOrders, business.resources ?? [], dateKey, "00:00", 24 * 60);
-         const dateHasFullSlot = isResourceMode ? dateResourceAvailability.isFull : dateSlotSummaries.some((slot) => slot.isFull);
-         const dateHasHoldSlot = isResourceMode ? dateResourceAvailability.hasHold : dateSlotSummaries.some((slot) => slot.holdCount > 0);
+
+         const dateHasFullSlot = isResourceMode ? false : dateSlotSummaries.some((slot) => slot.isFull);
+         const dateHasHoldSlot = isResourceMode ? cellOrders.some(o => isBookingHoldActive(o, new Date())) : dateSlotSummaries.some((slot) => slot.holdCount > 0);
 
          const isClosed = Boolean(business.closedDates?.[dateKey]);
          const closedReason = business.closedDates?.[dateKey] || "";
@@ -646,12 +661,12 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
            </div>
 
            {/* Hour rows and content grid */}
-           <div className="relative flex" style={{ height: "960px" }}>
+           <div className="relative flex" style={{ height: `${hoursLength * 64}px` }}>
             {/* Time labels axis */}
             <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/60 flex flex-col z-10">
              {hours.map((h) => (
               <div key={h} className="h-16 text-[11px] font-bold text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/60 flex items-start justify-center pt-1.5 font-mono">
-               {String(h).padStart(2, "0")}:00
+               {String(h % 24).padStart(2, "0")}:00
               </div>
              ))}
             </div>
@@ -660,6 +675,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
             <div className="flex-1 grid divide-x divide-[var(--color-border)]/40 relative" style={{ gridTemplateColumns: `repeat(${timelineColumns.length}, minmax(180px, 1fr))` }}>
              {timelineColumns.map((res) => {
               const resOrders = selectedOrders.filter((o) => {
+               if (o.status === "SELESAI") return false;
                if (res.id === "ANY") {
                 return !o.resourceId || o.resourceId === "ANY";
                }
@@ -672,7 +688,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                  <div
                   key={h}
                   onClick={() => {
-                   toast.info("Pembuatan Order", `Ketik "booking di ${res.name} jam ${h}" di Asisten Pintar (Cmd+K) untuk input cepat!`);
+                   toast.info("Pembuatan Order", `Ketik "booking di ${res.name} jam ${String(h % 24).padStart(2, "0")}:00" di Asisten Pintar (Cmd+K) untuk input cepat!`);
                   }}
                   className="absolute left-0 right-0 border-b border-[var(--color-border)]/60 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
                   style={{ top: `${idx * 64}px`, height: "64px" }}
@@ -684,7 +700,8 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                 {/* Order block cards */}
                 {resOrders.map((order) => {
                  const [hStr, mStr] = (order.scheduledTime || "08:00").split(":");
-                 const h = Number(hStr || 8);
+                 let h = Number(hStr || 8);
+                 if (h < startHour) h += 24;
                  const m = Number(mStr || 0);
                  const startOffset = h * 60 + m - startOffsetMinutes;
                  const top = (startOffset * 64) / 60;
@@ -716,10 +733,10 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                     </div>
                     <p className="text-[9px] font-semibold truncate opacity-90">{order.title}</p>
                    </div>
-                   <div className="flex justify-between items-center text-[8px] font-bold opacity-60 font-mono">
-                    <span>{order.scheduledTime}</span>
-                    <span>{order.bookingDurationMinutes}m</span>
-                   </div>
+                    <div className="flex justify-between items-center text-[8px] font-bold opacity-70 font-mono">
+                     <span>{order.scheduledTime} - {getEndTimeStr(order.scheduledTime, order.bookingDurationMinutes || 60)}</span>
+                     <span className="opacity-50 text-[7px]">({order.bookingDurationMinutes}m)</span>
+                    </div>
                   </button>
                  );
                 })}
@@ -739,12 +756,12 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
            </div>
 
            {/* Hour rows and content grid */}
-           <div className="relative flex" style={{ height: "960px" }}>
+           <div className="relative flex" style={{ height: `${hoursLength * 64}px` }}>
             {/* Time labels axis */}
             <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/60 flex flex-col z-10">
              {hours.map((h) => (
               <div key={h} className="h-16 text-[11px] font-bold text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/60 flex items-start justify-center pt-1.5 font-mono">
-               {String(h).padStart(2, "0")}:00
+               {String(h % 24).padStart(2, "0")}:00
               </div>
              ))}
             </div>
@@ -756,7 +773,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
               <div
                key={h}
                onClick={() => {
-                toast.info("Pembuatan Order", `Ketik "booking jam ${h}" di Asisten Pintar (Cmd+K) untuk input cepat!`);
+                toast.info("Pembuatan Order", `Ketik "booking jam ${String(h % 24).padStart(2, "0")}:00" di Asisten Pintar (Cmd+K) untuk input cepat!`);
                }}
                className="absolute left-0 right-0 border-b border-[var(--color-border)]/60 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
                style={{ top: `${idx * 64}px`, height: "64px" }}
@@ -792,12 +809,12 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                 </div>
                 <p className="text-[9px] font-semibold truncate opacity-90">{order.title}</p>
                </div>
-               <div className="flex justify-between items-center text-[8px] font-bold opacity-60 font-mono">
-                <span>{order.scheduledTime}</span>
-                <span>{order.bookingDurationMinutes}m</span>
-               </div>
-              </button>
-             ))}
+                <div className="flex justify-between items-center text-[8px] font-bold opacity-70 font-mono">
+                 <span>{order.scheduledTime} - {getEndTimeStr(order.scheduledTime, order.bookingDurationMinutes || 60)}</span>
+                 <span className="opacity-50 text-[7px]">({order.bookingDurationMinutes}m)</span>
+                </div>
+               </button>
+              ))}
             </div>
            </div>
           </div>
@@ -841,7 +858,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
         selectedDateLabel={selectedDateLabel}
         selectedDateCount={selectedDateCount}
         isResourceMode={isResourceMode}
-        selectedResourceAvailability={selectedResourceAvailability}
+
         hasFullSlot={hasFullSlot}
         hasHoldSlot={hasHoldSlot}
         visibleResourceDetails={visibleResourceDetails}

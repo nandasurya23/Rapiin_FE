@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Calendar, Clock, Copy, PencilLine, ReceiptText, Trash2 } from "lucide-react";
+import { Calendar, Clock, ReceiptText, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
-import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency, formatDate, formatPhoneNumber } from "@/lib/format";
-import { DEFAULT_BOOKING_DURATION_MINUTES, getBookingHoldExpiresAt, isBookingHoldActive } from "@/lib/booking";
+import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/lib/booking";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/cn";
 import type { Order, OrderStatus } from "@/types/order";
@@ -28,16 +27,16 @@ export function getAvatarGradient(name: string) {
  return "from-pink-400 to-rose-600";
 }
 
-function formatDateTime(value?: string | null) {
- if (!value) return "";
- const parsedDate = new Date(value);
- if (Number.isNaN(parsedDate.getTime())) return "";
- return new Intl.DateTimeFormat("id-ID", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  hour12: false,
-  hourCycle: "h23",
- }).format(parsedDate);
+
+
+function calculateEndTime(startTime?: string | null, durationMinutes?: number | null) {
+ if (!startTime) return "?";
+ const [h, m] = startTime.split(":").map(Number);
+ const dur = durationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
+ const total = h * 60 + m + dur;
+ const endH = Math.floor(total / 60) % 24;
+ const endM = total % 60;
+ return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
 }
 
 interface OrderBoardProps {
@@ -47,6 +46,7 @@ interface OrderBoardProps {
  onEdit: (order: Order) => void;
  onDelete?: (order: Order) => void;
  getWhatsAppConfig: (order: Order) => { label: string; message: string };
+ isResourceBooking?: boolean;
 }
 
 export function OrderBoard({
@@ -56,19 +56,13 @@ export function OrderBoard({
  onEdit,
  onDelete,
  getWhatsAppConfig,
+ isResourceBooking,
 }: OrderBoardProps) {
  const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
- const toast = useToast();
 
- async function handleCopyMessage(message: string) {
-  try {
-   await navigator.clipboard.writeText(message);
-   toast.success("Draf WhatsApp berhasil disalin!");
-  } catch {
-   toast.error("Gagal menyalin draf pesan.");
-  }
- }
+
+
 
  // Mouse drag-to-scroll support for desktop
  const [isMouseDown, setIsMouseDown] = useState(false);
@@ -167,9 +161,10 @@ export function OrderBoard({
              onDragEnd={() => {
               setDraggedOrder(null);
              }}
+             onClick={() => onEdit(order)}
              className={cn(
               "p-3.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl transition-all duration-300 relative shadow-sm hover:shadow hover:border-[var(--color-border-strong)] select-none",
-              isDraggable ? "cursor-grab active:cursor-grabbing" : "opacity-90 cursor-default"
+              isDraggable ? "cursor-pointer active:cursor-grabbing" : "opacity-90 cursor-default"
              )}
             >
              {/* <div className={cn("absolute left-0 top-3 bottom-3 w-1 rounded-full", statusIndicator)} /> */}
@@ -190,23 +185,34 @@ export function OrderBoard({
               </p>
               
               {order.mode === "BOOKING_SERVICE" && (
-               <div className="space-y-1.5 bg-[var(--color-surface-elevated)] border border-[var(--color-border)]/40 p-2.5 rounded-xl text-[11px] leading-normal text-[var(--color-text-secondary)]">
-                <p className="font-semibold flex items-center gap-1">
-                 <Clock className="h-3 w-3 text-[var(--color-text-muted)]" />
-                 Jadwal: {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} Menit
-                </p>
-                {order.resourceNameSnapshot && (
-                 <p className="text-[10px] font-bold text-[var(--color-text)]">
-                  Unit: {order.resourceNameSnapshot}
-                 </p>
-                )}
-                {isBookingHoldActive(order) ? (
-                 <p className="text-[10px] font-extrabold text-orange-600 dark:text-orange-400">
-                  Hold Expired: {formatDateTime(getBookingHoldExpiresAt(order)?.toISOString() ?? null)}
-                 </p>
-                ) : order.paymentStatus === "DP_PAID" || order.paymentStatus === "PAID" ? (
-                 <p className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">Pemesanan Mengunci Slot</p>
-                ) : null}
+               <div className={cn("space-y-1.5 border p-2.5 rounded-xl text-[11px] leading-normal", 
+                  isResourceBooking ? "bg-indigo-50/50 border-indigo-100 text-indigo-900" : "bg-[var(--color-surface-elevated)] border-[var(--color-border)]/40 text-[var(--color-text-secondary)]"
+               )}>
+                 {isResourceBooking ? (
+                    <div>
+                       {order.resourceNameSnapshot && (
+                        <p className="text-sm font-black text-indigo-700 uppercase tracking-wide">
+                         {order.resourceNameSnapshot}
+                        </p>
+                       )}
+                       <p className="font-bold flex items-center gap-1.5 text-indigo-800 text-[11px] mt-1">
+                        <Clock className="h-3 w-3" />
+                        {order.scheduledTime} s/d {calculateEndTime(order.scheduledTime, order.bookingDurationMinutes)}
+                       </p>
+                    </div>
+                 ) : (
+                    <>
+                     <p className="font-semibold flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-[var(--color-text-muted)]" />
+                      Jadwal: {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} Menit
+                     </p>
+                     {order.resourceNameSnapshot && (
+                      <p className="text-[10px] font-bold text-[var(--color-text)]">
+                       Unit: {order.resourceNameSnapshot}
+                      </p>
+                     )}
+                    </>
+                 )}
                </div>
               )}
               
@@ -230,21 +236,15 @@ export function OrderBoard({
               </div>
              </div>
 
-             <div className="mt-4 pt-3.5 border-t border-[var(--color-border)]/40 flex flex-wrap gap-1.5">
+             <div 
+              className="mt-4 pt-3.5 border-t border-[var(--color-border)]/40 flex flex-wrap gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+             >
               <WhatsAppButton
                phoneNumber={order.whatsappNumber}
                message={waConfig.message}
                label={waConfig.label}
               />
-              <Button
-               type="button"
-               variant="secondary"
-               className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)]"
-               onClick={() => void handleCopyMessage(waConfig.message)}
-               title="Salin draf pesan WA"
-              >
-               <Copy className="h-4 w-4" />
-              </Button>
               <LinkButton
                href={`${ROUTES.invoices}?orderId=${order.id}`}
                variant="secondary"
@@ -253,15 +253,6 @@ export function OrderBoard({
                <ReceiptText className="h-4 w-4" />
                Nota
               </LinkButton>
-              <Button
-               type="button"
-               variant="secondary"
-               className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
-               onClick={() => onEdit(order)}
-              >
-               <PencilLine className="h-4 w-4" />
-               Ubah
-              </Button>
               {onDelete && (
                <Button
                 type="button"
@@ -273,19 +264,6 @@ export function OrderBoard({
                 <Trash2 className="h-4 w-4" />
                </Button>
               )}
-              <select
-               value={order.status}
-               onChange={(e) => onUpdateStatus(order, e.target.value as OrderStatus)}
-               className={cn(
-                "h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[11px] font-bold text-[var(--color-text)] outline-none hover:border-[var(--color-border-strong)] transition-colors cursor-pointer"
-               )}
-              >
-               {getValidStatusOptions(order.status, order.mode).map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                 {opt.label}
-                </option>
-               ))}
-              </select>
              </div>
             </div>
            );
@@ -304,8 +282,9 @@ export function OrderBoard({
 
    {/* DELETE CONFIRMATION MODAL */}
    {deletingOrder && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
-     <div className="w-full max-w-md rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-6 shadow-xl space-y-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeletingOrder(null)} />
+     <div className="w-full max-w-md rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-6 shadow-xl space-y-4 animate-fade-in">
       <h3 className="text-lg font-bold text-[var(--color-text)]">Hapus Pesanan?</h3>
       <p className="text-sm text-[var(--color-text-secondary)]">
        Apakah Anda yakin ingin menghapus pesanan &quot;<strong className="text-[var(--color-text)]">{deletingOrder.title}</strong>&quot; untuk <strong className="text-[var(--color-text)]">{deletingOrder.customerName}</strong>? Tindakan ini tidak dapat dibatalkan.
