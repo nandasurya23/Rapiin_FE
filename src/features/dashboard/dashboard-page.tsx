@@ -31,8 +31,8 @@ import { useMessageTemplates } from "@/hooks/use-message-templates";
 export function DashboardPage() {
  const toast = useToast();
  const { business, currentUser, subscriptionForCurrentBusiness } = useAppData();
- const { orders, updateOrder } = useOrders({ enablePolling: true });
- const { customers, updateCustomer, currentBusinessUsage } = useCustomers({ enablePolling: true });
+ const { orders, updateOrder } = useOrders();
+ const { customers, updateCustomer, currentBusinessUsage } = useCustomers();
  const { messageTemplates } = useMessageTemplates();
 
  const isNearCustomerLimit = currentBusinessUsage 
