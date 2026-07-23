@@ -7,7 +7,9 @@ export default async function SuperAdminLoginPage() {
  const headersList = await headers();
  const host = headersList.get("host") || "";
  const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "";
- const adminHost = adminUrl ? new URL(adminUrl).host : "";
+ 
+ let adminHost = "";
+ try { adminHost = adminUrl ? new URL(adminUrl.startsWith("http") ? adminUrl : `https://${adminUrl}`).host : ""; } catch {}
 
  // If we are on app domain but accessing super-admin login, redirect to admin domain
  if (adminHost && host !== adminHost) {

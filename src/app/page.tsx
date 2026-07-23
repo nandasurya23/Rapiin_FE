@@ -7,8 +7,12 @@ export default async function HomePage() {
  const host = headersList.get("host") || "";
  const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "";
  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
- const adminHost = adminUrl ? new URL(adminUrl).host : "";
- const appHost = appUrl ? new URL(appUrl).host : "";
+ 
+ let adminHost = "";
+ try { adminHost = adminUrl ? new URL(adminUrl.startsWith("http") ? adminUrl : `https://${adminUrl}`).host : ""; } catch {}
+ 
+ let appHost = "";
+ try { appHost = appUrl ? new URL(appUrl.startsWith("http") ? appUrl : `https://${appUrl}`).host : ""; } catch {}
 
  if (adminHost && adminHost !== appHost && host === adminHost) {
   redirect(ROUTES.superAdminLogin);
