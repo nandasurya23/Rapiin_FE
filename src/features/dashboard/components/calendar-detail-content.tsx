@@ -9,9 +9,9 @@ import { PaymentStatusBadge, OrderStatusBadge } from "@/components/shared/status
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import {
  DEFAULT_BOOKING_DURATION_MINUTES,
- getResourceBookingAvailability,
  getResourceBookingDetailsForDate,
- getBookingSlotsForDate
+ getBookingSlotsForDate,
+ isBookingHoldActive
 } from "@/lib/booking";
 import { getValidStatusOptions, PAYMENT_STATUS_LABELS } from "@/lib/constants/orders";
 import type { Business } from "@/types/business";
@@ -25,7 +25,7 @@ type CalendarDetailContentProps = {
  selectedDateLabel: string;
  selectedDateCount: number;
  isResourceMode: boolean;
- selectedResourceAvailability: ReturnType<typeof getResourceBookingAvailability>;
+
  hasFullSlot: boolean;
  hasHoldSlot: boolean;
  visibleResourceDetails: ReturnType<typeof getResourceBookingDetailsForDate>;
@@ -75,13 +75,20 @@ function formatDateTime(value?: string | null) {
  }).format(parsedDate);
 }
 
+function getEndTimeStr(startTime: string = "08:00", durationMinutes: number = 60) {
+ const [hStr, mStr] = startTime.split(":");
+ const totalMins = Number(hStr || 8) * 60 + Number(mStr || 0) + durationMinutes;
+ const endH = Math.floor(totalMins / 60) % 24;
+ const endM = totalMins % 60;
+ return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+}
+
 export function CalendarDetailContent({
  business,
  selectedDate,
  selectedDateLabel,
  selectedDateCount,
  isResourceMode,
- selectedResourceAvailability,
  hasFullSlot,
  hasHoldSlot,
  visibleResourceDetails,
@@ -122,15 +129,13 @@ export function CalendarDetailContent({
      {selectedDateCount ? `${selectedDateCount} order / booking ditemukan` : "Belum ada order / booking pada tanggal ini."}
     </p>
     <div className="mt-3 flex flex-wrap gap-2 items-center">
-     <Badge tone={selectedDateCount <= 0 ? "neutral" : isResourceMode ? selectedResourceAvailability.isFull ? "danger" : selectedResourceAvailability.hasHold ? "warning" : "success" : hasFullSlot ? "danger" : hasHoldSlot ? "warning" : "success"}>
+     <Badge tone={selectedDateCount <= 0 ? "neutral" : isResourceMode ? (visibleSelectedOrders.some(o => isBookingHoldActive(o, new Date())) ? "warning" : "success") : hasFullSlot ? "danger" : hasHoldSlot ? "warning" : "success"}>
       {selectedDateCount <= 0
        ? "Kosong"
        : isResourceMode
-        ? selectedResourceAvailability.isFull
-         ? "Semua unit penuh"
-         : selectedResourceAvailability.hasHold
+        ? visibleSelectedOrders.some(o => isBookingHoldActive(o, new Date()))
           ? "Ada unit ditahan"
-          : `${selectedResourceAvailability.availableResourceCount} unit kosong`
+          : `${selectedDateCount} booking`
         : hasFullSlot
          ? "Full"
          : hasHoldSlot
@@ -149,7 +154,7 @@ export function CalendarDetailContent({
       </button>
      ) : null}
     </div>
-    {business.mode === "BOOKING_SERVICE" && (isResourceMode ? selectedResourceAvailability.hasHold : hasHoldSlot) ? (
+    {business.mode === "BOOKING_SERVICE" && (isResourceMode ? visibleSelectedOrders.some(o => isBookingHoldActive(o, new Date())) : hasHoldSlot) ? (
      <p className="mt-3 text-xs text-[var(--color-warning-text)]">Ada booking pending DP. Slot akan kembali terbuka setelah hold aktif berakhir.</p>
     ) : null}
    </div>
@@ -191,8 +196,8 @@ export function CalendarDetailContent({
              <div key={order.id} className="flex items-center justify-between gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-inset)] px-3 py-2 text-xs">
               <div className="min-w-0">
                <p className="truncate font-medium text-[var(--color-text)]">{order.customerName}</p>
-               <p className="text-[var(--color-text-muted)]">
-                {order.scheduledTime ?? "-"} • {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES} menit
+               <p className="text-[var(--color-text-muted)] font-mono text-[10px]">
+                {order.scheduledTime ? `${order.scheduledTime} - ${getEndTimeStr(order.scheduledTime, order.bookingDurationMinutes || DEFAULT_BOOKING_DURATION_MINUTES)}` : "-"} <span className="opacity-60 text-[9px]">({order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES}m)</span>
                </p>
               </div>
               <PaymentStatusBadge status={order.paymentStatus} />
@@ -263,8 +268,10 @@ export function CalendarDetailContent({
          <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
            <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold text-[var(--color-primary)]">{order.scheduledTime ?? "Jadwal bebas"}</span>
-            <span className="text-[10px] text-[var(--color-text-muted)]">• {order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES}m</span>
+            <span className="font-mono text-xs font-bold text-[var(--color-primary)]">
+             {order.scheduledTime ? `${order.scheduledTime} - ${getEndTimeStr(order.scheduledTime, order.bookingDurationMinutes || DEFAULT_BOOKING_DURATION_MINUTES)}` : "Jadwal bebas"}
+            </span>
+            <span className="text-[9px] text-[var(--color-text-muted)]">({order.bookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES}m)</span>
            </div>
            <p className="font-extrabold text-sm text-[var(--color-text)] truncate">{order.customerName}</p>
            <p className="text-xs text-[var(--color-text-secondary)] font-medium truncate">{order.title}</p>

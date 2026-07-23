@@ -7,9 +7,13 @@ export default async function LoginPage() {
  const headersList = await headers();
  const host = headersList.get("host") || "";
  const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "";
+ const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
  const adminHost = adminUrl ? new URL(adminUrl).host : "";
+ const appHost = appUrl ? new URL(appUrl).host : "";
 
- if (adminHost && host === adminHost) {
+ // Di local, appHost dan adminHost seringkali sama (localhost:3000)
+ // Cegah infinite redirect / salah arah jika mereka identik
+ if (adminHost && adminHost !== appHost && host === adminHost) {
   redirect(ROUTES.superAdminLogin);
  }
 

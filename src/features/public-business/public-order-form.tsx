@@ -40,6 +40,9 @@ export function PublicOrderForm({
     updateField,
     handleSelectCatalogItem,
     handleSubmit,
+    resourceBookingAvailability,
+    resourceDetailsForDate,
+    getCandidateAvailability,
   } = usePublicOrderForm(slug, initialBusiness);
 
   const waMessage = useMemo(
@@ -167,33 +170,6 @@ export function PublicOrderForm({
             Form Pemesanan
           </h2>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                Nama Lengkap *
-              </span>
-              <Input
-                name="name"
-                value={form.name || ""}
-                onChange={(e) => updateField("name", e.target.value)}
-                placeholder="Masukkan nama Anda"
-                required
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                Nomor WhatsApp *
-              </span>
-              <Input
-                name="whatsappNumber"
-                value={form.whatsappNumber || ""}
-                onChange={(e) => updateField("whatsappNumber", e.target.value)}
-                placeholder="Contoh: 08123456789"
-                required
-              />
-            </label>
-          </div>
-
           {business.mode === "BOOKING_SERVICE" && (
             <>
               {catalog.length > 0 && (
@@ -202,14 +178,76 @@ export function PublicOrderForm({
                     Pilih Layanan
                   </span>
                   <Select
-                    value={form.serviceId || ""}
-                    onValueChange={(val) => handleSelectCatalogItem(val)}
-                    options={catalog.map((c) => ({
-                      value: c.id,
-                      label: `${c.name} ${c.priceLabel ? `(${c.priceLabel})` : ""}`,
-                    }))}
+                    value={form.serviceId || (form.service ? "CUSTOM" : "")}
+                    onValueChange={(val) => {
+                      if (val === "CUSTOM") {
+                        updateField("serviceId", "");
+                        updateField("service", "");
+                      } else {
+                        handleSelectCatalogItem(val);
+                      }
+                    }}
+                    options={[
+                      ...catalog.map((c) => ({
+                        value: c.id,
+                        label: `${c.name} ${c.priceLabel ? `(${c.priceLabel})` : ""}`,
+                      })),
+                      { value: "CUSTOM", label: "Layanan Custom / Lainnya" }
+                    ]}
                   />
                 </label>
+              )}
+
+              {/* Show custom inputs if no catalog item is actively selected */}
+              {(!form.serviceId || !catalog.find(c => c.id === form.serviceId)) && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                      Layanan *
+                    </span>
+                    <Input
+                      name="service"
+                      value={form.service || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateField("service", val);
+
+                        // Auto deteksi jam dari teks layanan
+                        const match = val.match(/(\d+(?:\.\d+)?)\s*(?:jam|hours|h|j)/i);
+                        if (match && match[1]) {
+                          const hrs = Number(match[1]);
+                          if (hrs > 0) {
+                            updateField("bookingDurationMinutes", String(hrs * 60));
+                          }
+                        }
+                      }}
+                      placeholder="Contoh: Main 3 Jam"
+                      required
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                      Durasi (Jam) *
+                    </span>
+                    <Input
+                      name="bookingDurationMinutes"
+                      type="number"
+                      min="0.5"
+                      step="0.5"
+                      value={form.bookingDurationMinutes ? String(Number(form.bookingDurationMinutes) / 60) : ""}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (val > 0) {
+                          updateField("bookingDurationMinutes", String(val * 60));
+                        } else {
+                          updateField("bookingDurationMinutes", "");
+                        }
+                      }}
+                      placeholder="Contoh: 3"
+                      required
+                    />
+                  </label>
+                </div>
               )}
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -222,20 +260,120 @@ export function PublicOrderForm({
                     onValueChange={(val) => updateField("scheduledDate", val)}
                   />
                 </label>
-
-                {isTimeRequired(business) && (
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                      Jam Booking *
-                    </span>
-                    <Select
-                      value={form.scheduledTime || ""}
-                      onValueChange={(val) => updateField("scheduledTime", val)}
-                      options={timeCandidates.map((t) => ({ value: t, label: t }))}
-                    />
-                  </label>
-                )}
               </div>
+
+              {business.usesResources && business.resources && business.resources.length > 0 && form.scheduledDate && resourceDetailsForDate.length > 0 && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-[var(--color-border)]/50">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih {business.resourceLabel || "Unit"}</span>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!resourceBookingAvailability.isFull) {
+                          updateField("resourceId", "ANY");
+                          updateField("scheduledTime", "");
+                        }
+                      }}
+                      className={`p-3 rounded-xl border text-left transition-all flex justify-between items-center ${resourceBookingAvailability.isFull
+                          ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
+                          : form.resourceId === "ANY" || !form.resourceId
+                            ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.02]"
+                            : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+                        }`}
+                      disabled={resourceBookingAvailability.isFull}
+                    >
+                      <div>
+                        <div className="font-bold text-sm">Bebas / Pilihkan Untuk Saya</div>
+                        <div className={`text-[10px] mt-0.5 ${form.resourceId === "ANY" || !form.resourceId ? "text-white/80" : "text-[var(--color-text-secondary)]"}`}>
+                          Sistem akan memilih {business.resourceLabel || "unit"} yang kosong
+                        </div>
+                      </div>
+                    </button>
+                    {resourceDetailsForDate.map((res) => {
+                      const isSelected = form.resourceId === res.resourceId;
+                      // In RESOURCE_BOOKING, a unit is never strictly "full for the whole day" just because it has 1 booking.
+                      // We will let the Time Grid dictate the specific time availability.
+                      const hasBookings = res.bookings && res.bookings.length > 0;
+
+                      return (
+                        <button
+                          key={res.resourceId}
+                          type="button"
+                          onClick={() => {
+                            updateField("resourceId", res.resourceId);
+                            updateField("scheduledTime", "");
+                          }}
+                          className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-start items-stretch ${isSelected
+                                ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.02]"
+                                : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
+                            }`}
+                        >
+                          <div className="flex justify-between items-center w-full">
+                            <span className="text-sm font-bold block">{res.resourceName}</span>
+                            <span className={`text-[10px] tracking-wide uppercase font-extrabold mt-0.5 block ${isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
+                              }`}>
+                              {hasBookings ? "Cek Jam Kosong" : "Tersedia"}
+                            </span>
+                          </div>
+                          {hasBookings && (
+                            <div className={`mt-2 text-[10px] space-y-0.5 text-left border-t pt-1.5 ${isSelected ? "border-white/20 text-white/90" : "border-[var(--color-border)] text-orange-600/80"}`}>
+                              <span className="font-semibold block mb-1">Jadwal Terisi:</span>
+                              {res.bookings.map((b, i) => {
+                                if (!b.scheduledTime) return null;
+                                const [h, m] = b.scheduledTime.split(":").map(Number);
+                                const dur = b.bookingDurationMinutes || 60;
+                                const total = h * 60 + m + dur;
+                                const endH = Math.floor(total / 60) % 24;
+                                const endM = total % 60;
+                                const endStr = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+                                return (
+                                  <div key={i}>
+                                    • {b.scheduledTime} s/d {endStr}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {(!business.usesResources || form.resourceId) && form.scheduledDate && isTimeRequired(business) && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-[var(--color-border)]/50">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Jam yang Tersedia</span>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                    {timeCandidates.map((time) => {
+                      const avail = getCandidateAvailability(time);
+                      const isSelected = form.scheduledTime === time;
+                      const isFull = avail.isFull;
+
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => {
+                            if (!isFull) {
+                              updateField("scheduledTime", time);
+                            }
+                          }}
+                          className={`px-2 py-2.5 rounded-lg border text-center transition-all ${isFull
+                              ? "bg-red-50 border-red-200 text-red-500 cursor-not-allowed line-through opacity-70"
+                              : isSelected
+                                ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.05] font-bold"
+                                : "bg-[var(--color-surface)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-primary)]/5 active:scale-[0.95] text-[var(--color-text)]"
+                            }`}
+                          disabled={isFull}
+                        >
+                          <span className="text-xs">{time}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {slotHint ? (
                 <div className="rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-text-secondary)] leading-relaxed">
@@ -334,6 +472,37 @@ export function PublicOrderForm({
               </div>
             </>
           )}
+
+          <h3 className="mt-8 mb-4 text-sm font-bold text-[var(--color-text)] border-b border-[var(--color-border)] pb-2">
+            Data Pemesan & Kontak
+          </h3>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Nama Lengkap *
+              </span>
+              <Input
+                name="name"
+                value={form.name || ""}
+                onChange={(e) => updateField("name", e.target.value)}
+                placeholder="Masukkan nama Anda"
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Nomor WhatsApp *
+              </span>
+              <Input
+                name="whatsappNumber"
+                value={form.whatsappNumber || ""}
+                onChange={(e) => updateField("whatsappNumber", e.target.value)}
+                placeholder="Contoh: 08123456789"
+                required
+              />
+            </label>
+          </div>
 
           <label className="block">
             <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">

@@ -23,6 +23,7 @@ import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
 import { OrderBoard } from "./components/order-board";
 import { OrderFormSheet } from "./components/order-form-sheet";
 import { ConfirmFinishOrderDialog } from "./components/confirm-finish-order-dialog";
+import { SmartPaymentDialog } from "./components/smart-payment-dialog";
 
 type FilterValue = "ALL" | OrderStatus;
 type PaymentFilterValue = "ALL" | PaymentStatus;
@@ -42,6 +43,7 @@ export function OrderManager() {
  const [isFormOpen, setIsFormOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [finishingOrder, setFinishingOrder] = useState<Order | null>(null);
+ const [smartPaymentOrder, setSmartPaymentOrder] = useState<{ order: Order; nextStatus: OrderStatus } | null>(null);
 
  useEffect(() => {
   if (searchParams && searchParams.get("action") === "new-order") {
@@ -74,17 +76,43 @@ export function OrderManager() {
  function onStatusChangeRequest(order: Order, nextStatus: OrderStatus) {
   if (nextStatus === "SELESAI" && order.status !== "SELESAI") {
    setFinishingOrder(order);
+  } else if (nextStatus === "CONFIRMED") {
+   const isMissingSchedule = !order.scheduledDate || !order.scheduledTime;
+   const isMissingResource = business.operationalModel === "RESOURCE_BOOKING" && business.usesResources && (!order.resourceId || order.resourceId === "ANY");
+   
+   if (isMissingSchedule || isMissingResource) {
+    toast.error("Harap lengkapi Jadwal & Unit/PC terlebih dahulu sebelum mengunci jadwal!");
+    setEditingId(order.id);
+    setIsFormOpen(true);
+    return;
+   }
+
+   if (order.paymentStatus === "UNPAID" || !order.paymentStatus) {
+    setSmartPaymentOrder({ order, nextStatus });
+   } else {
+    void handleUpdateOrderStatus(order, nextStatus);
+   }
+  } else if ((nextStatus === "DIPROSES" || nextStatus === "DEAL") && (order.paymentStatus === "UNPAID" || !order.paymentStatus)) {
+   setSmartPaymentOrder({ order, nextStatus });
   } else {
    void handleUpdateOrderStatus(order, nextStatus);
   }
  }
 
- async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus) {
+ async function handleUpdateOrderStatus(order: Order, nextStatus: OrderStatus, nextPaymentStatus?: PaymentStatus, dpAmount?: number, totalAmount?: number) {
   try {
-   await updateOrder(order.id, {
-    status: nextStatus,
-   });
-   toast.success("Status order berhasil diperbarui!");
+   let finalStatus = nextStatus;
+   if (nextPaymentStatus === "PAID") {
+    finalStatus = "SELESAI";
+   }
+
+   const payload: Partial<Order> = { status: finalStatus };
+   if (nextPaymentStatus) payload.paymentStatus = nextPaymentStatus;
+   if (dpAmount !== undefined) payload.dpAmount = dpAmount;
+   if (totalAmount !== undefined) payload.totalAmount = totalAmount;
+
+   await updateOrder(order.id, payload);
+   toast.success(finalStatus === "SELESAI" ? "Pesanan lunas dan diselesaikan!" : "Status order berhasil diperbarui!");
   } catch (err) {
    toast.error("Gagal memperbarui status", err instanceof Error ? err.message : "");
   }
@@ -268,6 +296,7 @@ export function OrderManager() {
       onEdit={handleEditOrder}
       onDelete={handleDeleteOrder}
       getWhatsAppConfig={getWhatsAppButtonConfig}
+      isResourceBooking={business.operationalModel === "RESOURCE_BOOKING"}
      />
     )}
    </section>
@@ -284,6 +313,15 @@ export function OrderManager() {
     isOpen={!!finishingOrder}
     onClose={() => setFinishingOrder(null)}
     order={finishingOrder}
+    onConfirm={handleUpdateOrderStatus}
+   />
+
+   {/* SECTION 6: SMART PAYMENT DIALOG */}
+   <SmartPaymentDialog
+    isOpen={!!smartPaymentOrder}
+    onClose={() => setSmartPaymentOrder(null)}
+    order={smartPaymentOrder?.order ?? null}
+    nextStatus={smartPaymentOrder?.nextStatus ?? null}
     onConfirm={handleUpdateOrderStatus}
    />
   </main>
