@@ -15,6 +15,7 @@ import { formatDateTime } from "@/lib/format";
 import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useDebounce } from "@/hooks/use-debounce";
 import { ApiAdminService, AdminBusinessRow, AdminUser, SystemMetrics } from "@/services/admin.service";
 import type { PlanCode } from "@/types/subscription";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -37,6 +38,7 @@ export function SuperAdminBusinessesPage() {
  const [search, setSearch] = useState("");
  const [planFilter, setPlanFilter] = useState("");
  const [statusFilter, setStatusFilter] = useState("");
+ const debouncedSearch = useDebounce(search, 500);
  const [loading, setLoading] = useState(true);
  const pageSize = 10;
 
@@ -63,7 +65,7 @@ export function SuperAdminBusinessesPage() {
    const response = await ApiAdminService.fetchBusinesses(
     currentPage,
     pageSize,
-    search,
+    debouncedSearch,
     planFilter,
     statusFilter
    );
@@ -85,7 +87,7 @@ export function SuperAdminBusinessesPage() {
   } finally {
    setLoading(false);
   }
- }, [currentPage, search, planFilter, statusFilter]);
+ }, [currentPage, debouncedSearch, planFilter, statusFilter]);
 
  useEffect(() => {
   fetchBusinesses();
@@ -93,7 +95,11 @@ export function SuperAdminBusinessesPage() {
 
  useEffect(() => {
   fetchMetrics();
-  const interval = setInterval(fetchMetrics, 30000);
+  const interval = setInterval(() => {
+    if (document.visibilityState === "visible") {
+      fetchMetrics();
+    }
+  }, 30000);
   return () => clearInterval(interval);
  }, [fetchMetrics]);
 

@@ -36,7 +36,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit & { rawRes
   let response: Response;
   try {
     response = await fetch(url, {
-      cache: "no-store",
+      cache: "default",
       ...options,
       headers: {
         ...defaultHeaders,

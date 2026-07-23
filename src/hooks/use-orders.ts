@@ -5,7 +5,7 @@ import { canCreateOrder as canCreateOrderByState, getOrderUsage } from "@/lib/su
 
 const orderService = new ApiOrderService();
 
-export function useOrders() {
+export function useOrders(options?: { enablePolling?: boolean; intervalMs?: number }) {
   const queryClient = useQueryClient();
   const { business, canAccessWriteMode, readOnlyReason, subscriptions } = useAppData();
 
@@ -13,6 +13,8 @@ export function useOrders() {
     queryKey: ["orders", business?.id],
     queryFn: () => orderService.getOrders(business?.id || ""),
     enabled: !!business?.id && business.id !== "biz_default",
+    refetchInterval: options?.enablePolling ? (options.intervalMs ?? 30000) : false,
+    refetchOnWindowFocus: options?.enablePolling ? true : undefined,
   });
 
   const canCreateOrder = canCreateOrderByState({ business: business!, subscriptions, orders });

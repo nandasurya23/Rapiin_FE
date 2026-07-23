@@ -67,7 +67,7 @@ export class ApiCustomerService implements CustomerService {
         body: JSON.stringify(payload),
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
       return this.mapper.toDomain(response);
     } catch (err) {
@@ -83,7 +83,7 @@ export class ApiCustomerService implements CustomerService {
         body: JSON.stringify(payload),
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
       return this.mapper.toDomain(response);
     } catch (err) {
@@ -98,7 +98,7 @@ export class ApiCustomerService implements CustomerService {
         method: "DELETE",
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
     } catch (err) {
       logServiceError("Failed to delete customer", err);

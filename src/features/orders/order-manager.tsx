@@ -32,7 +32,7 @@ export function OrderManager() {
  const toast = useToast();
  const searchParams = useSearchParams();
  const { business } = useAppData();
- const { orders, isLoading, updateOrder, deleteOrder, canCreateOrder } = useOrders();
+ const { orders, isLoading, updateOrder, deleteOrder, canCreateOrder } = useOrders({ enablePolling: true });
  const { messageTemplates } = useMessageTemplates();
  
  const [query, setQuery] = useState("");

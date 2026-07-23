@@ -21,5 +21,10 @@ export const ROUTES = {
   superAdminResetRequests: "/dashboard/super-admin/reset-requests",
   publicBusiness: (slug: string) => `/b/${slug}`,
   publicBusinessOrder: (slug: string) => `/b/${slug}/order`,
-  invoice: (code: string, seal: string) => `/invoice/${code}?seal=${seal}`,
+  invoice: (id: string) => `/invoice/${id}`,
+  // Super Admin Routes
+  superAdminAuditLogs: "/dashboard/super-admin/audit-logs",
+  superAdminInvoiceChecker: "/dashboard/super-admin/invoice-checker",
+  // Owner PRO Routes
+  invoiceChecker: (slug: string) => `/dashboard/${slug}/invoice-checker`,
 } as const;

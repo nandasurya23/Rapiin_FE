@@ -1,4 +1,4 @@
-import { LayoutDashboard, MessageSquareText, NotebookPen, Receipt, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles, Key } from "lucide-react";
+import { LayoutDashboard, MessageSquareText, NotebookPen, Receipt, Settings2, ChartColumn, UsersRound, Link2, ShieldCheck, WalletCards, Sparkles, Key, FileText, SearchCheck } from "lucide-react";
 import type { ComponentType } from "react";
 import { ROUTES } from "@/lib/routes";
 
@@ -20,6 +20,7 @@ export function getAppNavItems(slug: string): NavItem[] {
     { label: "Link Bisnis", href: ROUTES.businessLink(slug), icon: Link2 },
     { label: "Plan", href: ROUTES.plan(slug), icon: WalletCards },
     { label: "Pengaturan", href: ROUTES.settings(slug), icon: Settings2 },
+    { label: "Cek Asli Nota", href: ROUTES.invoiceChecker(slug), icon: SearchCheck }, // PRO feature
   ];
 }
 
@@ -40,6 +41,7 @@ export function getMobileMoreItems(slug: string): NavItem[] {
     { label: "Laporan", href: ROUTES.reports(slug), icon: ChartColumn },
     { label: "Plan", href: ROUTES.plan(slug), icon: WalletCards },
     { label: "Pengaturan", href: ROUTES.settings(slug), icon: Settings2 },
+    { label: "Cek Asli Nota", href: ROUTES.invoiceChecker(slug), icon: SearchCheck }, // PRO feature
   ];
 }
 
@@ -47,4 +49,6 @@ export const SUPER_ADMIN_NAV_ITEMS: NavItem[] = [
   { label: "Bisnis", href: ROUTES.superAdminBusinesses, icon: ShieldCheck },
   { label: "Upgrade", href: ROUTES.superAdminUpgradeRequests, icon: WalletCards },
   { label: "Reset Password", href: ROUTES.superAdminResetRequests, icon: Key },
+  { label: "Activity Log", href: ROUTES.superAdminAuditLogs, icon: FileText },
+  { label: "Cek Asli Nota", href: ROUTES.superAdminInvoiceChecker, icon: SearchCheck },
 ];

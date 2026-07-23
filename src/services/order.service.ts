@@ -85,7 +85,7 @@ export class ApiOrderService implements OrderService {
         body: JSON.stringify(payload),
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
       return this.mapper.toDomain(response);
     } catch (err) {
@@ -104,7 +104,7 @@ export class ApiOrderService implements OrderService {
           body: JSON.stringify({ status: payload.status }),
         });
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("rapiin-storage-sync"));
+
         }
         return this.mapper.toDomain(response);
       }
@@ -115,7 +115,7 @@ export class ApiOrderService implements OrderService {
         body: JSON.stringify(payload),
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
       return this.mapper.toDomain(response);
     } catch (err) {
@@ -130,7 +130,7 @@ export class ApiOrderService implements OrderService {
         method: "DELETE",
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("rapiin-storage-sync"));
+
       }
     } catch (err) {
       logServiceError("Failed to delete order", err);

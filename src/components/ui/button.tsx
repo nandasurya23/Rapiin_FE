@@ -30,6 +30,7 @@ const baseStyles = [
  "focus-visible:ring-offset-[var(--color-background)]",
  "disabled:pointer-events-none disabled:opacity-[var(--state-disabled-opacity)]",
  "select-none",
+ "whitespace-nowrap",
 ].join(" ");
 
 const variantStyles: Record<ButtonVariant, string> = {
