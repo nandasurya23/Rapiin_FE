@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Send, Share2, CheckCircle2, Clock, MapPin, Package, Loader2, ShieldCheck } from "lucide-react";
+import { Download, Send, Share2, CheckCircle2, Clock, MapPin, Package, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
@@ -11,7 +11,7 @@ import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/cn";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 
-import { useSearchParams } from "next/navigation";
+
 import { apiFetch } from "@/lib/api-client";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
 import type { Invoice } from "@/types/invoice";
