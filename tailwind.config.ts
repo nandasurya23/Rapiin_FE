@@ -19,6 +19,10 @@ const config: Config = {
           500: "var(--color-gold-500)",
           300: "var(--color-gold-300)",
         },
+        "brand-whatsapp": {
+          DEFAULT: "var(--color-whatsapp)",
+          hover: "var(--color-whatsapp-hover)",
+        },
 
         // === SEMANTIC TOKENS ===
         background: "var(--color-background)",

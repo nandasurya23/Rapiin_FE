@@ -292,7 +292,7 @@ export function MessagesPage() {
 
       {customers.length === 0 ? (
         <div className="border-[var(--color-border)] py-12 text-center flex flex-col items-center justify-center space-y-4">
-          <div className="h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center text-[var(--color-primary)]">
+          <div className="h-16 w-16 rounded-full bg-[var(--color-primary-surface)] flex items-center justify-center text-[var(--color-primary)]">
             <Users className="h-8 w-8" />
           </div>
           <div className="space-y-1.5 max-w-md">
@@ -335,8 +335,8 @@ export function MessagesPage() {
                 const message = renderTemplate(template.content, values);
 
                 return (
-                  <div key={`${action.title}-${index}`} className="border border-[var(--color-border)] rounded-md flex flex-col justify-between bg-[var(--color-surface)]">
-                    <div className="p-4 flex flex-col justify-between h-full gap-4">
+                  <div key={`${action.title}-${index}`} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md shadow-sm flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                    <div className="p-5 flex flex-col justify-between h-full gap-4">
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
@@ -381,18 +381,18 @@ export function MessagesPage() {
 
           {/* SECTION 3: WHATSAPP CONFIG OVERVIEW */}
           <section className="animate-fade-up-delay-2">
-            <div className="border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="space-y-1">
                 <h3 className="font-bold text-[var(--color-text)]">Konfigurasi & Ringkasan</h3>
                 <p className="text-xs text-[var(--color-text-secondary)]">Sistem WhatsApp otomatis aktif untuk semua pelanggan dengan nomor valid.</p>
               </div>
               
               <div className="flex flex-wrap gap-3">
-                <div className="flex flex-col justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5">
+                <div className="flex flex-col justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 px-4 py-2.5">
                   <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Pelanggan Aktif</p>
                   <p className="mt-0.5 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{customers.length} Orang</p>
                 </div>
-                <div className="flex flex-col justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5">
+                <div className="flex flex-col justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 px-4 py-2.5">
                   <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Total Order</p>
                   <p className="mt-0.5 text-xs font-bold text-[var(--color-text)] whitespace-nowrap">{orders.length} Transaksi</p>
                 </div>

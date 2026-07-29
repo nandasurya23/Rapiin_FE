@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { CheckCircle2 } from "lucide-react";
 
 interface ForgotPasswordFormFieldsProps {
   touchedFields: Record<string, boolean>;
@@ -16,34 +17,37 @@ export function ForgotPasswordFormFields({
   handleChange,
 }: ForgotPasswordFormFieldsProps) {
   return (
-    <label className="block">
+    <label className="block relative">
       <div className="flex justify-between items-center mb-1.5">
-        <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+        <span className="block text-sm font-bold text-[var(--color-text)]">
           Email Terdaftar
         </span>
+      </div>
+      <div className="relative">
+        <Input
+          name="request-reset-email"
+          type="email"
+          placeholder="email@bisnis.com"
+          required
+          hasError={
+            touchedFields["request-reset-email"] && !!fieldErrors["request-reset-email"]
+          }
+          onBlur={(e) => handleBlur("request-reset-email", e.target.value)}
+          onChange={(e) => handleChange("request-reset-email", e.target.value)}
+          className={touchedFields["request-reset-email"] && !fieldErrors["request-reset-email"] ? "pr-10" : ""}
+        />
         {touchedFields["request-reset-email"] && !fieldErrors["request-reset-email"] && (
-          <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-            ✓ Valid
-          </span>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-emerald-500 animate-scale-in">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
         )}
       </div>
-      <Input
-        name="request-reset-email"
-        type="email"
-        placeholder="email@bisnis.com"
-        required
-        hasError={
-          touchedFields["request-reset-email"] && !!fieldErrors["request-reset-email"]
-        }
-        onBlur={(e) => handleBlur("request-reset-email", e.target.value)}
-        onChange={(e) => handleChange("request-reset-email", e.target.value)}
-      />
       {touchedFields["request-reset-email"] && fieldErrors["request-reset-email"] ? (
-        <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+        <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
           {fieldErrors["request-reset-email"]}
         </span>
       ) : (
-        <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">
+        <span className="mt-1.5 block text-[11px] font-medium text-[var(--color-text-muted)]">
           Token reset akan dikirim ke email ini.
         </span>
       )}

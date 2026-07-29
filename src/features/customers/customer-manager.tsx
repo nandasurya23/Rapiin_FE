@@ -201,27 +201,36 @@ export function CustomerManager() {
      </span>
     }
     action={
-     <div className="flex flex-wrap items-center gap-3 xl:shrink-0">
-      <Badge tone="info" className="bg-[var(--color-info-surface)] text-[var(--color-info-text)] border-[var(--color-info-border)] px-4 py-1.5 text-xs font-bold h-10 flex items-center">
-       {currentBusinessUsage?.used ?? 0} / {currentBusinessUsage?.limit === Infinity ? "∞" : currentBusinessUsage?.limit} Pelanggan
-      </Badge>
-      <Button
-       type="button"
-       variant="secondary"
-       onClick={handleCreateNew}
-       disabled={!canCreateCustomer}
-       className="font-bold"
-      >
-       <Plus className="mr-2 h-5 w-5" />
-       Tambah Pelanggan
-      </Button>
-     </div>
-    }
+      <div className="flex flex-col items-end gap-2 xl:shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge tone="info" className="bg-[var(--color-info-surface)] text-[var(--color-info-text)] border-[var(--color-info-border)] px-4 py-1.5 text-xs font-bold h-10 flex items-center">
+          {currentBusinessUsage?.used ?? 0} / {currentBusinessUsage?.limit === Infinity ? "∞" : currentBusinessUsage?.limit} Pelanggan
+          </Badge>
+          <div title={!canCreateCustomer ? (readOnlyReason ?? `Batas kuota pelanggan penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`) : ""}>
+            <Button
+            type="button"
+            variant="secondary"
+            onClick={handleCreateNew}
+            disabled={!canCreateCustomer}
+            className="font-bold"
+            >
+            <Plus className="mr-2 h-5 w-5" />
+            Tambah Pelanggan
+            </Button>
+          </div>
+        </div>
+        {!canCreateCustomer && (
+          <p className="text-[10px] font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] px-2 py-1 rounded-md border border-[var(--color-warning-border)] animate-pulse">
+            ⚠️ {readOnlyReason ?? "Batas kuota pelanggan telah tercapai. Upgrade ke Pro."}
+          </p>
+        )}
+      </div>
+     }
    />
 
    {/* SECTION 2: SEARCH & STATS */}
-   <section className="animate-fade-up-delay-1">
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+   <section className="relative z-20 animate-fade-up-delay-1">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md shadow-sm">
      <div className="space-y-5 p-5">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
        {/* Search & Filters */}
@@ -248,21 +257,21 @@ export function CustomerManager() {
 
        {/* Status Summary Stats */}
        <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 flex flex-col justify-between">
-         <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Baru</p>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-4 flex flex-col justify-between shadow-sm">
+         <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-info-text)]">Baru</p>
          <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">
           {customers.filter((customer) => customer.status === "NEW").length}
          </p>
          <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Customer baru</p>
         </div>
-        <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 flex flex-col justify-between">
+        <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-4 flex flex-col justify-between shadow-sm">
          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)]">Follow-Up</p>
          <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">
           {customers.filter((customer) => customer.status === "NEED_FOLLOW_UP").length}
          </p>
          <p className="text-[9px] text-[var(--color-warning-text)] font-semibold">Segera hubungi</p>
         </div>
-        <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-4 flex flex-col justify-between">
+        <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-4 flex flex-col justify-between shadow-sm">
          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-success-text)]">Selesai</p>
          <p className="mt-1 text-2xl font-black text-[var(--color-text)] tracking-tight">
           {customers.filter((customer) => customer.status === "DONE").length}
@@ -286,18 +295,18 @@ export function CustomerManager() {
     ) : paginatedCustomers.length ? (
      paginatedCustomers.map((customer) => {
       // Color indicators and left borders for statuses
-      let leftBorderStripe = "border-l-4 border-l-[var(--color-primary)]";
-      let hoverGlow = "hover:border-[var(--color-primary-border)] hover:shadow-[0_0_12px_rgba(55,88,145,0.08)]";
+      let leftBorderStripe = "border-l-[3px] border-l-[var(--color-primary)]";
+      let hoverGlow = "hover:border-[var(--color-primary)]/30 hover:shadow-md hover:-translate-y-1";
       if (customer.status === "NEED_FOLLOW_UP") {
-       leftBorderStripe = "border-l-4 border-l-[var(--color-warning)]";
-       hoverGlow = "hover:border-[var(--color-warning-border)] hover:shadow-[0_0_12px_rgba(218,159,78,0.08)]";
+       leftBorderStripe = "border-l-[3px] border-l-[var(--color-warning)]";
+       hoverGlow = "hover:border-[var(--color-warning)]/40 hover:shadow-md hover:-translate-y-1";
       } else if (customer.status === "DONE") {
-       leftBorderStripe = "border-l-4 border-l-[var(--color-success)]";
-       hoverGlow = "hover:border-[var(--color-success-border)] hover:shadow-[0_0_12px_rgba(30,122,82,0.08)]";
+       leftBorderStripe = "border-l-[3px] border-l-[var(--color-success)]";
+       hoverGlow = "hover:border-[var(--color-success)]/40 hover:shadow-md hover:-translate-y-1";
       }
 
       return (
-       <div key={customer.id} className={cn("transition-all duration-300 hover:-translate-y-0.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ", leftBorderStripe, hoverGlow)}>
+       <div key={customer.id} className={cn("transition-all duration-300 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm shadow-xs", leftBorderStripe, hoverGlow)}>
         <div className="p-5">
          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           {/* Left: Avatar & Text details */}
@@ -409,17 +418,13 @@ export function CustomerManager() {
     className="w-full sm:max-w-xl md:max-w-2xl"
    >
     <div className="space-y-6 pt-4 pb-12 overflow-y-auto">
-     {!editingId && !canCreateCustomer ? (
-      <p className="mt-2 text-xs font-bold text-[var(--color-warning-text)] bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3 py-2 rounded-xl">
-       ⚠️ {readOnlyReason ?? `Batas kuota pelanggan penuh (${currentBusinessUsage.used}/${currentBusinessUsage.limit}).`}
-      </p>
-     ) : null}
+
 
      {/* WhatsApp Auto-Parser box (Only when creating) */}
      {!editingId && (
-      <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/10 dark:border-indigo-900/60 dark:bg-indigo-950/20 p-4 space-y-2 relative overflow-hidden">
+      <div className="rounded-2xl border border-dashed border-[var(--color-primary)]/30 bg-[var(--color-primary-surface)] p-4 space-y-2 relative overflow-hidden">
        <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/60 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface)] px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-primary)] border border-[var(--color-primary)]/10 shadow-sm">
          <Sparkles className="h-2.5 w-2.5 animate-pulse" />
          Pintasan Pengisi Otomatis
         </span>
@@ -433,9 +438,9 @@ export function CustomerManager() {
         onChange={(event) => handleChatPasteChange(event.target.value)}
         placeholder="Contoh format tempel:&#10;Nama: Budi Luhur&#10;No HP: 08123456789&#10;Alamat: Jl. Sudirman No 12, Jakarta"
         rows={3}
-        className="bg-[var(--color-surface)] border-[var(--color-border)] rounded-xl"
+        className="bg-[var(--color-surface)]/80 backdrop-blur-sm border-[var(--color-primary)]/20 rounded-xl focus:border-[var(--color-primary)]"
        />
-       <div className="absolute -right-6 -bottom-6 h-12 w-12 rounded-full bg-indigo-500/[0.01] pointer-events-none" />
+       <div className="absolute -right-6 -bottom-6 h-12 w-12 rounded-full bg-[var(--color-primary)]/[0.04] pointer-events-none" />
       </div>
      )}
 

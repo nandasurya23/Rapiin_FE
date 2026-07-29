@@ -21,6 +21,9 @@
   --color-gold-100: rgba(218, 159, 78, 0.12);
   --color-gold-50:  rgba(218, 159, 78, 0.06);
 
+  --color-whatsapp: #25D366;
+  --color-whatsapp-hover: #1EBE5A;
+
   /* === SEMANTIC LAYOUT === */
   --color-background:       #FBFBFC;
   --color-surface:          #FFFFFF;

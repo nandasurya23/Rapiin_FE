@@ -1,11 +1,14 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { Bell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, PanelLeftClose, PanelLeftOpen, LogOut, Settings } from "lucide-react";
 import { QuickAddMenu } from "@/components/shared/quick-add-menu";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { cn } from "@/lib/cn";
 import { getAppNavItems, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/toast-provider";
+import { ROUTES } from "@/lib/routes";
 
 type TopbarProps = {
  sidebarCollapsed: boolean;
@@ -15,7 +18,9 @@ type TopbarProps = {
 
 export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: TopbarProps) {
  const pathname = usePathname();
- const { business, currentUser, isSuperAdmin, canAccessWriteMode, subscriptionForCurrentBusiness } = useAppData();
+ const router = useRouter();
+ const toast = useToast();
+ const { business, currentUser, isSuperAdmin, canAccessWriteMode, subscriptionForCurrentBusiness, logout } = useAppData();
 
  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : getAppNavItems(business.slug);
  const currentNav = navItems.find((item: { href: string }) => pathname.startsWith(item.href));
@@ -28,6 +33,13 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: T
   .map((n) => n[0])
   .join("")
   .toUpperCase();
+
+ async function handleLogout() {
+  await logout();
+  toast.info("Logout berhasil", "Kamu keluar dari sesi admin.");
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  router.push("/auth/login");
+ }
 
  return (
   <header
@@ -44,6 +56,7 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: T
     {/* Sidebar toggle — desktop only (now also in sidebar, this is topbar-level shortcut) */}
     <button
      type="button"
+     aria-expanded={!sidebarCollapsed}
      aria-label={sidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
      onClick={onToggleSidebar}
      className={cn(
@@ -83,7 +96,7 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: T
       type="button"
       aria-label="Notifikasi"
       className={cn(
-       "flex items-center justify-center",
+       "flex items-center justify-center relative",
        "h-8 w-8 rounded-[var(--radius-md)]",
        "text-[var(--color-text-muted)]",
        "hover:bg-[var(--state-hover-bg)] hover:text-[var(--color-primary)]",
@@ -92,6 +105,8 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: T
       )}
      >
       <Bell className="h-4 w-4" />
+      {/* Unread indicator dot */}
+      <span className="absolute top-1.5 right-2 h-1.5 w-1.5 rounded-full bg-red-500 ring-2 ring-[var(--color-surface)]" aria-hidden="true" />
      </button>
 
      {/* ⚡ Asisten Pintar Rapiin — standalone prominent CTA (non-superadmin only) */}
@@ -118,18 +133,41 @@ export function Topbar({ sidebarCollapsed, onOpenAssistant, onToggleSidebar }: T
      {/* Quick add */}
      {!isSuperAdmin ? <QuickAddMenu /> : null}
 
-     {/* User avatar — visual only (logout in sidebar) */}
-     <div
-      title={name}
-      className={cn(
-       "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-       "bg-[var(--color-primary-surface)]",
-       "border border-[var(--color-border-strong)]",
-       "text-[11px] font-bold text-[var(--color-primary)] select-none"
-      )}
-     >
-      {initials}
-     </div>
+     {/* User avatar with DropdownMenu */}
+     <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+       <button
+        title={name}
+        aria-label="Profil & Pengaturan"
+        className={cn(
+         "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+         "bg-[var(--color-primary-surface)]",
+         "border border-[var(--color-border-strong)]",
+         "text-[11px] font-bold text-[var(--color-primary)] select-none",
+         "transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary)]"
+        )}
+       >
+        {initials}
+       </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="right" className="w-56">
+       <div className="px-2 py-1.5 mb-1 border-b border-[var(--color-border)]">
+        <p className="text-sm font-semibold text-[var(--color-text)] truncate">{name}</p>
+        <p className="text-xs text-[var(--color-text-secondary)] truncate">{currentUser?.email || "Admin"}</p>
+       </div>
+       {!isSuperAdmin && (
+        <DropdownMenuItem onClick={() => router.push(ROUTES.settings(business.slug))}>
+         <Settings className="h-4 w-4 mr-2 text-[var(--color-text-muted)]" />
+         Pengaturan Profil
+        </DropdownMenuItem>
+       )}
+       <DropdownMenuItem onClick={() => void handleLogout()} className="text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-950/30">
+        <LogOut className="h-4 w-4 mr-2" />
+        Keluar
+       </DropdownMenuItem>
+      </DropdownMenuContent>
+     </DropdownMenu>
+
     </div>
    </div>
   </header>

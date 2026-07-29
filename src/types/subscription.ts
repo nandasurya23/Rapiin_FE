@@ -20,6 +20,7 @@ export type PlanDefinition = {
   label: string;
   trialDays?: number;
   customerLimit: number;
+  staffLimit: number;
   features: string[];
   requiresManualApproval: boolean;
   readLimitedAfterExpiry: boolean;

@@ -10,9 +10,10 @@ import {
  Users,
  History,
  Database,
- Server,
- ShieldAlert,
- Download
+  Server,
+  ShieldAlert,
+  Download,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
@@ -24,6 +25,7 @@ import { useAppData } from "@/components/providers/app-data-provider";
 import { useCustomers } from "@/hooks/use-customers";
 import { useOrders } from "@/hooks/use-orders";
 import { getCustomerUsage } from "@/lib/subscription";
+import { RoleGate } from "@/components/shared/role-gate";
 import type { PlanCode } from "@/types/subscription";
 
 export function PlanPage() {
@@ -129,8 +131,20 @@ export function PlanPage() {
 
  return (
   <main className="page-enter space-y-8 px-4 py-6 sm:px-6 lg:px-8">
-   {/* SECTION 1: HERO HEADER & STATS */}
-   <section className="space-y-6">
+   <RoleGate
+    allowedRoles={["OWNER"]}
+    fallback={
+     <div className="flex flex-col items-center justify-center py-20 text-center">
+      <AlertTriangle className="h-12 w-12 text-[var(--color-warning-text)] mb-4" />
+      <h2 className="text-xl font-bold text-[var(--color-text)]">Akses Ditolak</h2>
+      <p className="mt-2 text-[var(--color-text-secondary)]">
+       Hanya pemilik bisnis (Owner) yang dapat mengakses pengaturan langganan dan tagihan.
+      </p>
+     </div>
+    }
+   >
+    {/* SECTION 1: HERO HEADER & STATS */}
+    <section className="space-y-6">
     <PageHeader
      variant="hero"
      title="Kelola Langganan & Keamanan Data"
@@ -518,6 +532,7 @@ export function PlanPage() {
      </div>
     </section>
    )}
+   </RoleGate>
   </main>
  );
 }

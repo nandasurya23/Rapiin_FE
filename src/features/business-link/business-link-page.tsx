@@ -1,7 +1,7 @@
 "use client";
 
 import { ClipboardCopy, Link2, QrCode, Share2, ExternalLink, PhoneCall, MapPinned, Sparkles, Clock, Phone, MapPin } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast-provider";
@@ -11,27 +11,17 @@ import { buildWhatsAppShareUrl } from "@/lib/whatsapp";
 import { getPublicCatalog, getPublicPageSubtitle, getPublicPageTitle } from "@/lib/public-business";
 import { formatPhoneNumber } from "@/lib/format";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { cn } from "@/lib/cn";
 
 async function copyToClipboard(text: string) {
  await navigator.clipboard.writeText(text);
 }
 
-export function BusinessLinkPage() {
- const toast = useToast();
- const { business } = useAppData();
- const [linkType, setLinkType] = useState<"FORM" | "PROFILE">("FORM");
- const [publicUrl, setPublicUrl] = useState(ROUTES.publicBusinessOrder(business.slug));
- const [loadingAction, setLoadingAction] = useState<string | null>(null);
- const catalog = getPublicCatalog(business);
-
- const activeUrlPath = linkType === "FORM" 
-  ? ROUTES.publicBusinessOrder(business.slug) 
-  : ROUTES.publicBusiness(business.slug);
-
- useEffect(() => {
-  setPublicUrl(`${window.location.origin}${activeUrlPath}`);
- }, [business.slug, linkType, activeUrlPath]);
+ export function BusinessLinkPage() {
+  const toast = useToast();
+  const { business } = useAppData();
+  const publicUrl = `${window.location.origin}${ROUTES.publicBusiness(business.slug)}`;
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const catalog = getPublicCatalog(business);
 
  return (
   <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -40,12 +30,12 @@ export function BusinessLinkPage() {
     variant="hero"
     title="Bagikan Link Bisnis Anda"
     description="Rapiin menyediakan landing page khusus bagi pelanggan Anda untuk melihat list layanan catalog, dan melakukan reservasi booking secara instan."
-    badge={
-     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
-      <Link2 className="h-3.5 w-3.5 text-[var(--color-accent-hover)]" />
-      {linkType === "FORM" ? "Link Form Booking" : "Link Profil Publik"}
-     </span>
-    }
+     badge={
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] px-3.5 py-1 text-xs font-bold tracking-wider text-[var(--color-warning-text)] uppercase">
+       <Link2 className="h-3.5 w-3.5 text-[var(--color-accent-hover)]" />
+       Link Profil Publik Utama
+      </span>
+     }
     action={
      <div className="flex flex-wrap gap-2.5 xl:shrink-0">
       <LinkButton href={publicUrl} variant="accent" className="font-bold ">
@@ -90,11 +80,11 @@ export function BusinessLinkPage() {
 
    {/* SECTION 2: LINK ACTIVE PREVIEW & CONFIGS */}
    <section className="animate-fade-up-delay-1">
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md shadow-sm ">
      <div className="p-5">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
        {/* Copy URL panel */}
-       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 space-y-4">
+       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
          <div>
           <p className="font-extrabold text-[var(--color-text)] uppercase tracking-wider text-xs">Link Landing Page Aktif</p>
@@ -103,38 +93,7 @@ export function BusinessLinkPage() {
          <Link2 className="h-5 w-5 text-[var(--color-primary)] shrink-0" />
         </div>
         
-        <div className="flex rounded-xl bg-[var(--color-surface)] p-1 border border-[var(--color-border)]">
-         <button
-          type="button"
-          onClick={() => setLinkType("FORM")}
-          className={cn(
-           "flex-1 rounded-lg py-1.5 text-[11px] font-extrabold transition-all",
-           linkType === "FORM"
-            ? "bg-[var(--color-primary)] text-white "
-            : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-          )}
-         >
-          {business.mode === "BOOKING_SERVICE" 
-           ? "Form Booking" 
-           : business.mode === "PRODUCT_ORDER" 
-           ? "Form Order" 
-           : "Form Request"} (/order)
-         </button>
-         <button
-          type="button"
-          onClick={() => setLinkType("PROFILE")}
-          className={cn(
-           "flex-1 rounded-lg py-1.5 text-[11px] font-extrabold transition-all",
-           linkType === "PROFILE"
-            ? "bg-[var(--color-primary)] text-white "
-            : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-          )}
-         >
-          Profil & Katalog (/b)
-         </button>
-        </div>
-
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex items-center justify-between gap-3 relative overflow-hidden">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm p-4 flex items-center justify-between gap-3 relative overflow-hidden mt-2">
          <div className="min-w-0 flex-1">
           <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">URL Halaman</p>
           <p className="mt-1.5 break-all font-mono text-xs text-[var(--color-primary)] font-bold">{publicUrl}</p>
@@ -159,14 +118,14 @@ export function BusinessLinkPage() {
 
        {/* Mode & Operational summary */}
        <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 flex flex-col justify-between">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm p-5 flex flex-col justify-between">
          <div className="space-y-1">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Mode Bisnis</p>
           <p className="text-sm font-black text-[var(--color-text)] truncate">{business.mode}</p>
          </div>
          <Badge tone="info" className="font-extrabold uppercase text-[8px] tracking-wider self-start">Active Mode</Badge>
         </div>
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 flex flex-col justify-between">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm p-5 flex flex-col justify-between">
          <div className="space-y-1">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Niche Kategori</p>
           <p className="text-sm font-black text-[var(--color-text)] truncate">{business.niche}</p>
@@ -182,7 +141,7 @@ export function BusinessLinkPage() {
    {/* SECTION 3: MOCKUP MOBILE SCREEN & DETAILS */}
    <section className="grid gap-6 2xl:grid-cols-[1.08fr_0.92fr] animate-fade-up-delay-2">
     {/* Left Card: Phone Viewport Preview */}
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md shadow-sm ">
      <div className="space-y-5 p-5">
       <div className="border-b border-[var(--color-border)] pb-3">
        <h2 className="text-lg font-bold text-[var(--color-text)]">Preview Landing Page Publik</h2>
@@ -202,7 +161,7 @@ export function BusinessLinkPage() {
         <div className="flex-1 overflow-y-auto px-4 pt-8 pb-5 space-y-4 no-scrollbar">
          {/* Banner header inside mobile screen */}
          <div className="text-center space-y-1.5 pb-3 border-b border-[var(--color-border)]/60">
-          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-surface)] px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-[var(--color-primary)]">
            <Sparkles className="h-2.5 w-2.5" />
            Live Mockup
           </span>
@@ -245,7 +204,7 @@ export function BusinessLinkPage() {
     </div>
 
     {/* Right Card: Info Bisnis */}
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md shadow-sm ">
      <div className="space-y-5 p-5">
       <div className="border-b border-[var(--color-border)] pb-3">
        <h2 className="text-lg font-bold text-[var(--color-text)]">Informasi Kontak Bisnis</h2>

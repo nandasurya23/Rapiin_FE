@@ -83,7 +83,7 @@ export function FilterChip({
    disabled={disabled}
    className={cn(
     // Base
-    "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border font-medium",
+    "inline-flex items-center gap-1.5 rounded-[var(--radius-lg)] border font-medium",
     "transition-all duration-[var(--transition-fast)]",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1",
     "disabled:pointer-events-none disabled:opacity-[var(--state-disabled-opacity)]",
@@ -97,14 +97,14 @@ export function FilterChip({
      ? [
        "bg-[var(--color-primary)] text-[var(--color-text-inverse)]",
        "border-[var(--color-primary)]",
-       "shadow-[var(--shadow-xs)]",
+       "shadow-md",
       ]
      : [
-       "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+       "bg-[var(--color-surface)]/80 backdrop-blur-sm text-[var(--color-text-muted)]",
        "border-[var(--color-border)]",
        "hover:bg-[var(--color-primary-surface)]",
        "hover:text-[var(--color-primary)]",
-       "hover:border-[var(--color-border-strong)]",
+       "hover:border-[var(--color-primary)]/40",
       ],
 
     className

@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/cn";
+import { CheckCircle2 } from "lucide-react";
 
 interface RegisterFormFieldsProps {
   pwdValue: string;
@@ -25,110 +26,114 @@ export function RegisterFormFields({
 }: RegisterFormFieldsProps) {
   return (
     <>
-      <label className="block">
+      <label className="block relative">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+          <span className="block text-sm font-bold text-[var(--color-text)]">
             Nama Owner
           </span>
+        </div>
+        <div className="relative">
+          <Input
+            name="name"
+            placeholder="Contoh: Budi Santoso"
+            required
+            hasError={touchedFields.name && !!fieldErrors.name}
+            onBlur={(e) => handleBlur("name", e.target.value)}
+            onChange={(e) => handleChange("name", e.target.value)}
+            className={touchedFields.name && !fieldErrors.name ? "pr-10" : ""}
+          />
           {touchedFields.name && !fieldErrors.name && (
-            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-              ✓ Valid
-            </span>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-emerald-500 animate-scale-in">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
           )}
         </div>
-        <Input
-          name="name"
-          placeholder="Nama kamu"
-          required
-          hasError={touchedFields.name && !!fieldErrors.name}
-          onBlur={(e) => handleBlur("name", e.target.value)}
-          onChange={(e) => handleChange("name", e.target.value)}
-        />
         {touchedFields.name && fieldErrors.name ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.name}
           </span>
         ) : (
-          <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">
+          <span className="mt-1.5 block text-[11px] font-medium text-[var(--color-text-muted)]">
             Nama lengkap penanggung jawab bisnis.
           </span>
         )}
       </label>
 
-      <label className="block">
+      <label className="block relative">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+          <span className="block text-sm font-bold text-[var(--color-text)]">
             Email
           </span>
+        </div>
+        <div className="relative">
+          <Input
+            name="email"
+            type="email"
+            placeholder="contoh@mail.com"
+            required
+            hasError={touchedFields.email && !!fieldErrors.email}
+            onBlur={(e) => handleBlur("email", e.target.value)}
+            onChange={(e) => handleChange("email", e.target.value)}
+            className={touchedFields.email && !fieldErrors.email ? "pr-10" : ""}
+          />
           {touchedFields.email && !fieldErrors.email && (
-            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-              ✓ Valid
-            </span>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-emerald-500 animate-scale-in">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
           )}
         </div>
-        <Input
-          name="email"
-          type="email"
-          placeholder="owner@bisnis.com"
-          required
-          hasError={touchedFields.email && !!fieldErrors.email}
-          onBlur={(e) => handleBlur("email", e.target.value)}
-          onChange={(e) => handleChange("email", e.target.value)}
-        />
         {touchedFields.email && fieldErrors.email ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.email}
           </span>
         ) : (
-          <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">
+          <span className="mt-1.5 block text-[11px] font-medium text-[var(--color-text-muted)]">
             Digunakan untuk konfirmasi & masuk sistem.
           </span>
         )}
       </label>
 
-      <label className="block">
+      <label className="block relative">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+          <span className="block text-sm font-bold text-[var(--color-text)]">
             Nomor WhatsApp
           </span>
+        </div>
+        <div className="relative">
+          <Input
+            name="phoneNumber"
+            placeholder="Contoh: 0812-xxxx-xxxx"
+            required
+            hasError={touchedFields.phoneNumber && !!fieldErrors.phoneNumber}
+            onBlur={(e) => handleBlur("phoneNumber", e.target.value)}
+            onChange={(e) => {
+              e.target.value = e.target.value.replace(/[^\d]/g, "");
+              handleChange("phoneNumber", e.target.value);
+            }}
+            className={touchedFields.phoneNumber && !fieldErrors.phoneNumber ? "pr-10" : ""}
+          />
           {touchedFields.phoneNumber && !fieldErrors.phoneNumber && (
-            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-              ✓ Valid
-            </span>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-emerald-500 animate-scale-in">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
           )}
         </div>
-        <Input
-          name="phoneNumber"
-          placeholder="08123456789"
-          required
-          hasError={touchedFields.phoneNumber && !!fieldErrors.phoneNumber}
-          onBlur={(e) => handleBlur("phoneNumber", e.target.value)}
-          onChange={(e) => {
-            e.target.value = e.target.value.replace(/[^\d]/g, "");
-            handleChange("phoneNumber", e.target.value);
-          }}
-        />
         {touchedFields.phoneNumber && fieldErrors.phoneNumber ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.phoneNumber}
           </span>
         ) : (
-          <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">
+          <span className="mt-1.5 block text-[11px] font-medium text-[var(--color-text-muted)]">
             Format: 08123456789 atau 628123456789. Digunakan untuk notifikasi WA.
           </span>
         )}
       </label>
 
-      <label className="block">
+      <label className="block relative">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+          <span className="block text-sm font-bold text-[var(--color-text)]">
             Password
           </span>
-          {touchedFields.password && !fieldErrors.password && (
-            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-              ✓ Valid
-            </span>
-          )}
         </div>
         <PasswordInput
           name="password"
@@ -143,18 +148,18 @@ export function RegisterFormFields({
           }}
         />
         {touchedFields.password && fieldErrors.password ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.password}
           </span>
         ) : (
-          <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">
+          <span className="mt-1.5 block text-[11px] font-medium text-[var(--color-text-muted)]">
             Gunakan password yang kuat (minimal 8 karakter).
           </span>
         )}
 
         {pwdValue && (
-          <div className="mt-2.5 space-y-1.5">
-            <div className="flex justify-between items-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+          <div className="mt-3 space-y-2 animate-fade-in">
+            <div className="flex justify-between items-center text-xs font-bold text-[var(--color-text)]">
               <span>Kekuatan Password:</span>
               <span
                 className={cn(
@@ -162,6 +167,7 @@ export function RegisterFormFields({
                   pwdStrength.label === "Sedang" && "text-amber-500",
                   pwdStrength.label === "Kuat" && "text-emerald-500"
                 )}
+                aria-live="polite"
               >
                 {pwdStrength.label}
               </span>

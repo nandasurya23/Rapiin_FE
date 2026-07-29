@@ -21,16 +21,15 @@ export function PublicOrderReceipt({
 }: PublicOrderReceiptProps) {
   return (
     <div className="max-w-xl mx-auto mt-10">
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-xl shadow-xl">
         <div className="p-6 sm:p-8 space-y-6 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-success-surface)] text-[var(--color-success)]">
             <CheckCircle2 className="h-10 w-10 animate-bounce" />
           </div>
 
           <div className="inline-flex mx-auto">
             <Badge
-              tone="success"
-              className="font-extrabold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+              className="font-extrabold flex items-center gap-1 bg-[var(--color-success-surface)] text-[var(--color-success-text)] border border-[var(--color-success)]/20"
             >
               ✓ Tersimpan di Database
             </Badge>
@@ -43,7 +42,7 @@ export function PublicOrderReceipt({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-left text-sm space-y-3.5 shadow-inner">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-sm p-4 text-left text-sm space-y-3.5 shadow-inner">
             <p className="font-extrabold text-xs uppercase tracking-wider text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/40 pb-2">
               Ringkasan Pemesanan
             </p>
@@ -100,7 +99,7 @@ export function PublicOrderReceipt({
                 href={waLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm py-3 transition-colors shadow-sm"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white font-extrabold text-sm py-3 transition-colors shadow-sm"
               >
                 Lanjut ke WhatsApp Admin →
               </a>

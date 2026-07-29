@@ -2,7 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { doesOperationalModelUseResources } from "@/lib/constants/business";
+import { doesOperationalModelUseResources, DURATION_OPTIONS } from "@/lib/constants/business";
 import type { BusinessResource, OperationalModel } from "@/types/business";
 import type { FormErrors, SettingsFormState } from "./general-settings-tab";
 
@@ -39,22 +39,15 @@ export function OperationalSettingsTab({
           <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
             Tipe Usaha
           </span>
-          <Select
-            value={form.operationalModel}
-            onValueChange={(value) => {
-              const nextOperationalModel = value as OperationalModel;
-              const nextUsesResources = doesOperationalModelUseResources(nextOperationalModel);
-
-              setForm((current) => ({
-                ...current,
-                operationalModel: nextOperationalModel,
-                resources: nextUsesResources
-                  ? buildResources(current.resourceLabel, current.resourceCount, current.resources)
-                  : current.resources.map((resource) => ({ ...resource, isActive: false })),
-              }));
-            }}
-            options={modeOptions}
-          />
+          <div className="flex h-11 w-full items-center justify-between rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-sm text-[var(--color-text-muted)] cursor-not-allowed opacity-80">
+            <span>
+              {modeOptions.find((opt) => opt.value === form.operationalModel)?.label ||
+                form.operationalModel}
+            </span>
+          </div>
+          <p className="mt-2 text-[10px] font-bold text-[var(--color-warning-text)]">
+            🔒 Mode operasional telah dikunci sejak Onboarding. Hubungi support jika butuh reset.
+          </p>
         </label>
 
         {form.mode !== "BOOKING_SERVICE" && (
@@ -66,7 +59,7 @@ export function OperationalSettingsTab({
         {form.mode === "BOOKING_SERVICE" && form.operationalModel === "APPOINTMENT" ? (
           <div className="space-y-4">
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed">
-              📌 <strong>Model Janji Temu (Appointment):</strong> Sangat cocok untuk salon, barber, terapis, klinik, studio foto, dan jasa yang memerlukan reservasi waktu global tanpa alokasi unit tertentu.
+              📌 <strong>Bebas (Asal Jam Kosong):</strong> Sangat cocok untuk salon, klinik, dan jasa yang memerlukan reservasi waktu tanpa pelanggan memilih unit/staf spesifik. Sistem otomatis mengatur alokasi asal belum penuh.
             </div>
             <label className="block">
               <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
@@ -88,11 +81,62 @@ export function OperationalSettingsTab({
           </div>
         ) : null}
 
-        {usesResources ? (
-          <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-4 text-xs text-[var(--color-warning-text)] leading-relaxed">
-            ⚠️ <strong>Model Pilihan Tim & Unit:</strong> Customer publik memesan jadwal secara terpusat. Sistem otomatis memvalidasi sisa staf/unit yang tersedia, lalu admin dapat mengalokasikan unit spesifik melalui panel pesanan.
+        {form.operationalModel === "RESOURCE_BOOKING" ? (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-4 text-xs text-[var(--color-text-secondary)] leading-relaxed">
+            📌 <strong>Pilih Unit / Orang Khusus:</strong> Customer wajib memilih unit spesifik (misal: Meja 1, Kapster Budi). Jadwal hanya tersedia jika unit/orang tersebut kosong di jam yang diinginkan.
           </div>
         ) : null}
+
+        {form.mode === "BOOKING_SERVICE" ? (
+          <div className="pt-4 border-t border-[var(--color-border)]">
+            <label className="block">
+              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Durasi Default Booking (Menit)
+              </span>
+              <Select
+                value={String(form.defaultBookingDurationMinutes)}
+                options={DURATION_OPTIONS}
+                onValueChange={(val) => updateForm("defaultBookingDurationMinutes", val)}
+                placeholder="Pilih Durasi"
+              />
+              <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+                Durasi standar untuk pemesanan jika layanan tidak memiliki durasi spesifik (misal: 60 menit).
+              </p>
+              {errors.defaultBookingDurationMinutes ? (
+                <p className="mt-1 text-[10px] font-bold text-[var(--color-danger)]">{errors.defaultBookingDurationMinutes}</p>
+              ) : null}
+            </label>
+          </div>
+        ) : null}
+
+        {/* 1E: autoCreateOrderFromSubmission toggle */}
+        <div className="pt-4 border-t border-[var(--color-border)]">
+          <button
+            type="button"
+            onClick={() => updateForm("autoCreateOrderFromSubmission", !form.autoCreateOrderFromSubmission)}
+            className="flex w-full items-start gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-left transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface)]"
+          >
+              <div className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${
+                form.autoCreateOrderFromSubmission
+                  ? "bg-[var(--color-primary)]"
+                  : "bg-[var(--color-border-strong)]"
+              }`}>
+                <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                  form.autoCreateOrderFromSubmission ? "translate-x-4" : "translate-x-0"
+                }`} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--color-text)]">
+                  Auto-Buat Order dari Request Publik
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                  {form.autoCreateOrderFromSubmission
+                    ? "✅ Aktif — Setiap permintaan dari halaman publik langsung masuk sebagai Order di Dashboard Anda."
+                    : "🔴 Nonaktif — Permintaan masuk sebagai Submission terlebih dahulu. Anda perlu review manual sebelum menjadi Order."}
+                </p>
+              </div>
+            </button>
+        </div>
       </div>
     </div>
   );

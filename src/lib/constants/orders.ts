@@ -10,9 +10,9 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 };
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  INQUIRY: "Booking Baru",
+  INQUIRY: "Booking Masuk",
   WAITING_DP: "Menunggu DP (15m)",
-  CONFIRMED: "Jadwal Terkunci",
+  CONFIRMED: "Jadwal Confirmed",
   ORDER_BARU: "Pesanan Baru",
   DIPROSES: "Sedang Dikerjakan",
   DIKIRIM_DIAMBIL: "Siap Ambil / Kirim",
@@ -26,9 +26,9 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 export const ORDER_STATUS_BY_MODE: Record<BusinessMode, StatusOption[]> = {
   BOOKING_SERVICE: [
-    { value: "INQUIRY", label: "Booking Baru", tone: "info" },
+    { value: "INQUIRY", label: "Booking Masuk", tone: "info" },
     { value: "WAITING_DP", label: "Menunggu DP (15m)", tone: "warning" },
-    { value: "CONFIRMED", label: "Jadwal Terkunci", tone: "success" },
+    { value: "CONFIRMED", label: "Jadwal Confirmed", tone: "success" },
     { value: "SELESAI", label: "Selesai & Lunas", tone: "success" },
     { value: "BATAL", label: "Dibatalkan", tone: "danger" },
   ],

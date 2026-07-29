@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Settings } from "lucide-react";
+import { AlertTriangle, Settings, Lock } from "lucide-react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { useBusiness } from "@/hooks/use-business";
 import {
   createBusinessResources,
   OPERATIONAL_MODEL_OPTIONS,
+  doesOperationalModelUseResources
 } from "@/lib/constants/business";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 import { getPublicCatalog } from "@/lib/public-business";
@@ -61,6 +63,7 @@ function createFormStateFromBusiness(
     resources: business.resources ?? [],
     services: business.services ?? getPublicCatalog(business),
     logoUrl: business.logoUrl ?? "",
+    autoCreateOrderFromSubmission: business.autoCreateOrderFromSubmission ?? true,
   };
 }
 
@@ -87,7 +90,7 @@ function buildResources(resourceLabel: string, resourceCount: string, currentRes
 
 export function SettingsPage() {
   const toast = useToast();
-  const { currentUser } = useAppData();
+  const { currentUser, subscriptionForCurrentBusiness } = useAppData();
   const { orders } = useOrders();
   const { business, saveBusinessSettings } = useBusiness();
   const [form, setForm] = useState<SettingsFormState>(createFormStateFromBusiness(business, currentUser));
@@ -119,7 +122,7 @@ export function SettingsPage() {
     setForm(createFormStateFromBusiness(business, currentUser));
   }, [business, currentUser]);
 
-  const usesResources = form.operationalModel === "RESOURCE_BOOKING";
+  const usesResources = doesOperationalModelUseResources(form.operationalModel);
   const modeOptions = useMemo(
     () =>
       form.mode === "BOOKING_SERVICE"
@@ -173,6 +176,18 @@ export function SettingsPage() {
 
       if (!form.resources.some((resource) => resource.isActive)) {
         nextErrors.resources = "Minimal ada 1 unit aktif.";
+      }
+
+      // Validasi workingHours: jam selesai harus setelah jam mulai
+      const invalidShift = form.resources.find((resource) => {
+        const wh = resource.workingHours;
+        if (!wh) return false;
+        const [sH, sM] = wh.start.split(":").map(Number);
+        const [eH, eM] = wh.end.split(":").map(Number);
+        return eH * 60 + eM <= sH * 60 + sM;
+      });
+      if (invalidShift) {
+        nextErrors.resources = `Jam selesai "${invalidShift.name}" harus setelah jam mulai.`;
       }
     }
 
@@ -240,6 +255,7 @@ export function SettingsPage() {
         description: form.description.trim(),
         paymentInstructions: form.paymentInstructions.trim() || undefined,
         logoUrl: form.logoUrl.trim() || undefined,
+        autoCreateOrderFromSubmission: form.autoCreateOrderFromSubmission,
       });
       toast.success("Pengaturan bisnis disimpan", "Flow form dan booking sudah ikut menyesuaikan.");
     } catch (err) {
@@ -330,8 +346,6 @@ export function SettingsPage() {
                 form={form}
                 errors={errors}
                 updateForm={updateForm}
-                setForm={setForm}
-                buildResources={buildResources}
               />
               <OperationalSettingsTab
                 form={form}
@@ -346,12 +360,11 @@ export function SettingsPage() {
 
             {usesResources && (
               <ResourceSettingsTab
-                form={form}
-                errors={errors}
-                referencedResourceIds={referencedResourceIds}
-                setForm={setForm}
-                buildResources={buildResources}
-              />
+                  form={form}
+                  errors={errors}
+                  referencedResourceIds={referencedResourceIds}
+                  setForm={setForm}
+                />
             )}
 
             <CatalogSettingsTab form={form} errors={errors} setForm={setForm} />
@@ -400,15 +413,40 @@ export function SettingsPage() {
 
         {activeTab === "team" && hasPermission("team:view") && (
           <div className="animate-fade-up space-y-6">
-            <TeamList
-              members={teamMembers}
-              onEdit={(member) => {
-                setEditingMember(member);
-                setIsEditOpen(true);
-              }}
-              onOpenInvite={() => setIsInviteOpen(true)}
-              showActions={hasPermission("team:manage")}
-            />
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+              <h2 className="text-base font-bold text-[var(--color-text)]">Manajemen Tim</h2>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                Akun untuk <strong>kasir, admin, atau manajer</strong> yang perlu login ke aplikasi untuk mengelola order.
+                Ini berbeda dari daftar kapster/staf lapangan yang bisa dipilih customer saat booking.
+              </p>
+            </div>
+            {subscriptionForCurrentBusiness?.planCode === "FREE_TRIAL" ? (
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-10 text-center shadow-sm">
+                <Lock className="mx-auto h-12 w-12 text-[var(--color-gold-400)] mb-4 opacity-80" />
+                <h3 className="text-xl font-bold text-[var(--color-text)]">Fitur Manajemen Tim Terkunci</h3>
+                <p className="text-sm text-[var(--color-text-secondary)] mt-2 max-w-md mx-auto leading-relaxed">
+                  Fitur untuk mengundang staf, mengatur hak akses kasir, admin, atau manajer hanya tersedia untuk paket langganan berbayar.
+                </p>
+                <div className="mt-8">
+                  <Link
+                    href={`/dashboard/${business.slug}/plan`}
+                    className="inline-flex items-center justify-center rounded-xl bg-[var(--color-primary)] px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] shadow-lg shadow-[var(--color-primary)]/20 hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    Upgrade ke Pro
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <TeamList
+                members={teamMembers}
+                onEdit={(member) => {
+                  setEditingMember(member);
+                  setIsEditOpen(true);
+                }}
+                onOpenInvite={() => setIsInviteOpen(true)}
+                showActions={hasPermission("team:manage")}
+              />
+            )}
           </div>
         )}
 

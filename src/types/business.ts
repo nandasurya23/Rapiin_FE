@@ -6,10 +6,15 @@ export type OperationalModel = "APPOINTMENT" | "RESOURCE_BOOKING" | "ORDER_REQUE
 
 export type NicheTemplate = string;
 
+/** Jam kerja individual staf. null = ikuti jam operasional bisnis. */
+export type WorkingHours = { start: string; end: string } | null;
+
 export type BusinessResource = {
   id: ID;
   name: string;
   isActive: boolean;
+  /** Jam kerja staf. null = ikuti jam operasional bisnis (default). */
+  workingHours?: WorkingHours;
 };
 
 export type PublicCatalogItem = {

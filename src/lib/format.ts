@@ -26,6 +26,19 @@ const dateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
   hourCycle: "h23",
 });
 
+function getFormatter(
+  baseFormatter: Intl.DateTimeFormat,
+  options: Intl.DateTimeFormatOptions,
+  timeZone?: string
+) {
+  if (!timeZone) return baseFormatter;
+  try {
+    return new Intl.DateTimeFormat("id-ID", { ...options, timeZone });
+  } catch (e) {
+    return baseFormatter;
+  }
+}
+
 const relativeFormatter = new Intl.RelativeTimeFormat("id-ID", {
   numeric: "auto",
 });
@@ -51,7 +64,7 @@ export function formatCurrency(value: number | null | undefined) {
   return rupiahFormatter.format(value);
 }
 
-export function formatDate(value: string | Date | null | undefined) {
+export function formatDate(value: string | Date | null | undefined, timeZone?: string) {
   if (!value) {
     return "-";
   }
@@ -61,10 +74,15 @@ export function formatDate(value: string | Date | null | undefined) {
     return "-";
   }
 
-  return shortDateFormatter.format(date);
+  const formatter = getFormatter(
+    shortDateFormatter,
+    { day: "numeric", month: "short", year: "numeric" },
+    timeZone
+  );
+  return formatter.format(date);
 }
 
-export function formatLongDate(value: string | Date | null | undefined) {
+export function formatLongDate(value: string | Date | null | undefined, timeZone?: string) {
   if (!value) {
     return "-";
   }
@@ -74,10 +92,15 @@ export function formatLongDate(value: string | Date | null | undefined) {
     return "-";
   }
 
-  return longDateFormatter.format(date);
+  const formatter = getFormatter(
+    longDateFormatter,
+    { day: "numeric", month: "long", year: "numeric" },
+    timeZone
+  );
+  return formatter.format(date);
 }
 
-export function formatDateTime(value: string | Date | null | undefined) {
+export function formatDateTime(value: string | Date | null | undefined, timeZone?: string) {
   if (!value) {
     return "-";
   }
@@ -87,7 +110,20 @@ export function formatDateTime(value: string | Date | null | undefined) {
     return "-";
   }
 
-  return dateTimeFormatter.format(date);
+  const formatter = getFormatter(
+    dateTimeFormatter,
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      hourCycle: "h23",
+    },
+    timeZone
+  );
+  return formatter.format(date);
 }
 
 export function formatRelativeDate(value: string | Date | null | undefined) {

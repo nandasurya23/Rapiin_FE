@@ -118,7 +118,7 @@ export function OrderBoard({
       );
 
       return (
-       <div key={option.value} className="w-[320px] shrink-0 bg-[var(--color-surface-elevated)] rounded-2xl border border-[var(--color-border)] flex flex-col justify-between p-3">
+       <div key={option.value} className="w-[320px] shrink-0 bg-[var(--color-surface-elevated)]/40 backdrop-blur-sm rounded-2xl border border-[var(--color-border)] flex flex-col justify-between p-3">
         <div className="flex items-center justify-between gap-2 pb-3 mb-2 px-1">
          <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text)]">{option.label}</p>
          <Badge tone={option.tone} className="text-[9px] uppercase tracking-wider font-extrabold">{laneOrders.length}</Badge>
@@ -165,7 +165,7 @@ export function OrderBoard({
              }}
              onClick={() => onEdit(order)}
              className={cn(
-              "p-3.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl transition-all duration-300 relative shadow-sm hover:shadow hover:border-[var(--color-border-strong)] select-none",
+              "p-3.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl transition-all duration-300 relative shadow-xs hover:shadow-md hover:border-[var(--color-border-strong)] select-none",
               isDraggable ? "cursor-pointer active:cursor-grabbing" : "opacity-90 cursor-default"
              )}
             >
@@ -247,14 +247,25 @@ export function OrderBoard({
                message={waConfig.message}
                label={waConfig.label}
               />
-              <LinkButton
-               href={`${ROUTES.invoices(businessSlug)}?orderId=${order.id}`}
-               variant="secondary"
-               className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
-              >
-               <ReceiptText className="h-4 w-4" />
-               Nota
-              </LinkButton>
+              {order.mode === "CUSTOM_REQUEST" && (!order.totalAmount || order.totalAmount === 0) ? (
+                <Button
+                 type="button"
+                 variant="secondary"
+                 className="h-9 px-2.5 rounded-xl border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-surface)] text-xs font-bold"
+                 onClick={() => onEdit(order)}
+                >
+                 📝 Beri Penawaran
+                </Button>
+              ) : (
+                <LinkButton
+                 href={`${ROUTES.invoices(businessSlug)}?orderId=${order.id}`}
+                 variant="secondary"
+                 className="h-9 px-2.5 rounded-xl border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] text-xs font-bold"
+                >
+                 <ReceiptText className="h-4 w-4 mr-1" />
+                 Nota
+                </LinkButton>
+              )}
               {onDelete && (
                <Button
                 type="button"

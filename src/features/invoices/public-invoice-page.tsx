@@ -279,9 +279,9 @@ export function PublicInvoicePage({
 
       return (
        <div className="w-full">
-        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-6 shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md">
+        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-6 shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md">
          {/* Glow background */}
-         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--color-primary)] via-indigo-500 to-[var(--color-accent)] opacity-80" />
+         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-hover)] to-[var(--color-accent)] opacity-80" />
          
          <div className="flex items-center justify-between mb-8">
           <div>
@@ -411,7 +411,7 @@ export function PublicInvoicePage({
         </div>
        </>
       ) : (
-       <div className="bg-[var(--color-surface-elevated)] p-4 rounded-xl border border-[var(--color-border)] text-center">
+       <div className="bg-[var(--color-surface)]/60 backdrop-blur-md p-4 rounded-xl border border-[var(--color-border)] text-center">
         <p className="text-sm font-medium text-[var(--color-text-secondary)]">
          Fitur unduh nota belum tersedia karena pesanan ini masih berstatus <strong>Belum Bayar</strong>.
         </p>
@@ -441,7 +441,7 @@ export function PublicInvoicePage({
     {/* Right Column: Invoice Sheet */}
     <div className="lg:col-span-6 flex justify-center order-1 lg:order-2 lg:sticky lg:top-8">
      <div className="w-full max-w-[420px] transition-transform hover:scale-[1.01] duration-500">
-      <div id="invoice-sheet-capture-area" className="w-full bg-[var(--color-surface)] rounded-2xl overflow-hidden shadow-sm">
+      <div id="invoice-sheet-capture-area" className="w-full bg-[var(--color-surface)]/60 backdrop-blur-xl rounded-2xl overflow-hidden shadow-sm">
        <InvoiceSheet business={business} invoice={invoice} order={order} />
       </div>
      </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { PLAN_DEFINITIONS, PRO_CUSTOMER_LIMIT, TRIAL_CUSTOMER_LIMIT, TRIAL_DURATION_DAYS } from "@/lib/constants/subscription";
+import { PLAN_DEFINITIONS, TRIAL_DURATION_DAYS } from "@/lib/constants/subscription";
 import { buildInvoiceIntegritySeal, buildInvoiceVerificationCode, normalizeInvoiceVerification } from "@/lib/invoice";
 import { createBusinessResources, doesOperationalModelUseResources, getDefaultBusinessConfigForMode, getDefaultOperationalModel } from "@/lib/constants/business";
 import type { AppStorageState, AuthUser, PublicSubmission } from "@/types/app-state";
@@ -143,7 +143,7 @@ function normalizeSubscriptions(subscriptions: BusinessSubscription[] | unknown,
       status: resolveSubscriptionStatus(item.status ?? "TRIAL_ACTIVE", planCode, expiresAt),
       startedAt,
       expiresAt,
-      customerLimit: item.customerLimit ?? (planCode === "FREE_TRIAL" ? TRIAL_CUSTOMER_LIMIT : planCode === "PRO" ? PRO_CUSTOMER_LIMIT : 10000),
+      customerLimit: item.customerLimit ?? (planCode === "FREE_TRIAL" ? 25 : planCode === "PRO" ? 500 : 10000),
       hasCompletedRequiredBackup: item.hasCompletedRequiredBackup ?? false,
       lastBackupAt: item.lastBackupAt,
       readOnlyReason: item.readOnlyReason,
@@ -389,7 +389,7 @@ export function createBusinessSubscriptionRecord(input: {
 }): BusinessSubscription {
   const startedAt = input.startedAt ?? now();
   const customerLimit =
-    input.planCode === "FREE_TRIAL" ? TRIAL_CUSTOMER_LIMIT : input.planCode === "PRO" ? PRO_CUSTOMER_LIMIT : 10000;
+    input.planCode === "FREE_TRIAL" ? 25 : input.planCode === "PRO" ? 500 : 10000;
   const expiresAt =
     input.planCode === "FREE_TRIAL" ? addDays(startedAt, TRIAL_DURATION_DAYS) : addDays(startedAt, 30);
 

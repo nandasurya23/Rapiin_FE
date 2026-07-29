@@ -4,16 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Sparkles } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast-provider";
 import { PageHeader } from "@/components/shared/page-header";
-import { createBusinessResources } from "@/lib/constants/business";
+import { createBusinessResources, DURATION_OPTIONS } from "@/lib/constants/business";
 import type { BusinessResource } from "@/types/business";
 import { ROUTES } from "@/lib/routes";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { normalizePhoneNumber } from "@/lib/validation";
 import { Select } from "@/components/ui/select";
+import { getPlanDefinition, getSubscriptionForBusiness } from "@/lib/subscription";
 
 type Step = 1 | 2 | 3;
 
@@ -56,7 +58,7 @@ const NICHE_RESOURCE_LABELS: Record<string, string> = {
 export function OnboardingFlow() {
  const router = useRouter();
  const toast = useToast();
- const { business, hydrated, completeOnboarding, currentUser, auth } = useAppData();
+ const { business, hydrated, completeOnboarding, currentUser, auth, subscriptionForCurrentBusiness } = useAppData();
  const [step, setStep] = useState<Step>(1);
  const [errors, setErrors] = useState<{
   name?: string;
@@ -66,6 +68,9 @@ export function OnboardingFlow() {
   resources?: string;
   niche?: string;
   description?: string;
+  openingHours?: string;
+  timezone?: string;
+  bookingCapacity?: string;
  }>({});
  const [form, setForm] = useState({
   name: business.name,
@@ -79,6 +84,9 @@ export function OnboardingFlow() {
   defaultBookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? 60),
   niche: business.niche,
   description: business.description,
+  openingHours: business.openingHours ?? "08:00-21:00",
+  timezone: business.timezone ?? "Asia/Jakarta",
+  bookingCapacity: String(business.bookingCapacity ?? 1),
  });
 
  useEffect(() => {
@@ -98,6 +106,9 @@ export function OnboardingFlow() {
    defaultBookingDurationMinutes: String(business.defaultBookingDurationMinutes ?? 60),
    niche: business.niche,
    description: business.description,
+   openingHours: business.openingHours ?? "08:00-21:00",
+   timezone: business.timezone ?? "Asia/Jakarta",
+   bookingCapacity: String(business.bookingCapacity ?? 1),
   });
  }, [business.defaultBookingDurationMinutes, business.description, business.mode, business.name, business.niche, business.operationalModel, business.resourceCount, business.resourceLabel, business.resources, business.usesResources, business.whatsappNumber, hydrated, currentUser?.phoneNumber]);
 
@@ -138,18 +149,28 @@ export function OnboardingFlow() {
    if (!form.niche.trim()) {
     nextErrors.niche = "Kategori bisnis wajib diisi.";
    }
+   if (!form.openingHours || !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(form.openingHours)) {
+    nextErrors.openingHours = "Format jam buka harus HH:MM-HH:MM (contoh: 08:00-21:00)";
+   }
+   if (!form.timezone) {
+    nextErrors.timezone = "Zona waktu wajib diisi.";
+   }
   }
 
   if (currentStep === 2) {
-   if (form.usesResources) {
-    if (!form.resourceLabel.trim()) {
-     nextErrors.resourceLabel = "Sebutan unit/tim wajib diisi.";
+    if (form.usesResources) {
+     if (!form.resourceLabel.trim()) {
+      nextErrors.resourceLabel = "Sebutan unit/tim wajib diisi.";
+     }
+     const count = Number(form.resourceCount);
+     const maxLimit = getPlanDefinition(subscriptionForCurrentBusiness?.planCode || "FREE_TRIAL").staffLimit;
+
+     if (!form.resourceCount.trim() || isNaN(count) || count < 1) {
+      nextErrors.resourceCount = "Jumlah unit/tim minimal 1.";
+     } else if (count > maxLimit) {
+      nextErrors.resourceCount = `Paket Anda saat ini maksimal ${maxLimit} ${form.resourceLabel.toLowerCase()}. Upgrade paket untuk menambah lebih banyak.`;
+     }
     }
-    const count = Number(form.resourceCount);
-    if (!form.resourceCount.trim() || isNaN(count) || count < 1) {
-     nextErrors.resourceCount = "Jumlah unit/tim minimal 1.";
-    }
-   }
   }
 
   if (currentStep === 3) {
@@ -188,6 +209,7 @@ export function OnboardingFlow() {
     resourceCount: form.usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
     resources: form.usesResources ? form.resources : [],
     defaultBookingDurationMinutes: Number(form.defaultBookingDurationMinutes) || 60,
+    bookingCapacity: Number(form.bookingCapacity) || 1,
    });
    toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
    let redirectUrl = `/dashboard/${response?.slug || business.slug}`;
@@ -228,20 +250,33 @@ export function OnboardingFlow() {
       </span>
      }
      action={
-      <div className="flex items-center gap-3 sm:shrink-0">
-       <div className="flex gap-1.5">
+      <div className="flex items-center gap-2 sm:shrink-0">
+       <div className="flex gap-2">
         {[1, 2, 3].map((s) => (
-         <div
-          key={s}
-          className={`h-1.5 w-6 rounded-full transition-all duration-300 ${
-           s < step ? "bg-[var(--color-primary)]" : s === step ? "bg-[var(--color-accent-hover)]" : "bg-[var(--color-border)]"
-          }`}
-         />
+         <div key={s} className="flex items-center gap-2">
+          <div
+           className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all duration-300",
+            s < step
+             ? "bg-[var(--color-success)] text-white"
+             : s === step
+             ? "bg-[var(--color-primary)] text-white ring-4 ring-[var(--color-primary-surface)]"
+             : "bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]"
+           )}
+          >
+           {s < step ? <CheckCircle2 className="h-4 w-4" /> : s}
+          </div>
+          {s < 3 && (
+           <div
+            className={cn(
+             "h-1 w-6 sm:w-10 rounded-full transition-all duration-300",
+             s < step ? "bg-[var(--color-success)]" : "bg-[var(--color-surface-inset)]"
+            )}
+           />
+          )}
+         </div>
         ))}
        </div>
-       <span className="rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border-strong)] px-3 py-1 text-xs font-extrabold text-[var(--color-text)]">
-        {progress}
-       </span>
       </div>
      }
     />
@@ -249,230 +284,479 @@ export function OnboardingFlow() {
     <div className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
      <div className="space-y-6 p-6 sm:p-8">
 
-     {step === 1 ? (
-      <div className="grid gap-5">
-       <label className="block">
-        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Nama Bisnis</span>
-        <Input
-         value={form.name}
-         onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-         placeholder="Contoh: Rapiin Studio"
-         hasError={!!errors.name}
-        />
-        {errors.name ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.name}</p> : null}
-       </label>
+      {step === 1 ? (
+       <div className="grid gap-6 animate-fade-in">
+        <label className="block relative">
+         <div className="flex justify-between items-center mb-1.5">
+           <span className="block text-sm font-bold text-[var(--color-text)]">Nama Bisnis</span>
+         </div>
+         <Input
+          value={form.name}
+          onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+          placeholder="Contoh: Rapiin Studio"
+          hasError={!!errors.name}
+          className="h-11 text-base"
+         />
+         {errors.name ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.name}</p> : null}
+        </label>
 
-       <label className="block">
-        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Kategori Bisnis Jasa / Sewa</span>
-        <Select
-         value={form.niche}
-         options={NICHE_OPTIONS}
-         onValueChange={(val) => {
-          setForm((current) => {
-           const nextLabel = NICHE_RESOURCE_LABELS[val] || "Staf";
-           const isResourceBased = ["FUTSAL", "WARNET", "RENTAL", "STUDIO_MUSIK", "STUDIO_FOTO"].includes(val);
-           return {
-            ...current,
-            niche: val,
-            resourceLabel: nextLabel,
-            usesResources: isResourceBased,
-            operationalModel: isResourceBased ? "RESOURCE_BOOKING" : "APPOINTMENT",
-            resources: isResourceBased ? updateResources(nextLabel, current.resourceCount) : [],
-           };
-          });
-         }}
-         placeholder="Pilih Kategori"
-         hasError={!!errors.niche}
-        />
-        {errors.niche ? (
-         <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.niche}</p>
-        ) : (
-         <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">
-          💡 Membantu sistem mengatur sebutan unit/tim yang paling sesuai secara otomatis.
-         </p>
-        )}
-       </label>
-      </div>
-     ) : null}
-
-     {step === 2 ? (
-      <div className="grid gap-6">
-       <div className="grid gap-4">
-        <p className="text-sm font-extrabold text-[var(--color-text)]">Pengaturan Slot & Jadwal</p>
-        <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">Apakah pelanggan Anda memesan staf, ruangan, lapangan, atau unit khusus tertentu?</p>
-        
-        <div className="grid gap-3 sm:grid-cols-2">
-         <button
-          type="button"
-          onClick={() => {
-           setForm((current) => ({
-            ...current,
-            mode: "BOOKING_SERVICE",
-            operationalModel: "APPOINTMENT",
-            usesResources: false,
-            resources: [],
-           }));
+        <label className="block relative">
+         <div className="flex justify-between items-center mb-1.5">
+           <span className="block text-sm font-bold text-[var(--color-text)]">Kategori Bisnis Jasa / Sewa</span>
+         </div>
+         <Select
+          value={form.niche}
+          options={NICHE_OPTIONS}
+          onValueChange={(val) => {
+           setForm((current) => {
+            const nextLabel = NICHE_RESOURCE_LABELS[val] || "Staf";
+            const isResourceBased = ["FUTSAL", "WARNET", "RENTAL", "STUDIO_MUSIK", "STUDIO_FOTO"].includes(val);
+             return {
+              ...current,
+              niche: val,
+              resourceLabel: nextLabel,
+              usesResources: true,
+              operationalModel: isResourceBased ? "RESOURCE_BOOKING" : "APPOINTMENT",
+             resources: isResourceBased ? updateResources(nextLabel, current.resourceCount) : [],
+            };
+           });
           }}
-          className={`rounded-2xl border p-4 text-left transition-all duration-200 relative flex flex-col justify-between ${
-           !form.usesResources
-            ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 "
-            : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
-          }`}
-         >
-          {!form.usesResources && (
-           <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
-          )}
-          <div>
-           <div className="text-sm font-extrabold text-[var(--color-text)]">Booking Langsung ke Jadwal</div>
-           <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">Cocok untuk: salon, servis, klinik, konsultasi — pelanggan pilih tanggal & jam.</p>
-          </div>
-         </button>
+          placeholder="Pilih Kategori"
+          hasError={!!errors.niche}
+         />
+         {errors.niche ? (
+          <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.niche}</p>
+         ) : (
+          <p className="mt-2 text-xs text-[var(--color-text-secondary)] font-medium leading-relaxed">
+           💡 Membantu sistem mengatur sebutan unit/tim yang paling sesuai secara otomatis.
+          </p>
+         )}
+        </label>
 
-         <button
-          type="button"
-          onClick={() => {
-           setForm((current) => ({
-            ...current,
-            mode: "BOOKING_SERVICE",
-            operationalModel: "RESOURCE_BOOKING",
-            usesResources: true,
-            resources: updateResources(current.resourceLabel, current.resourceCount),
-           }));
-          }}
-          className={`rounded-2xl border p-4 text-left transition-all duration-200 relative flex flex-col justify-between ${
-           form.usesResources
-            ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)]/60 ring-2 ring-[var(--color-primary)]/20 "
-            : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)]"
-          }`}
-         >
-          {form.usesResources && (
-           <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[var(--color-primary)]" />
-          )}
-          <div>
-           <div className="text-sm font-extrabold text-[var(--color-text)]">Pilih Unit / Tempat / Orang Tertentu</div>
-           <p className="mt-2 text-xs text-[var(--color-text-secondary)] leading-relaxed">Cocok untuk: lapangan, warnet (PC), kapster tertentu — pelanggan pilih unit spesifik.</p>
+        <div className="grid gap-5 sm:grid-cols-2">
+         <label className="block relative">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="block text-sm font-bold text-[var(--color-text)]">Jam Operasional</span>
           </div>
-         </button>
+          <div className="flex items-center gap-2">
+            <datalist id="time-options">
+              {Array.from({ length: 25 }, (_, i) => (
+                <option key={i} value={`${String(i).padStart(2, "0")}:00`} />
+              ))}
+            </datalist>
+            <Input
+              type="text"
+              list="time-options"
+              value={(form.openingHours.split("-")[0] || "").trim() || "08:00"}
+              onChange={(event) => {
+                const end = (form.openingHours.split("-")[1] || "").trim() || "21:00";
+                setForm((current) => ({ ...current, openingHours: `${event.target.value}-${end}` }));
+              }}
+              placeholder="08:00"
+              hasError={!!errors.openingHours}
+              className="text-center"
+            />
+            <span className="text-[var(--color-text-secondary)] font-bold">-</span>
+            <Input
+              type="text"
+              list="time-options"
+              value={(form.openingHours.split("-")[1] || "").trim() || "21:00"}
+              onChange={(event) => {
+                const start = (form.openingHours.split("-")[0] || "").trim() || "08:00";
+                setForm((current) => ({ ...current, openingHours: `${start}-${event.target.value}` }));
+              }}
+              placeholder="21:00"
+              hasError={!!errors.openingHours}
+              className="text-center"
+            />
+          </div>
+          {errors.openingHours ? (
+           <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.openingHours}</p>
+          ) : null}
+         </label>
+         
+         <label className="block relative">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="block text-sm font-bold text-[var(--color-text)]">Zona Waktu</span>
+          </div>
+          <Select
+           value={form.timezone}
+           options={[
+            { value: "Asia/Jakarta", label: "WIB (Jakarta)" },
+            { value: "Asia/Makassar", label: "WITA (Makassar)" },
+            { value: "Asia/Jayapura", label: "WIT (Jayapura)" }
+           ]}
+           onValueChange={(val) => setForm((current) => ({ ...current, timezone: val }))}
+           placeholder="Pilih Zona Waktu"
+           hasError={!!errors.timezone}
+          />
+          {errors.timezone ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.timezone}</p> : null}
+         </label>
         </div>
        </div>
+      ) : null}
 
-       {form.usesResources ? (
-        <div className="grid gap-4 pt-4 border-t border-[var(--color-border)]">
-         <p className="text-sm font-extrabold text-[var(--color-text)]">Setup Unit / Staf</p>
-         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-           <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Sebutan (Contoh: Staf, Kapster, Ruangan)</span>
-           <Input
-            value={form.resourceLabel}
-            onChange={(e) => setForm(c => ({ ...c, resourceLabel: e.target.value, resources: updateResources(e.target.value, c.resourceCount) }))}
-            placeholder="Contoh: Staf"
-            hasError={!!errors.resourceLabel}
-           />
-           {errors.resourceLabel ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceLabel}</p> : null}
-          </label>
-          <label className="block">
-           <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Jumlah {form.resourceLabel || "Unit"}</span>
-           <div className="flex items-center gap-2">
-            <Button
-             type="button"
-             variant="secondary"
-             className="h-11 w-11 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg border border-[var(--color-border)]"
-             onClick={() => {
-              const nextCount = Math.max(1, (Number(form.resourceCount) || 1) - 1);
-              setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
-             }}
-            >
-             -
-            </Button>
-            <Input
-             type="number"
-             min="1"
-             className="text-center"
-             value={form.resourceCount}
-             onChange={(e) => setForm(c => ({ ...c, resourceCount: e.target.value, resources: updateResources(c.resourceLabel, e.target.value) }))}
-             hasError={!!errors.resourceCount}
-            />
-            <Button
-             type="button"
-             variant="secondary"
-             className="h-11 w-11 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg border border-[var(--color-border)]"
-             onClick={() => {
-              const nextCount = (Number(form.resourceCount) || 1) + 1;
-              setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
-             }}
-            >
-             +
-            </Button>
-           </div>
-           {errors.resourceCount ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.resourceCount}</p> : null}
-          </label>
+      {step === 2 ? (
+       <div className="grid gap-8 animate-fade-up">
+        <div className="grid gap-5">
+         <div>
+          <h3 className="text-xl font-bold text-[var(--color-text)]">Pilih Mode Bisnis Utama</h3>
+          <p className="text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed mt-1">
+           Sesuaikan sistem dengan cara Anda berjualan agar fitur yang muncul pas untuk bisnis Anda.
+          </p>
+         </div>
+         
+        {/* 2B: Saran tambah layanan — hanya untuk BOOKING_SERVICE */}
+        {form.mode === "BOOKING_SERVICE" && (
+         <div className="rounded-2xl border border-[var(--color-info-border)] bg-[var(--color-info-surface)] p-5 flex items-start gap-4 animate-scale-in">
+          <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-[var(--color-primary)]" />
+          <div className="space-y-1.5">
+           <p className="text-base font-bold text-[var(--color-text)]">
+            Tambahkan Daftar Layanan Setelah Ini
+           </p>
+           <p className="text-[13px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
+            Tambah layanan (misal: Potong Rambut, Creambath) agar pelanggan bisa memilih layanan dan melihat harga sebelum booking.
+            Bisa dilakukan di <strong>Pengaturan → Layanan &amp; Produk</strong> kapan saja setelah dashboard dibuka.
+           </p>
+          </div>
+         </div>
+        )}
+
+         <div className="grid gap-4 sm:grid-cols-3">
+          <button
+           type="button"
+           onClick={() => {
+             setForm((current) => ({
+              ...current,
+              mode: "BOOKING_SERVICE",
+              operationalModel: current.operationalModel === "APPOINTMENT" || current.operationalModel === "RESOURCE_BOOKING" ? current.operationalModel : "APPOINTMENT",
+              usesResources: true,
+              resources: current.resources.length > 0 ? current.resources : updateResources(current.resourceLabel, current.resourceCount),
+             }));
+           }}
+           className={cn(
+            "rounded-2xl border p-5 text-left transition-all duration-300 relative flex flex-col gap-2.5",
+            form.mode === "BOOKING_SERVICE"
+             ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] shadow-[var(--shadow-md)] ring-2 ring-[var(--color-primary)]/20 scale-[1.02]"
+             : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:shadow-[var(--shadow-sm)]"
+           )}
+          >
+           {form.mode === "BOOKING_SERVICE" && (
+            <div className="absolute top-4 right-4 text-[var(--color-primary)] animate-scale-in">
+             <CheckCircle2 className="h-5 w-5" />
+            </div>
+           )}
+           <div className="text-lg font-bold text-[var(--color-text)]">Jasa / Sewa</div>
+           <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed">
+            Pelanggan pesan jadwal (tanggal & jam). Cocok untuk: Salon, Lapangan, Konsultasi.
+           </p>
+          </button>
+
+          <button
+           type="button"
+           onClick={() => {
+            setForm((current) => ({
+             ...current,
+             mode: "PRODUCT_ORDER",
+             operationalModel: "ORDER_REQUEST",
+             usesResources: false,
+             resources: [],
+            }));
+           }}
+           className={cn(
+            "rounded-2xl border p-5 text-left transition-all duration-300 relative flex flex-col gap-2.5",
+            form.mode === "PRODUCT_ORDER"
+             ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] shadow-[var(--shadow-md)] ring-2 ring-[var(--color-primary)]/20 scale-[1.02]"
+             : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:shadow-[var(--shadow-sm)]"
+           )}
+          >
+           {form.mode === "PRODUCT_ORDER" && (
+            <div className="absolute top-4 right-4 text-[var(--color-primary)] animate-scale-in">
+             <CheckCircle2 className="h-5 w-5" />
+            </div>
+           )}
+           <div className="text-lg font-bold text-[var(--color-text)]">Produk Fisik</div>
+           <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed">
+            Pelanggan pesan barang/makanan. Cocok untuk: Toko Kue, Katering, Toko Baju.
+           </p>
+          </button>
+
+          <button
+           type="button"
+           onClick={() => {
+            setForm((current) => ({
+             ...current,
+             mode: "CUSTOM_REQUEST",
+             operationalModel: "ORDER_REQUEST",
+             usesResources: false,
+             resources: [],
+            }));
+           }}
+           className={cn(
+            "rounded-2xl border p-5 text-left transition-all duration-300 relative flex flex-col gap-2.5",
+            form.mode === "CUSTOM_REQUEST"
+             ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] shadow-[var(--shadow-md)] ring-2 ring-[var(--color-primary)]/20 scale-[1.02]"
+             : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:shadow-[var(--shadow-sm)]"
+           )}
+          >
+           {form.mode === "CUSTOM_REQUEST" && (
+            <div className="absolute top-4 right-4 text-[var(--color-primary)] animate-scale-in">
+             <CheckCircle2 className="h-5 w-5" />
+            </div>
+           )}
+           <div className="text-lg font-bold text-[var(--color-text)]">Request Custom</div>
+           <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed">
+            Pelanggan mengajukan detail khusus tanpa jadwal. Cocok untuk: Jahit, Desain.
+           </p>
+          </button>
          </div>
         </div>
+
+        <div className="grid transition-[grid-template-rows] duration-500 ease-in-out overflow-hidden" style={{ gridTemplateRows: form.mode === "BOOKING_SERVICE" ? "1fr" : "0fr" }}>
+         <div className="min-h-0">
+          <div className="grid gap-5 pt-8 border-t border-[var(--color-border)]">
+           <div>
+            <h3 className="text-xl font-bold text-[var(--color-text)]">Cara Booking Jadwal</h3>
+            <p className="text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed mt-1">
+             Apakah pelanggan cukup pilih jam kosong, atau mereka harus memilih unit/staf tertentu?
+            </p>
+           </div>
+           
+           <div className="grid gap-4 sm:grid-cols-2">
+            <button
+             type="button"
+             onClick={() => {
+              setForm((current) => ({
+               ...current,
+               operationalModel: "APPOINTMENT",
+               usesResources: true,
+               resources: current.resources.length > 0 ? current.resources : updateResources(current.resourceLabel, current.resourceCount),
+              }));
+             }}
+             className={cn(
+              "rounded-2xl border p-5 text-left transition-all duration-300 relative flex flex-col justify-between",
+              form.operationalModel === "APPOINTMENT"
+               ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] shadow-[var(--shadow-md)] ring-2 ring-[var(--color-primary)]/20 scale-[1.02]"
+               : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:shadow-[var(--shadow-sm)]"
+             )}
+            >
+             {form.operationalModel === "APPOINTMENT" && (
+              <div className="absolute top-4 right-4 text-[var(--color-primary)] animate-scale-in">
+               <CheckCircle2 className="h-5 w-5" />
+              </div>
+             )}
+             <div>
+              <div className="text-lg font-bold text-[var(--color-text)]">Bebas Jam Kosong</div>
+              <p className="mt-2 text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed">
+               Sistem otomatis alokasikan slot asal belum penuh. Cocok untuk salon, servis.
+              </p>
+             </div>
+            </button>
+
+            <button
+             type="button"
+             onClick={() => {
+              setForm((current) => ({
+               ...current,
+               operationalModel: "RESOURCE_BOOKING",
+               usesResources: true,
+               resources: updateResources(current.resourceLabel, current.resourceCount),
+              }));
+             }}
+             className={cn(
+              "rounded-2xl border p-5 text-left transition-all duration-300 relative flex flex-col justify-between",
+              form.operationalModel === "RESOURCE_BOOKING"
+               ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] shadow-[var(--shadow-md)] ring-2 ring-[var(--color-primary)]/20 scale-[1.02]"
+               : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:shadow-[var(--shadow-sm)]"
+             )}
+            >
+             {form.operationalModel === "RESOURCE_BOOKING" && (
+              <div className="absolute top-4 right-4 text-[var(--color-primary)] animate-scale-in">
+               <CheckCircle2 className="h-5 w-5" />
+              </div>
+             )}
+             <div>
+              <div className="text-lg font-bold text-[var(--color-text)]">Pilih Unit / Orang</div>
+              <p className="mt-2 text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed">
+               Pelanggan wajib pilih spesifik (misal: Lapangan 1, Kapster Budi).
+              </p>
+             </div>
+            </button>
+           </div>
+          </div>
+
+          <div className="grid transition-[grid-template-rows] duration-500 ease-in-out overflow-hidden" style={{ gridTemplateRows: form.mode === "BOOKING_SERVICE" ? "1fr" : "0fr" }}>
+           <div className="min-h-0">
+            <div className="grid gap-5 pt-8 border-t border-[var(--color-border)] mt-8">
+             <div>
+              <h3 className="text-xl font-bold text-[var(--color-text)]">Setup Unit / Staf</h3>
+              <p className="mt-1 text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
+               Daftar kapster, terapis, atau unit yang bisa dipilih customer saat booking.
+               Mereka <strong>tidak perlu akun login</strong> — yang perlu login adalah kasir/admin yang mengelola order.
+              </p>
+             </div>
+             <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block relative">
+               <div className="flex justify-between items-center mb-1.5">
+                 <span className="block text-sm font-bold text-[var(--color-text)]">Sebutan Unit (Contoh: Staf, Kapster)</span>
+               </div>
+               <Input
+                value={form.resourceLabel}
+                onChange={(e) => setForm(c => ({ ...c, resourceLabel: e.target.value, resources: updateResources(e.target.value, c.resourceCount) }))}
+                placeholder="Contoh: Staf"
+                hasError={!!errors.resourceLabel}
+               />
+               {errors.resourceLabel ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.resourceLabel}</p> : null}
+              </label>
+              <label className="block relative">
+               <div className="flex justify-between items-center mb-1.5">
+                 <span className="block text-sm font-bold text-[var(--color-text)]">Jumlah {form.resourceLabel || "Unit"}</span>
+               </div>
+               <div className="flex items-center gap-2">
+                <Button
+                 type="button"
+                 variant="secondary"
+                 className="h-10 w-10 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg shadow-none"
+                 onClick={() => {
+                  const nextCount = Math.max(1, (Number(form.resourceCount) || 1) - 1);
+                  setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
+                 }}
+                >
+                 -
+                </Button>
+                <Input
+                 type="number"
+                 min="1"
+                 className="text-center"
+                 value={form.resourceCount}
+                 onChange={(e) => setForm(c => ({ ...c, resourceCount: e.target.value, resources: updateResources(c.resourceLabel, e.target.value) }))}
+                 hasError={!!errors.resourceCount}
+                />
+                <Button
+                 type="button"
+                 variant="secondary"
+                 className="h-10 w-10 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg shadow-none"
+                 onClick={() => {
+                  const nextCount = (Number(form.resourceCount) || 1) + 1;
+                  setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
+                 }}
+                >
+                 +
+                </Button>
+               </div>
+               {errors.resourceCount ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.resourceCount}</p> : null}
+              </label>
+             </div>
+            </div>
+           </div>
+          </div>
+
+          <div className="grid transition-[grid-template-rows] duration-500 ease-in-out overflow-hidden" style={{ gridTemplateRows: form.operationalModel === "APPOINTMENT" ? "1fr" : "0fr" }}>
+           <div className="min-h-0">
+            <div className="grid gap-5 pt-8 border-t border-[var(--color-border)] mt-8 sm:grid-cols-2">
+             <label className="block relative">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="block text-sm font-bold text-[var(--color-text)]">Kapasitas Maksimal per Waktu</span>
+              </div>
+              <Input
+               type="number"
+               min="1"
+               value={form.bookingCapacity}
+               onChange={(event) => setForm((current) => ({ ...current, bookingCapacity: event.target.value }))}
+               placeholder="1"
+              />
+              <p className="mt-1.5 text-[13px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
+               Berapa banyak booking bisa masuk di jam yang sama? Isi sesuai jumlah kapster/terapis aktif.
+              </p>
+             </label>
+             <label className="block relative">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="block text-sm font-bold text-[var(--color-text)]">Durasi Layanan Default (Menit)</span>
+              </div>
+              <Select
+               value={String(form.defaultBookingDurationMinutes)}
+               options={DURATION_OPTIONS}
+               onValueChange={(val) => setForm((current) => ({ ...current, defaultBookingDurationMinutes: val }))}
+               placeholder="Pilih Durasi"
+              />
+              <p className="mt-1.5 text-[13px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
+               Durasi rata-rata sesi pelayanan. Digunakan untuk menghitung slot tersedia jika layanan tidak dipilih.
+              </p>
+             </label>
+            </div>
+           </div>
+          </div>
+         </div>
+        </div>
+       </div>
+      ) : null}
+
+      {step === 3 ? (
+       <div className="grid gap-6 animate-fade-up">
+        <label className="block relative">
+         <div className="flex justify-between items-center mb-1.5">
+           <span className="block text-sm font-bold text-[var(--color-text)]">Deskripsi Singkat Bisnis</span>
+         </div>
+         <Textarea
+          value={form.description}
+          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+          placeholder="Contoh: Booking salon cepat, servis AC bergaransi, atau potong rambut kekinian."
+          hasError={!!errors.description}
+          className="min-h-[100px] text-base rounded-[var(--radius-lg)] p-3 border-[var(--color-border)] focus:border-[var(--color-border-focus)] focus:ring-[var(--state-focus-ring)] focus:ring-3"
+         />
+         {errors.description ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.description}</p> : null}
+        </label>
+
+        {/* Setup Summary Card */}
+        <div className="relative overflow-hidden rounded-2xl shadow-[var(--shadow-md)] border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-primary-surface)] via-[var(--color-surface-elevated)] to-[var(--color-surface)] p-6 space-y-4">
+         <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-6 w-6 text-[var(--color-primary)] animate-scale-in" />
+          <h3 className="text-xl font-bold text-[var(--color-text)]">Dashboard kamu sudah siap 🎉</h3>
+         </div>
+         <p className="text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
+          Sekarang Anda bisa langsung mengatur jam buka toko, mengelola jadwal kosong, dan membagikan link booking ke pelanggan.
+         </p>
+         <div className="rounded-xl border border-[var(--color-border)] bg-white/50 backdrop-blur-sm px-5 py-5 space-y-3 mt-4">
+          <p className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Ringkasan Setup</p>
+          <div className="space-y-2 text-[15px]">
+           <p className="text-[var(--color-text)]"><span className="font-bold text-[var(--color-primary)]">Mode bisnis:</span> {form.mode === "BOOKING_SERVICE" ? "Booking Jasa" : form.mode === "PRODUCT_ORDER" ? "Jual Produk Fisik" : "Request Custom"}</p>
+           {form.mode === "BOOKING_SERVICE" && (
+            <p className="text-[var(--color-text)]">
+             <span className="font-bold text-[var(--color-primary)]">Cara kerja:</span>{" "}
+             {form.operationalModel === "RESOURCE_BOOKING" ? `Booking per ${form.resourceLabel}` : "Jadwal kosong langsung"}
+            </p>
+           )}
+           {form.mode === "BOOKING_SERVICE" && form.resources.length > 0 ? <p className="text-[var(--color-text)]"><span className="font-bold text-[var(--color-primary)]">Unit aktif:</span> {form.resources.map((resource: BusinessResource) => resource.name).join(", ")}</p> : null}
+          </div>
+         </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+         <Button type="button" variant="secondary" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-sm)]" onClick={() => void finish("new-order")} isLoading={isSubmitting} disabled={isSubmitting}>
+          Tambah Order
+         </Button>
+         <Button type="button" variant="secondary" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-sm)]" onClick={() => void finish("share-link")} isLoading={isSubmitting} disabled={isSubmitting}>
+          Bagikan Link
+         </Button>
+         <Button type="button" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
+          Lihat Dashboard
+         </Button>
+        </div>
+       </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border)] pt-6">
+       <Button type="button" variant="secondary" className="rounded-xl h-12 px-6 font-bold text-[15px]" onClick={back} disabled={step === 1 || isSubmitting}>
+        ← Kembali
+       </Button>
+       {step < 3 ? (
+        <Button type="button" className="rounded-xl h-12 px-6 font-bold text-[15px] shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]" onClick={next}>
+         {step === 2 ? "Review Setup →" : "Lanjut →"}
+        </Button>
        ) : null}
       </div>
-     ) : null}
-
-     {step === 3 ? (
-      <div className="grid gap-5">
-       <label className="block">
-        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Deskripsi Singkat Bisnis</span>
-        <Textarea
-         value={form.description}
-         onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-         placeholder="Contoh: Booking salon cepat, servis AC bergaransi, atau potong rambut kekinian."
-         hasError={!!errors.description}
-        />
-        {errors.description ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium">{errors.description}</p> : null}
-       </label>
-
-       {/* Setup Summary Card */}
-       <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-surface-elevated)] p-5 space-y-4">
-        <div className="flex items-center gap-2">
-         <CheckCircle2 className="h-5 w-5 text-[var(--color-primary)]" />
-         <p className="font-extrabold text-[var(--color-text)]">Dashboard kamu sudah siap 🎉</p>
-        </div>
-        <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-         Sekarang Anda bisa langsung mengatur jam buka toko, mengelola jadwal kosong, dan membagikan link booking ke pelanggan.
-        </p>
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 space-y-2">
-         <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Ringkasan Setup</p>
-         <div className="space-y-1 text-sm">
-          <p className="text-[var(--color-text)]"><span className="font-bold">Mode bisnis:</span> Booking Jasa</p>
-          <p className="text-[var(--color-text)]">
-           <span className="font-bold">Cara kerja:</span>{" "}
-           {form.usesResources ? `Booking per ${form.resourceLabel}` : "Jadwal kosong langsung"}
-          </p>
-          {form.usesResources ? <p className="text-[var(--color-text)]"><span className="font-bold">Unit aktif:</span> {form.resources.map((resource: BusinessResource) => resource.name).join(", ")}</p> : null}
-         </div>
-        </div>
-       </div>
-
-       <div className="grid gap-3 sm:grid-cols-3">
-        <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish("new-order")} isLoading={isSubmitting} disabled={isSubmitting}>
-         Tambah Order Pertama
-        </Button>
-        <Button type="button" variant="secondary" className="rounded-xl h-11 text-xs font-bold" onClick={() => void finish("share-link")} isLoading={isSubmitting} disabled={isSubmitting}>
-         Bagikan Link Bisnis
-        </Button>
-        <Button type="button" className="rounded-xl h-11 font-bold" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
-         Lihat Dashboard
-        </Button>
-       </div>
-      </div>
-     ) : null}
-
-     <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-5">
-      <Button type="button" variant="secondary" className="rounded-xl h-11 px-5 font-bold text-sm" onClick={back} disabled={step === 1 || isSubmitting}>
-       ← Kembali
-      </Button>
-      {step < 3 ? (
-       <Button type="button" className="rounded-xl h-11 px-5 font-bold text-sm" onClick={next}>
-        {step === 2 ? "Review Setup →" : "Lanjut →"}
-       </Button>
-      ) : null}
      </div>
     </div>
-   </div>
    </div>
   </div>
  );

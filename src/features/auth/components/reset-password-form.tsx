@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/cn";
+import { CheckCircle2 } from "lucide-react";
 
 interface ResetPasswordFormFieldsProps {
   resetEmail: string;
@@ -33,77 +34,107 @@ export function ResetPasswordFormFields({
 }: ResetPasswordFormFieldsProps) {
   return (
     <>
-      <label className="block">
+      <label className="block relative">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+          <span className="block text-sm font-bold text-[var(--color-text)]">
             Email Akun
           </span>
+        </div>
+        <div className="relative">
+          <Input
+            name="email"
+            type="email"
+            placeholder="email@bisnis.com"
+            required
+            value={resetEmail}
+            hasError={touchedFields.email && !!fieldErrors.email}
+            onBlur={(e) => handleBlur("email", e.target.value)}
+            onChange={(e) => {
+              setResetEmail(e.target.value);
+              handleChange("email", e.target.value);
+            }}
+            className={touchedFields.email && !fieldErrors.email ? "pr-10" : ""}
+          />
           {touchedFields.email && !fieldErrors.email && (
-            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-              ✓ Valid
-            </span>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-emerald-500 animate-scale-in">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
           )}
         </div>
-        <Input
-          name="email"
-          type="email"
-          placeholder="email@bisnis.com"
-          required
-          value={resetEmail}
-          hasError={touchedFields.email && !!fieldErrors.email}
-          onBlur={(e) => handleBlur("email", e.target.value)}
-          onChange={(e) => {
-            setResetEmail(e.target.value);
-            handleChange("email", e.target.value);
-          }}
-        />
         {touchedFields.email && fieldErrors.email ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.email}
           </span>
         ) : null}
       </label>
 
-      <label className="block">
+      <div className="block">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+          <span className="block text-sm font-bold text-[var(--color-text)]">
             Kode Reset (OTP 6-Digit)
           </span>
           {touchedFields.token && !fieldErrors.token && (
-            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-              ✓ Valid
+            <span className="text-xs text-emerald-500 font-bold flex items-center gap-1 animate-scale-in">
+              <CheckCircle2 className="h-3 w-3" /> Valid
             </span>
           )}
         </div>
-        <Input
-          name="token"
-          type="text"
-          maxLength={6}
-          placeholder="Contoh: 123456"
-          required
-          value={tokenValue}
-          hasError={touchedFields.token && !!fieldErrors.token}
-          onBlur={(e) => handleBlur("token", e.target.value)}
-          onChange={(e) => {
-            const val = e.target.value.replace(/[^0-9]/g, "");
-            setTokenValue(val);
-            handleChange("token", val);
-          }}
-        />
+        
+        <div className="flex gap-2 justify-between">
+          {[0, 1, 2, 3, 4, 5].map((index) => {
+            const otpArray = tokenValue.split("").concat(Array(6).fill("")).slice(0, 6);
+            return (
+              <input
+                key={index}
+                id={`otp-input-${index}`}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={otpArray[index] || ""}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "");
+                  const newOtp = [...otpArray];
+                  newOtp[index] = val;
+                  const joined = newOtp.join("").slice(0, 6);
+                  setTokenValue(joined);
+                  handleChange("token", joined);
+                  if (val && index < 5) {
+                    document.getElementById(`otp-input-${index + 1}`)?.focus();
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Backspace" && !otpArray[index] && index > 0) {
+                    document.getElementById(`otp-input-${index - 1}`)?.focus();
+                  }
+                }}
+                onBlur={() => handleBlur("token", tokenValue)}
+                className={cn(
+                  "w-12 h-14 text-center text-xl font-black rounded-xl border bg-[var(--color-surface)] text-[var(--color-text)] transition-all",
+                  "focus:border-[var(--color-border-focus)] focus:ring-3 focus:ring-[var(--state-focus-ring)] outline-none",
+                  touchedFields.token && fieldErrors.token ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"
+                )}
+              />
+            );
+          })}
+        </div>
+        <input type="hidden" name="token" value={tokenValue} />
+        
         {touchedFields.token && fieldErrors.token ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.token}
           </span>
         ) : (
-          <span className="mt-1.5 block text-[11px] text-[var(--color-text-muted)]">
+          <span className="mt-1.5 block text-[11px] font-medium text-[var(--color-text-muted)]">
             Masukkan 6 digit kode OTP yang dikirim ke email atau diberikan Admin.
           </span>
         )}
-      </label>
+      </div>
 
-      <label className="block">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent my-2"></div>
+
+      <label className="block relative">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+          <span className="block text-sm font-bold text-[var(--color-text)]">
             Password Baru
           </span>
         </div>
@@ -120,14 +151,14 @@ export function ResetPasswordFormFields({
           }}
         />
         {touchedFields.newPassword && fieldErrors.newPassword ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.newPassword}
           </span>
         ) : null}
 
         {pwdValue && (
-          <div className="mt-2.5 space-y-1.5">
-            <div className="flex justify-between items-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+          <div className="mt-3 space-y-2 animate-fade-in">
+            <div className="flex justify-between items-center text-xs font-bold text-[var(--color-text)]">
               <span>Kekuatan Password:</span>
               <span
                 className={cn(
@@ -135,6 +166,7 @@ export function ResetPasswordFormFields({
                   pwdStrength.label === "Sedang" && "text-amber-500",
                   pwdStrength.label === "Kuat" && "text-emerald-500"
                 )}
+                aria-live="polite"
               >
                 {pwdStrength.label}
               </span>
@@ -163,8 +195,8 @@ export function ResetPasswordFormFields({
         )}
       </label>
 
-      <label className="block">
-        <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+      <label className="block relative">
+        <span className="block text-sm font-bold text-[var(--color-text)] mb-1.5">
           Konfirmasi Password Baru
         </span>
         <PasswordInput
@@ -176,7 +208,7 @@ export function ResetPasswordFormFields({
           onChange={(e) => handleChange("confirmPassword", e.target.value)}
         />
         {touchedFields.confirmPassword && fieldErrors.confirmPassword ? (
-          <span className="mt-1.5 block text-xs text-[var(--color-danger)]">
+          <span className="mt-1.5 block text-xs font-medium text-[var(--color-danger)] animate-fade-in">
             {fieldErrors.confirmPassword}
           </span>
         ) : null}

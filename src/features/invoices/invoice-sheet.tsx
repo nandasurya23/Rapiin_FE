@@ -34,7 +34,7 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
    {/* Invalid Watermark Overlay */}
    {!isValid && (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden z-10">
-     <span className="text-[80px] font-black uppercase tracking-widest text-red-600 opacity-20 -rotate-45 select-none text-center leading-none">
+     <span className="text-[80px] font-black uppercase tracking-widest text-[var(--color-danger)] opacity-20 -rotate-45 select-none text-center leading-none">
       INVALID
      </span>
     </div>
@@ -129,8 +129,8 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
     {/* Security Seal */}
     <div className={`mt-6 border-t-2 border-dashed border-[var(--color-border)] pt-6 text-center`}>
      <div className="flex items-center justify-center gap-2 mb-2">
-      {isValid ? <ShieldCheck className="h-5 w-5 text-emerald-500" /> : <ShieldAlert className="h-5 w-5 text-red-500" />}
-      <span className={`text-xs font-bold uppercase tracking-widest ${isValid ? 'text-emerald-600' : 'text-red-600'}`}>
+      {isValid ? <ShieldCheck className="h-5 w-5 text-[var(--color-success)]" /> : <ShieldAlert className="h-5 w-5 text-[var(--color-danger)]" />}
+      <span className={`text-xs font-bold uppercase tracking-widest ${isValid ? 'text-[var(--color-success-text)]' : 'text-[var(--color-danger-text)]'}`}>
        {isValid ? "Segel Digital Valid" : "Segel Rusak / Tidak Valid"}
       </span>
      </div>

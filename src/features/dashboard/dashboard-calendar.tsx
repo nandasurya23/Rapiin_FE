@@ -10,11 +10,10 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
- getResourceBookingDetailsForDate,
- getBookingSlotsForDate,
- isBookingHoldActive,
-} from "@/lib/booking";
+ import {
+  getResourceBookingDetailsForDate,
+  getBookingSlotsForDate,
+ } from "@/lib/booking";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { ROUTES } from "@/lib/routes";
@@ -127,7 +126,6 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
  );
 
  const hasFullSlot = selectedSlotSummaries.some((slot) => slot.isFull);
- const hasHoldSlot = selectedSlotSummaries.some((slot) => slot.holdCount > 0);
  const isResourceMode = business.operationalModel === "RESOURCE_BOOKING" && business.usesResources;
  const unassignedSelectedOrders = useMemo(
   () =>
@@ -208,7 +206,6 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
     scheduledDate: order.scheduledDate,
     scheduledTime: order.scheduledTime,
     bookingDurationMinutes: order.bookingDurationMinutes,
-    bookingHoldExpiresAt: order.bookingHoldExpiresAt,
     resourceId: order.resourceId,
    });
 
@@ -285,7 +282,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
   toast.info("Nota dibuka", "Preview nota dibuka di tab baru.");
  }
 
- function getDayBadgeLabel(count: number, fullSlotAvailable: boolean, holdSlotAvailable: boolean) {
+ function getDayBadgeLabel(count: number, fullSlotAvailable: boolean) {
   if (count <= 0) {
    return "Kosong";
   }
@@ -298,14 +295,10 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
    return "Full";
   }
 
-  if (holdSlotAvailable) {
-   return "Hold";
-  }
-
   return `${count} booking`;
  }
 
- function getDayBadgeCompactLabel(count: number, fullSlotAvailable: boolean, holdSlotAvailable: boolean) {
+ function getDayBadgeCompactLabel(count: number, fullSlotAvailable: boolean) {
   if (count <= 0) {
    return "0";
   }
@@ -318,14 +311,10 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
    return "F";
   }
 
-  if (holdSlotAvailable) {
-   return "H";
-  }
-
   return String(count);
  }
 
- function getDayBadgeTone(count: number, fullSlotAvailable: boolean, holdSlotAvailable: boolean) {
+ function getDayBadgeTone(count: number, fullSlotAvailable: boolean) {
   if (count <= 0) {
    return "neutral" as const;
   }
@@ -336,10 +325,6 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
 
   if (fullSlotAvailable) {
    return "danger" as const;
-  }
-
-  if (holdSlotAvailable) {
-   return "warning" as const;
   }
 
   return "success" as const;
@@ -386,7 +371,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
 
  const [startHour, endHour] = useMemo(() => {
   if (!business.openingHours) return [7, 21];
-  const [startStr, endStr] = business.openingHours.split(" - ");
+  const [startStr, endStr] = business.openingHours.split("-").map(s => s.trim());
   let s = parseInt(startStr?.split(":")[0], 10);
   let e = parseInt(endStr?.split(":")[0], 10);
   if (Number.isNaN(s)) s = 7;
@@ -424,9 +409,11 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
 
    const widthPercent = 100 / totalInGroup;
    const leftPercent = orderIndexInGroup * widthPercent;
+   const hasConflict = totalInGroup > (business.bookingCapacity || 1);
 
    return {
     order,
+    hasConflict,
     top: ((start - startOffsetMinutes) * 64) / 60,
     height: Math.max(36, ((order.bookingDurationMinutes || 60) * 64) / 60),
     style: {
@@ -524,17 +511,16 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
          const dateSlotSummaries = getBookingSlotsForDate(cellOrders, dateKey, null, new Date(), business.bookingCapacity);
 
          const dateHasFullSlot = isResourceMode ? false : dateSlotSummaries.some((slot) => slot.isFull);
-         const dateHasHoldSlot = isResourceMode ? cellOrders.some(o => isBookingHoldActive(o, new Date())) : dateSlotSummaries.some((slot) => slot.holdCount > 0);
 
          const isClosed = Boolean(business.closedDates?.[dateKey]);
          const closedReason = business.closedDates?.[dateKey] || "";
 
-         const badgeLabel = isClosed ? `TUTUP: ${closedReason}` : getDayBadgeLabel(count, dateHasFullSlot, dateHasHoldSlot);
-         const compactBadgeLabel = isClosed ? "TUTUP" : getDayBadgeCompactLabel(count, dateHasFullSlot, dateHasHoldSlot);
-         const badgeTone = isClosed ? ("danger" as const) : getDayBadgeTone(count, dateHasFullSlot, dateHasHoldSlot);
+         const badgeLabel = isClosed ? `TUTUP: ${closedReason}` : getDayBadgeLabel(count, dateHasFullSlot);
+         const compactBadgeLabel = isClosed ? "TUTUP" : getDayBadgeCompactLabel(count, dateHasFullSlot);
+         const badgeTone = isClosed ? ("danger" as const) : getDayBadgeTone(count, dateHasFullSlot);
 
          return (
-          <button
+           <button
            key={dateKey}
            type="button"
            onClick={() => {
@@ -542,30 +528,40 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
             setIsDetailOpen(true);
            }}
            className={cn(
-            "relative flex h-11 flex-col items-center justify-center rounded-md border px-0.5 text-sm transition-colors duration-200 sm:h-14 sm:px-1 md:h-16",
+            "relative flex flex-col items-center justify-center rounded-2xl border px-1 transition-all duration-200 h-12 sm:h-16 md:h-20",
             !isSelected && (
              isClosed
               ? "border-red-200 bg-red-50 text-red-700 font-semibold"
-              : (isCurrentMonth ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]" : "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]/40")
+              : (isCurrentMonth ? "border-transparent bg-transparent text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)]" : "border-transparent bg-transparent text-[var(--color-text-muted)]/40")
             ),
-            isToday && !isSelected && "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-semibold",
-            isSelected && "border-transparent bg-[var(--color-primary)] text-white shadow-[var(--shadow-sm)]"
+            isToday && !isSelected && "border-[var(--color-primary)] bg-[var(--color-primary-surface)] text-[var(--color-primary)] font-bold",
+            isSelected && "border-transparent bg-[var(--color-primary)] text-white shadow-[var(--shadow-md)] scale-[1.05]"
            )}
           >
-           <span className="text-[10px] font-medium sm:text-xs md:text-sm">{date.getDate()}</span>
-           <span
-            className={cn(
-             "mt-0.5 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide sm:mt-1 sm:min-w-0 sm:px-1.5 sm:text-[9px]",
-             badgeTone === "neutral" && !isSelected && "border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)]",
-             badgeTone === "success" && !isSelected && "border-[var(--color-success-border)] bg-[var(--color-success-surface)] text-[var(--color-success)]",
-             badgeTone === "danger" && !isSelected && "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] text-[var(--color-danger)]",
-             badgeTone === "warning" && !isSelected && "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]",
-             isSelected && "border-white/20 bg-white/20 text-white"
-            )}
-           >
-            <span className="sm:hidden">{compactBadgeLabel}</span>
-            <span className="hidden sm:inline">{badgeLabel}</span>
-           </span>
+           <span className="text-xs sm:text-sm font-semibold">{date.getDate()}</span>
+           
+           {/* Minimalist Indicators */}
+           <div className="absolute bottom-1.5 sm:bottom-2.5 left-0 right-0 flex justify-center items-center gap-0.5 sm:gap-1">
+             {isClosed ? (
+               <span className={cn("h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full", isSelected ? "bg-white" : "bg-red-500")} />
+             ) : count > 0 ? (
+               // Dot indicators up to 3
+               Array.from({ length: Math.min(count, 3) }).map((_, i) => (
+                 <span 
+                   key={i} 
+                   className={cn(
+                     "h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full",
+                     isSelected ? "bg-white" : dateHasFullSlot ? "bg-[var(--color-danger)]" : "bg-[var(--color-primary)]"
+                   )} 
+                 />
+               ))
+             ) : null}
+             {count > 3 && !isClosed && (
+               <span className={cn("text-[7px] sm:text-[9px] font-bold leading-none -ml-0.5", isSelected ? "text-white" : "text-[var(--color-text-muted)]")}>
+                 +
+               </span>
+             )}
+           </div>
           </button>
          );
         })}
@@ -653,7 +649,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
           // ── RESOURCE TIMELINE VIEW (G-CAL STYLE) ──
           <div className="relative">
            {/* Column titles */}
-           <div className="grid border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/40" style={{ gridTemplateColumns: `80px repeat(${timelineColumns.length}, minmax(180px, 1fr))` }}>
+           <div className="grid border-b border-[var(--color-border)]/20 bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/20" style={{ gridTemplateColumns: `80px repeat(${timelineColumns.length}, minmax(180px, 1fr))` }}>
             <div className="py-2.5">Waktu</div>
             {timelineColumns.map((res) => (
              <div key={res.id} className="py-2.5 truncate">{res.name}</div>
@@ -663,16 +659,16 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
            {/* Hour rows and content grid */}
            <div className="relative flex" style={{ height: `${hoursLength * 64}px` }}>
             {/* Time labels axis */}
-            <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/60 flex flex-col z-10">
+            <div className="w-[80px] shrink-0 bg-[var(--color-surface)] border-r border-[var(--color-border)]/20 flex flex-col z-10">
              {hours.map((h) => (
-              <div key={h} className="h-16 text-[11px] font-bold text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/60 flex items-start justify-center pt-1.5 font-mono">
+              <div key={h} className="h-16 text-[10px] font-bold text-[var(--color-text-muted)] border-b border-[var(--color-border)]/20 flex items-start justify-center pt-1.5 font-mono">
                {String(h % 24).padStart(2, "0")}:00
               </div>
              ))}
             </div>
 
             {/* Resource columns content */}
-            <div className="flex-1 grid divide-x divide-[var(--color-border)]/40 relative" style={{ gridTemplateColumns: `repeat(${timelineColumns.length}, minmax(180px, 1fr))` }}>
+            <div className="flex-1 grid divide-x divide-[var(--color-border)]/20 relative" style={{ gridTemplateColumns: `repeat(${timelineColumns.length}, minmax(180px, 1fr))` }}>
              {timelineColumns.map((res) => {
               const resOrders = selectedOrders.filter((o) => {
                if (o.status === "SELESAI") return false;
@@ -682,7 +678,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                return o.resourceId === res.id;
               });
               return (
-               <div key={res.id} className="relative h-full">
+               <div key={res.id} className="relative h-full bg-[var(--color-surface)]">
                 {/* Grid backgrounds */}
                 {hours.map((h, idx) => (
                  <div
@@ -690,10 +686,10 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                   onClick={() => {
                    toast.info("Pembuatan Order", `Ketik "booking di ${res.name} jam ${String(h % 24).padStart(2, "0")}:00" di Asisten Pintar (Cmd+K) untuk input cepat!`);
                   }}
-                  className="absolute left-0 right-0 border-b border-[var(--color-border)]/60 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
+                  className="absolute left-0 right-0 border-b border-[var(--color-border)]/20 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
                   style={{ top: `${idx * 64}px`, height: "64px" }}
                  >
-                  <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--color-border)]/30" />
+                  <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--color-border)]/10" />
                  </div>
                 ))}
 
@@ -706,6 +702,16 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                  const startOffset = h * 60 + m - startOffsetMinutes;
                  const top = (startOffset * 64) / 60;
                  const height = ((order.bookingDurationMinutes || 60) * 64) / 60;
+                  const overlappingResOrders = resOrders.filter(other => {
+                    const [ohStr, omStr] = (other.scheduledTime || "08:00").split(":");
+                    let oh = Number(ohStr || 8);
+                    if (oh < startHour) oh += 24;
+                    const om = Number(omStr || 0);
+                    const oStartOffset = oh * 60 + om - startOffsetMinutes;
+                    const oHeight = ((other.bookingDurationMinutes || 60) * 64) / 60;
+                    return startOffset < oStartOffset + (other.bookingDurationMinutes || 60) && startOffset + (order.bookingDurationMinutes || 60) > oStartOffset;
+                  });
+                  const hasConflict = overlappingResOrders.length > 1;
 
                  return (
                   <button
@@ -716,26 +722,20 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                     setIsDetailOpen(true);
                    }}
                    className={cn(
-                    "absolute left-1.5 right-1.5 rounded-xl border p-2 text-left flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
-                    getTimelineCardClasses(order.status, order.paymentStatus)
+                    "absolute left-1.5 right-1.5 rounded-lg border px-2 py-1.5 text-left flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
+                    getTimelineCardClasses(order.status, order.paymentStatus, hasConflict)
                    )}
                    style={{ top: `${top}px`, height: `${height}px` }}
                   >
-                   <div className="min-w-0 w-full space-y-1">
-                    <div className="flex items-center justify-between gap-1 w-full">
-                     <div className="flex items-center gap-1 min-w-0">
-                      <User className="h-3 w-3 shrink-0 opacity-70" />
-                      <p className="font-extrabold text-[10px] truncate leading-none">{order.customerName}</p>
-                     </div>
-                     <span className="text-[7px] font-black uppercase shrink-0 tracking-wider px-1 py-0.5 rounded bg-black/5">
+                   <div className="min-w-0 w-full">
+                    <p className="font-bold text-[10px] truncate leading-tight">{order.customerName}</p>
+                    <p className="text-[9px] font-medium truncate opacity-80">{order.title}</p>
+                   </div>
+                    <div className="flex justify-between items-center text-[8px] font-bold opacity-70 font-mono mt-1">
+                     <span>{order.scheduledTime}</span>
+                     <span className="uppercase text-[7px] tracking-wider px-1 py-0.5 rounded-sm bg-black/5">
                       {getTimelineStatusLabel(order.status)}
                      </span>
-                    </div>
-                    <p className="text-[9px] font-semibold truncate opacity-90">{order.title}</p>
-                   </div>
-                    <div className="flex justify-between items-center text-[8px] font-bold opacity-70 font-mono">
-                     <span>{order.scheduledTime} - {getEndTimeStr(order.scheduledTime, order.bookingDurationMinutes || 60)}</span>
-                     <span className="opacity-50 text-[7px]">({order.bookingDurationMinutes}m)</span>
                     </div>
                   </button>
                  );
@@ -750,7 +750,7 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
           // ── STANDARD TIMELINE VIEW (G-CAL STYLE) ──
           <div className="relative">
            {/* Column titles */}
-           <div className="grid border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/40 grid-cols-[80px_1fr]">
+           <div className="grid border-b border-[var(--color-border)]/20 bg-[var(--color-surface-elevated)] font-bold text-xs text-[var(--color-text-secondary)] text-center divide-x divide-[var(--color-border)]/20 grid-cols-[80px_1fr]">
             <div className="py-2.5">Waktu</div>
             <div className="py-2.5">Slot Pemesanan & Overlap</div>
            </div>
@@ -758,16 +758,16 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
            {/* Hour rows and content grid */}
            <div className="relative flex" style={{ height: `${hoursLength * 64}px` }}>
             {/* Time labels axis */}
-            <div className="w-[80px] shrink-0 bg-[var(--color-surface-elevated)] border-r border-[var(--color-border)]/60 flex flex-col z-10">
+            <div className="w-[80px] shrink-0 bg-[var(--color-surface)] border-r border-[var(--color-border)]/20 flex flex-col z-10">
              {hours.map((h) => (
-              <div key={h} className="h-16 text-[11px] font-bold text-[var(--color-text-secondary)] border-b border-[var(--color-border)]/60 flex items-start justify-center pt-1.5 font-mono">
+              <div key={h} className="h-16 text-[10px] font-bold text-[var(--color-text-muted)] border-b border-[var(--color-border)]/20 flex items-start justify-center pt-1.5 font-mono">
                {String(h % 24).padStart(2, "0")}:00
               </div>
              ))}
             </div>
 
             {/* Content area */}
-            <div className="flex-1 relative h-full">
+            <div className="flex-1 relative h-full bg-[var(--color-surface)]">
              {/* Grid backgrounds */}
              {hours.map((h, idx) => (
               <div
@@ -775,15 +775,15 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                onClick={() => {
                 toast.info("Pembuatan Order", `Ketik "booking jam ${String(h % 24).padStart(2, "0")}:00" di Asisten Pintar (Cmd+K) untuk input cepat!`);
                }}
-               className="absolute left-0 right-0 border-b border-[var(--color-border)]/60 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
+               className="absolute left-0 right-0 border-b border-[var(--color-border)]/20 hover:bg-[var(--color-primary-surface)]/20 cursor-pointer transition-colors"
                style={{ top: `${idx * 64}px`, height: "64px" }}
               >
-               <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--color-border)]/30" />
+               <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--color-border)]/10" />
               </div>
              ))}
 
              {/* Order blocks */}
-             {positionedOrders.map(({ order, style }) => (
+             {positionedOrders.map(({ order, style, hasConflict }) => (
               <button
                key={order.id}
                type="button"
@@ -792,26 +792,20 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
                 setIsDetailOpen(true);
                }}
                className={cn(
-                "absolute rounded-xl border p-2 text-left flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
-                getTimelineCardClasses(order.status, order.paymentStatus)
+                "absolute rounded-lg border px-2 py-1.5 text-left flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] transition duration-200 z-10",
+                getTimelineCardClasses(order.status, order.paymentStatus, hasConflict)
                )}
                style={style}
               >
-               <div className="min-w-0 w-full space-y-1">
-                <div className="flex items-center justify-between gap-1 w-full">
-                 <div className="flex items-center gap-1 min-w-0">
-                  <User className="h-3 w-3 shrink-0 opacity-70" />
-                  <p className="font-extrabold text-[10px] truncate leading-none">{order.customerName}</p>
-                 </div>
-                 <span className="text-[7px] font-black uppercase shrink-0 tracking-wider px-1 py-0.5 rounded bg-black/5">
+               <div className="min-w-0 w-full">
+                <p className="font-bold text-[10px] truncate leading-tight">{order.customerName}</p>
+                <p className="text-[9px] font-medium truncate opacity-80">{order.title}</p>
+               </div>
+                <div className="flex justify-between items-center text-[8px] font-bold opacity-70 font-mono mt-1">
+                 <span>{order.scheduledTime}</span>
+                 <span className="uppercase text-[7px] tracking-wider px-1 py-0.5 rounded-sm bg-black/5">
                   {getTimelineStatusLabel(order.status)}
                  </span>
-                </div>
-                <p className="text-[9px] font-semibold truncate opacity-90">{order.title}</p>
-               </div>
-                <div className="flex justify-between items-center text-[8px] font-bold opacity-70 font-mono">
-                 <span>{order.scheduledTime} - {getEndTimeStr(order.scheduledTime, order.bookingDurationMinutes || 60)}</span>
-                 <span className="opacity-50 text-[7px]">({order.bookingDurationMinutes}m)</span>
                 </div>
                </button>
               ))}
@@ -860,7 +854,6 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
         isResourceMode={isResourceMode}
 
         hasFullSlot={hasFullSlot}
-        hasHoldSlot={hasHoldSlot}
         visibleResourceDetails={visibleResourceDetails}
         hiddenResourceCount={hiddenResourceCount}
         selectedSlotSummaries={selectedSlotSummaries}

@@ -284,9 +284,12 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
     className={cn(
      "hidden lg:flex lg:flex-col lg:justify-between lg:w-[420px] xl:w-[480px] shrink-0",
      "relative overflow-hidden",
-     "bg-slate-900 border-r border-slate-800 px-10 py-12"
+     "bg-[var(--color-navy-900)] border-r border-[var(--color-border)] px-10 py-12"
     )}
    >
+    {/* Decorative background glow */}
+    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[var(--color-gold-600)] opacity-10 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+    <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[var(--color-navy-500)] opacity-20 blur-[80px] rounded-full -translate-x-1/4 translate-y-1/4 pointer-events-none" />
 
     {/* Logo */}
     <div className="relative flex items-center mb-2">
@@ -299,23 +302,23 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
       <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] border border-white/[0.1] px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 mb-4">
        ✦ Admin bisnis WA-first
       </span>
-      <h1 className="text-3xl font-black text-white leading-snug tracking-tight">
+      <h1 className="text-4xl font-black text-white leading-[1.15] tracking-tight animate-fade-up">
        Buku admin online<br />untuk bisnis WhatsApp‑first
       </h1>
-      <p className="mt-4 text-white/50 text-sm leading-relaxed">
+      <p className="mt-4 text-white/60 text-base leading-relaxed animate-fade-up-delay-1">
        Kelola customer, order, follow-up, nota, dan laporan sederhana dari satu tempat —
        tanpa istilah teknis yang bikin bingung.
       </p>
      </div>
 
      {/* Benefits list */}
-     <ul className="space-y-3">
+     <ul className="space-y-4 animate-fade-up-delay-2">
       {benefits.map((benefit) => (
        <li key={benefit} className="flex items-start gap-3">
-        <div className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-amber-400/20 flex items-center justify-center">
-         <CheckCircle2 className="h-3 w-3 text-amber-300" />
+        <div className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-amber-400/20 flex items-center justify-center">
+         <CheckCircle2 className="h-3.5 w-3.5 text-amber-300" />
         </div>
-        <span className="text-sm text-white/75">{benefit}</span>
+        <span className="text-[15px] font-medium text-white/80">{benefit}</span>
        </li>
       ))}
      </ul>
@@ -335,62 +338,74 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
      </div>
 
      {/* Heading */}
-     <div className="mb-7">
-      <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">
+     <div className="mb-8 text-center sm:text-left">
+      <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">
        {headingMap[mode]}
       </h2>
-      <p className="mt-1.5 text-sm text-[var(--color-text-muted)] leading-relaxed">
+      <p className="mt-2 text-[15px] text-[var(--color-text-secondary)] leading-relaxed font-medium">
        {subCopyMap[mode]}
       </p>
      </div>
 
      {/* ── SUCCESS STATE: request-reset sent ── */}
      {mode === "request-reset" && requestResetSent ? (
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
-       <div className="p-6 space-y-4">
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-         <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+      <div className="rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden animate-scale-in">
+       <div className="p-8 space-y-6">
+        <div className="flex flex-col items-center text-center space-y-3 mb-2">
+         <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
+          <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+         </div>
          <div>
-          <p className="text-sm font-semibold text-emerald-800">Permintaan Terdaftar!</p>
-          <p className="text-xs text-emerald-700 mt-0.5">
-           Permintaan reset password berhasil dikirim. Admin akan segera menghubungi kamu via WhatsApp dengan kode OTP 6-digit.
+          <h3 className="text-xl font-bold text-[var(--color-text)]">Permintaan Terdaftar!</h3>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+           Admin akan segera memproses permintaan Anda.
           </p>
          </div>
         </div>
 
-        {/* Langkah selanjutnya */}
-        <div className="rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] p-4 space-y-2.5">
-         <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">Langkah Selanjutnya:</p>
-         <ol className="space-y-1.5 text-xs text-[var(--color-text-secondary)] list-none">
-          <li className="flex items-start gap-2"><span className="flex-shrink-0 font-bold text-[var(--color-primary)]">1.</span>Tunggu Admin mengirim kode OTP 6-digit via WhatsApp</li>
-          <li className="flex items-start gap-2"><span className="flex-shrink-0 font-bold text-[var(--color-primary)]">2.</span>Buka halaman reset password di bawah ini</li>
-          <li className="flex items-start gap-2"><span className="flex-shrink-0 font-bold text-[var(--color-primary)]">3.</span>Masukkan email + kode OTP + password baru</li>
-         </ol>
+        {/* Langkah selanjutnya Timeline */}
+        <div className="space-y-4">
+         <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Langkah Selanjutnya:</p>
+         <div className="relative border-l-2 border-[var(--color-border-strong)] ml-3 pl-5 space-y-5">
+          <div className="relative">
+           <div className="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-[var(--color-primary)] ring-4 ring-[var(--color-surface)]"></div>
+           <p className="text-sm font-medium text-[var(--color-text)]">Tunggu Admin mengirim <span className="font-bold">kode OTP 6-digit</span> via WhatsApp</p>
+          </div>
+          <div className="relative">
+           <div className="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-[var(--color-border-strong)] ring-4 ring-[var(--color-surface)]"></div>
+           <p className="text-sm font-medium text-[var(--color-text)]">Buka halaman reset password</p>
+          </div>
+          <div className="relative">
+           <div className="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-[var(--color-border-strong)] ring-4 ring-[var(--color-surface)]"></div>
+           <p className="text-sm font-medium text-[var(--color-text)]">Masukkan email, kode OTP, dan password baru</p>
+          </div>
+         </div>
         </div>
 
         <a
          href={`https://wa.me/628123456789?text=Halo%20Admin%20Rapiin%2C%20saya%20meminta%20bantuan%20reset%20password%20untuk%20akun%20saya%20dengan%20email%3A%20${encodeURIComponent(resetEmail)}`}
          target="_blank"
          rel="noopener noreferrer"
-         className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm py-3 transition-colors "
+         className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-whatsapp)] hover:bg-[var(--color-whatsapp-hover)] text-white font-bold text-base py-3.5 transition-all shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)]"
         >
          Hubungi Admin via WhatsApp
         </a>
 
-        <LinkButton href={ROUTES.resetPassword} variant="ghost" className="w-full h-10 text-sm font-semibold">
-         Sudah punya kode? Reset Password →
-        </LinkButton>
-
-        <LinkButton href={ROUTES.login} variant="ghost" className="w-full h-10 text-sm font-semibold">
-         ← Kembali ke halaman login
-        </LinkButton>
+        <div className="pt-2">
+         <LinkButton href={ROUTES.resetPassword} variant="ghost" className="w-full h-11 text-sm font-bold bg-[var(--color-surface-elevated)] hover:bg-[var(--color-surface-inset)] border border-[var(--color-border)] mb-2">
+          Sudah punya kode? Reset Password →
+         </LinkButton>
+         <LinkButton href={ROUTES.login} variant="ghost" className="w-full h-10 text-sm font-semibold">
+          ← Kembali ke halaman login
+         </LinkButton>
+        </div>
        </div>
       </div>
      ) : (
       /* ── FORM CARD ── */
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
-       <div className="space-y-4 p-6">
-        <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+      <div className="rounded-2xl shadow-[var(--shadow-md)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+       <div className="space-y-6 p-6 sm:p-8">
+        <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
 
          {/* ─── REGISTER FIELDS ─── */}
          {mode === "register" ? (
@@ -446,13 +461,13 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
 
          {/* ─── ERROR BANNER ─── */}
          {error ? (
-          <div className="rounded-xl bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] px-4 py-3 flex items-start gap-2.5">
-           <span className="text-[var(--color-danger)] text-base leading-none mt-0.5">⚠</span>
-           <p className="text-sm text-[var(--color-danger)] leading-relaxed">{error}</p>
+          <div className="rounded-xl bg-[var(--color-danger-surface)] border border-[var(--color-danger-border)] px-4 py-3.5 flex items-start gap-3 animate-slide-down">
+           <span className="text-[var(--color-danger)] text-base font-bold leading-none mt-0.5">!</span>
+           <p className="text-sm font-medium text-[var(--color-danger-text)] leading-relaxed">{error}</p>
           </div>
          ) : null}
 
-         <Button type="submit" className="w-full h-11 font-bold rounded-xl" isLoading={isSubmitting}>
+         <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl mt-2" isLoading={isSubmitting}>
           {mode === "login" ? "Masuk ke Akun"
            : mode === "register" ? "Buat Akun Sekarang"
            : mode === "request-reset" ? "Kirim Instruksi Reset"
@@ -462,24 +477,24 @@ export function AuthPanel({ mode, resetToken = "", initialEmail = "", roleFilter
 
         {/* Footer links */}
         {roleFilter !== "SUPER_ADMIN" ? (
-         <div className="flex flex-col items-center gap-2 pt-2 text-sm text-[var(--color-text-muted)]">
+         <div className="flex flex-col items-center gap-3 pt-3 text-sm text-[var(--color-text-muted)] font-medium">
           {mode === "login" ? (
-           <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-primary)] text-xs font-semibold">
+           <LinkButton href={ROUTES.forgotPassword} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-primary)] text-sm font-bold">
             Lupa password?
            </LinkButton>
           ) : null}
           {(mode === "request-reset" || mode === "reset-password") ? (
-           <LinkButton href={ROUTES.login} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-text-muted)] text-xs">
+           <LinkButton href={ROUTES.login} variant="ghost" className="h-auto px-0 py-0 text-[var(--color-text-muted)] text-sm font-bold">
             ← Kembali ke login
            </LinkButton>
           ) : null}
           {(mode === "login" || mode === "register") ? (
-           <span className="text-xs">
+           <span className="text-sm">
             {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
             <LinkButton
              href={mode === "login" ? ROUTES.register : ROUTES.login}
              variant="ghost"
-             className="h-auto px-0 py-0 text-[var(--color-primary)] font-bold text-xs"
+             className="h-auto px-0 py-0 text-[var(--color-primary)] font-bold text-sm underline underline-offset-4 decoration-[var(--color-primary-surface)] hover:decoration-[var(--color-primary)]"
             >
              {mode === "login" ? "Daftar gratis" : "Masuk"}
             </LinkButton>

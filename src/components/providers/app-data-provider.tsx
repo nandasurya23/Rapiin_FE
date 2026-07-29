@@ -32,6 +32,7 @@ type OnboardingPayload = {
  resourceCount?: number;
  resources?: BusinessResource[];
  defaultBookingDurationMinutes?: number;
+ bookingCapacity?: number;
  niche: NicheTemplate;
  description: string;
 };
@@ -293,10 +294,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      onboardingCompleted: true,
     },
    }));
+   queryClient.invalidateQueries({ queryKey: ["business"] });
    await fetchAllData();
    return response;
   }
- }, [fetchAllData]);
+ }, [fetchAllData, queryClient]);
 
  const registerOwner = useCallback(async (payload: RegisterOwnerInput) => {
   const result = await authService.register(payload);

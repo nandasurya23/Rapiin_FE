@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageCircleMore, X, Copy, ExternalLink } from "lucide-react";
+import { MessageCircle, X, Copy, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { buildWhatsAppUrl, isValidWhatsappNumber } from "@/lib/whatsapp";
@@ -10,11 +10,13 @@ import { cn } from "@/lib/cn";
 type WhatsAppButtonProps = {
  phoneNumber: string;
  message: string;
- label: string;
+ label?: string;
  className?: string;
+ title?: string;
+ size?: "sm" | "md" | "lg" | "icon-sm" | "icon-md";
 };
 
-export function WhatsAppButton({ phoneNumber, message, label, className }: WhatsAppButtonProps) {
+export function WhatsAppButton({ phoneNumber, message, label, className, title, size }: WhatsAppButtonProps) {
  const toast = useToast();
  const [isOpen, setIsOpen] = useState(false);
  const [draftMessage, setDraftMessage] = useState(message);
@@ -43,9 +45,9 @@ export function WhatsAppButton({ phoneNumber, message, label, className }: Whats
 
  return (
   <>
-   <Button type="button" variant="secondary" className={className} onClick={handleClick}>
-    <MessageCircleMore className="h-4 w-4" />
-    {label}
+   <Button type="button" variant="secondary" size={size} className={className} onClick={handleClick} title={title}>
+    <MessageCircle className="h-4 w-4" />
+    {label ? <span className="ml-1">{label}</span> : null}
    </Button>
 
    {isOpen && (
