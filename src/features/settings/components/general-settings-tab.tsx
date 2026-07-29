@@ -7,7 +7,9 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
-import { compressLogoImage } from "@/lib/image";
+import { compressLogoAsBlob, compressLogoImage } from "@/lib/image";
+import { supabase } from "@/lib/supabase";
+import { useBusiness } from "@/hooks/use-business";
 import { BUSINESS_MODE_OPTIONS } from "@/lib/constants/business";
 import type { BusinessResource, OperationalModel, PublicCatalogItem } from "@/types/business";
 
@@ -49,6 +51,7 @@ export function GeneralSettingsTab({
   updateForm,
 }: GeneralSettingsTabProps) {
   const toast = useToast();
+  const { business } = useBusiness();
 
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
@@ -99,12 +102,46 @@ export function GeneralSettingsTab({
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
+                    
+                    toast.info("Sedang mengunggah logo...", "Mohon tunggu sebentar.");
                     try {
-                      const base64 = await compressLogoImage(file);
-                      updateForm("logoUrl", base64);
-                      toast.success("Logo berhasil dimuat!");
+                      if (!supabase) {
+                        // Fallback Mode (Lokal / Tanpa Supabase): Gunakan Base64
+                        const base64 = await compressLogoImage(file);
+                        updateForm("logoUrl", base64);
+                        toast.success("Logo berhasil dimuat (Mode Lokal)!");
+                        return;
+                      }
+
+                      // Mode Production (Supabase Storage)
+                      // 1. Kompres gambar jadi Blob
+                      const blob = await compressLogoAsBlob(file);
+                      
+                      // 2. Buat nama file unik menggunakan business.id
+                      const businessId = business?.id || `temp-${Date.now()}`;
+                      const fileExt = file.name.split('.').pop() || 'jpg';
+                      const fileName = `${businessId}.${fileExt}`;
+
+                      // 3. Upload ke Supabase Storage
+                      const { error: uploadError } = await supabase.storage
+                        .from('business-logos')
+                        .upload(fileName, blob, {
+                          cacheControl: '3600',
+                          upsert: true,
+                          contentType: 'image/jpeg'
+                        });
+
+                      if (uploadError) throw uploadError;
+
+                      // 4. Dapatkan Public URL
+                      const { data: publicUrlData } = supabase.storage
+                        .from('business-logos')
+                        .getPublicUrl(fileName);
+
+                      updateForm("logoUrl", publicUrlData.publicUrl);
+                      toast.success("Logo berhasil dimuat!", "Jangan lupa klik Simpan Pengaturan di bagian bawah.");
                     } catch (err) {
-                      toast.error(err instanceof Error ? err.message : "Gagal membaca file");
+                      toast.error("Gagal mengunggah logo", err instanceof Error ? err.message : "Terjadi kesalahan");
                     }
                   }}
                 />
