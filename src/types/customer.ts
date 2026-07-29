@@ -12,4 +12,5 @@ export type Customer = Timestamped & {
   notes?: string;
   lastInteractionAt?: string;
   lastOrderSummary?: string;
+  pointsBalance?: number;
 };

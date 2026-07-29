@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent" | "whatsapp";
 type ButtonSize = "sm" | "md" | "lg" | "icon-sm" | "icon-md";
 
 type BaseProps = {
@@ -71,6 +71,13 @@ const variantStyles: Record<ButtonVariant, string> = {
   "border border-[var(--color-accent)]",
   "hover:bg-[var(--color-accent-hover)] hover:border-[var(--color-accent-hover)]",
   "active:bg-[var(--color-accent-active)]",
+  "shadow-[var(--shadow-sm)]",
+ ].join(" "),
+
+ whatsapp: [
+  "bg-[var(--color-whatsapp)] text-white",
+  "border border-[var(--color-whatsapp)]",
+  "hover:bg-[var(--color-whatsapp-hover)] hover:border-[var(--color-whatsapp-hover)]",
   "shadow-[var(--shadow-sm)]",
  ].join(" "),
 };

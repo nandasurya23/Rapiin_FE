@@ -4,11 +4,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { getMobileNavItems, getMobileMoreItems, SUPER_ADMIN_NAV_ITEMS } from "@/lib/constants/navigation";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, Lock } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast-provider";
 import { usePermission } from "@/hooks/use-permission";
-
 import { ROUTES } from "@/lib/routes";
 
 export function MobileBottomNav() {
@@ -30,15 +29,14 @@ export function MobileBottomNav() {
 
  const moreItems = isSuperAdmin 
   ? [] 
-  : getMobileMoreItems(business.slug).filter(item => {
-    let matchesPlan = true;
+  : getMobileMoreItems(business.slug).filter(item => canAccessRoute(item.href, business.slug)).map(item => {
+    let isLocked = false;
     if (item.href === ROUTES.assistant(business.slug)) {
-      matchesPlan = subscriptionForCurrentBusiness?.planCode === "PREMIUM";
+      isLocked = subscriptionForCurrentBusiness?.planCode !== "PREMIUM";
     } else if (item.href === ROUTES.invoiceChecker(business.slug)) {
-      matchesPlan = subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL";
+      isLocked = subscriptionForCurrentBusiness?.planCode === "FREE_TRIAL";
     }
-    const hasAccess = canAccessRoute(item.href, business.slug);
-    return matchesPlan && hasAccess;
+    return { ...item, isLocked };
    });
 
  // Close drawer if pathname changes
@@ -61,7 +59,7 @@ export function MobileBottomNav() {
    >
     <div
      className={cn(
-      "grid px-1 py-1",
+      "grid px-2 py-1.5",
       isSuperAdmin ? "grid-cols-4" : "grid-cols-5"
      )}
     >
@@ -76,36 +74,31 @@ export function MobileBottomNav() {
         key={item.href}
         href={item.href}
         className={cn(
-         "relative flex flex-col items-center justify-center gap-0.5",
-         "min-h-[52px] rounded-[var(--radius-md)] px-1 py-2",
-         "text-[11px] font-medium",
-         "transition-all duration-[var(--transition-fast)]",
+         "relative flex flex-col items-center justify-center gap-1",
+         "min-h-[52px] rounded-xl px-1 py-1.5 mx-0.5",
+         "text-[10px] font-semibold",
+         "transition-all duration-200",
          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]",
          active
           ? "text-[var(--color-primary)]"
-          : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--state-hover-bg)]"
+          : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
         )}
        >
-        {/* Active top indicator bar */}
-        {active && (
-         <span
-          className="absolute top-0 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-b-full bg-[var(--color-primary)]"
-          aria-hidden
+        {/* Active Pill Background inside icon wrapper */}
+        <div className={cn(
+          "flex items-center justify-center h-7 w-12 rounded-full transition-all duration-300",
+          active ? "bg-[var(--color-primary)]/10" : "bg-transparent hover:bg-[var(--state-hover-bg)]"
+        )}>
+         <Icon
+          className={cn(
+           "transition-all duration-200",
+           active
+            ? "h-[18px] w-[18px] text-[var(--color-primary)]"
+            : "h-[18px] w-[18px]"
+          )}
          />
-        )}
-
-        {/* Icon */}
-        <Icon
-         className={cn(
-          "transition-all duration-[var(--transition-fast)]",
-          active
-           ? "h-[20px] w-[20px] text-[var(--color-primary)]"
-           : "h-[18px] w-[18px]"
-         )}
-        />
-
-        {/* Label */}
-        <span className="leading-none">{item.label}</span>
+        </div>
+        <span className="leading-none mt-0.5">{item.label}</span>
        </Link>
       );
      })}
@@ -116,31 +109,30 @@ export function MobileBottomNav() {
        type="button"
        onClick={() => setIsMoreOpen(true)}
        className={cn(
-        "relative flex flex-col items-center justify-center gap-0.5",
-        "min-h-[52px] rounded-[var(--radius-md)] px-1 py-2",
-        "text-[11px] font-medium",
-        "transition-all duration-[var(--transition-fast)]",
+        "relative flex flex-col items-center justify-center gap-1",
+        "min-h-[52px] rounded-xl px-1 py-1.5 mx-0.5",
+        "text-[10px] font-semibold",
+        "transition-all duration-200",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]",
         isMoreActive
          ? "text-[var(--color-primary)]"
-         : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--state-hover-bg)]"
+         : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
        )}
       >
-       {isMoreActive && (
-        <span
-         className="absolute top-0 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-b-full bg-[var(--color-primary)]"
-         aria-hidden
+       <div className={cn(
+         "flex items-center justify-center h-7 w-12 rounded-full transition-all duration-300",
+         isMoreActive ? "bg-[var(--color-primary)]/10" : "bg-transparent hover:bg-[var(--state-hover-bg)]"
+       )}>
+        <Menu
+         className={cn(
+          "transition-all duration-200",
+          isMoreActive
+           ? "h-[18px] w-[18px] text-[var(--color-primary)]"
+           : "h-[18px] w-[18px]"
+         )}
         />
-       )}
-       <Menu
-        className={cn(
-         "transition-all duration-[var(--transition-fast)]",
-         isMoreActive
-          ? "h-[20px] w-[20px] text-[var(--color-primary)]"
-          : "h-[18px] w-[18px]"
-        )}
-       />
-       <span className="leading-none">Lainnya</span>
+       </div>
+       <span className="leading-none mt-0.5">Lainnya</span>
       </button>
      )}
 
@@ -150,16 +142,17 @@ export function MobileBottomNav() {
        type="button"
        onClick={() => void handleLogout()}
        className={cn(
-        "relative flex flex-col items-center justify-center gap-0.5",
-        "min-h-[52px] rounded-[var(--radius-md)] px-1 py-2",
-        "text-[11px] font-medium text-[var(--color-danger)]",
-        "transition-all duration-[var(--transition-fast)]",
-        "hover:bg-[var(--color-danger)]/10",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]"
+        "relative flex flex-col items-center justify-center gap-1",
+        "min-h-[52px] rounded-xl px-1 py-1.5 mx-0.5",
+        "text-[10px] font-semibold text-rose-500",
+        "transition-all duration-200 hover:text-rose-600",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
        )}
       >
-       <LogOut className="h-[18px] w-[18px]" />
-       <span className="leading-none">Logout</span>
+       <div className="flex items-center justify-center h-7 w-12 rounded-full bg-transparent hover:bg-rose-500/10 transition-all duration-300">
+        <LogOut className="h-[18px] w-[18px]" />
+       </div>
+       <span className="leading-none mt-0.5">Logout</span>
       </button>
      )}
     </div>
@@ -180,33 +173,42 @@ export function MobileBottomNav() {
        return (
         <Link
          key={item.href}
-         href={item.href}
-         onClick={() => setIsMoreOpen(false)}
+         href={item.isLocked ? ROUTES.plan(business.slug) : item.href}
+         onClick={(e) => {
+           if (item.isLocked) {
+             e.preventDefault();
+             toast.info("Fitur Terkunci", "Silakan upgrade paket Anda untuk menggunakan fitur ini.");
+           }
+           setIsMoreOpen(false);
+         }}
          className={cn(
-          "flex flex-col items-center justify-center gap-2.5 p-5 rounded-2xl border text-center transition-all duration-200",
-          "hover:scale-[1.01] active:scale-[0.99]",
+          "relative flex flex-col items-center justify-center gap-2.5 p-5 rounded-2xl border text-center transition-all duration-200",
+          "hover:scale-[1.02] active:scale-[0.98]",
           active
-           ? "bg-[var(--color-primary-surface)] border-[var(--color-primary)] text-[var(--color-primary)] font-bold shadow-xs"
-           : "bg-[var(--color-surface-elevated)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--state-hover-bg)]"
+           ? "bg-[var(--color-primary-surface)] border-[var(--color-primary)] text-[var(--color-primary)] font-bold shadow-sm"
+           : "bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)]"
          )}
         >
+         {item.isLocked && (
+           <Lock className="absolute top-3 right-3 h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+         )}
          <Icon className={cn("h-6 w-6", active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]")} />
          <span className="text-xs leading-none font-semibold">{item.label}</span>
         </Link>
        );
       })}
 
-      {/* Logout button */}
+      {/* Logout button in drawer */}
       <button
        type="button"
        onClick={() => void handleLogout()}
        className={cn(
-        "col-span-2 flex items-center justify-center gap-2.5 p-4.5 mt-2 rounded-2xl border text-center transition-all duration-200 font-bold active:scale-[0.99]",
-        "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/15"
+        "col-span-2 flex items-center justify-center gap-2.5 p-4 mt-3 rounded-xl transition-all duration-200 font-semibold active:scale-[0.99]",
+        "text-[var(--color-text-secondary)] hover:text-rose-600 hover:bg-rose-500/10"
        )}
       >
-       <LogOut className="h-5 w-5" />
-       <span className="text-xs">Keluar (Logout)</span>
+       <LogOut className="h-[18px] w-[18px]" />
+       <span className="text-sm">Keluar (Logout)</span>
       </button>
      </div>
     </Sheet>

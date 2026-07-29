@@ -4,7 +4,10 @@ export const weekdayLabels = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 export const weekdayShortLabels = ["S", "S", "R", "K", "J", "S", "M"];
 
 
-export function getTimelineCardClasses(status: OrderStatus, paymentStatus: PaymentStatus): string {
+export function getTimelineCardClasses(status: OrderStatus, paymentStatus: PaymentStatus, hasConflict: boolean = false): string {
+  if (hasConflict && status !== "BATAL" && status !== "SELESAI") {
+    return "bg-[var(--color-danger-surface)] border-red-600 border-2 text-red-700 shadow-[0_0_10px_rgba(239,68,68,0.5)] font-extrabold ring-2 ring-red-500 animate-[pulse_2s_ease-in-out_infinite] z-50";
+  }
   if (status === "BATAL") {
     return "bg-[var(--color-danger-surface)] border-[var(--color-danger)] border text-[var(--color-danger)] line-through opacity-70";
   }

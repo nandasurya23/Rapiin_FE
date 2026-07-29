@@ -40,6 +40,8 @@ export type Order = Timestamped & {
   notes?: string;
   lastFollowUpAt?: string;
   customerStatusSnapshot?: CustomerStatus;
+  pointsEarned?: number;
+  pointsUsed?: number;
 };
 
 export type StatusOption = {

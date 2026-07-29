@@ -4,7 +4,9 @@ import { PlusCircle, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { formatRupiahInput } from "@/lib/format";
+import { DURATION_OPTIONS } from "@/lib/constants/business";
 import type { FormErrors, SettingsFormState } from "./general-settings-tab";
 
 interface CatalogSettingsTabProps {
@@ -110,24 +112,22 @@ export function CatalogSettingsTab({ form, errors, setForm }: CatalogSettingsTab
                 {form.mode === "BOOKING_SERVICE" && (
                   <label className="block w-1/2">
                     <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                      Durasi (Jam)
+                      Durasi
                     </span>
-                    <Input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={service.durationMinutes ? service.durationMinutes / 60 : ""}
-                      placeholder="1"
-                      onChange={(event) =>
+                    <Select
+                      value={String(service.durationMinutes || 60)}
+                      options={DURATION_OPTIONS}
+                      onValueChange={(val) =>
                         setForm((current) => ({
                           ...current,
                           services: current.services.map((item) =>
                             item.id === service.id
-                              ? { ...item, durationMinutes: (parseInt(event.target.value, 10) || 0) * 60 || undefined }
+                              ? { ...item, durationMinutes: parseInt(val, 10) || undefined }
                               : item
                           ),
                         }))
                       }
+                      placeholder="Pilih Durasi"
                     />
                   </label>
                 )}

@@ -1,7 +1,7 @@
 import type { BusinessResource } from "@/types/business";
 import type { Order } from "@/types/order";
 
-export const BOOKING_SLOT_CAPACITY = 2;
+export const BOOKING_SLOT_CAPACITY = 1;
 export const RESOURCE_BOOKING_RESOURCE_CAPACITY = 1;
 export const BOOKING_HOLD_MINUTES = 15;
 export const DEFAULT_BOOKING_DURATION_MINUTES = 60;
@@ -9,20 +9,16 @@ export const DEFAULT_BOOKING_DURATION_MINUTES = 60;
 export type BookingSlotSummary = {
   time: string;
   count: number;
-  holdCount: number;
   paidCount: number;
   isFull: boolean;
 };
 
 export type BookingAvailability = {
   count: number;
-  holdCount: number;
   paidCount: number;
   remaining: number;
   isFull: boolean;
-  hasHold: boolean;
   overlappingOrders: Order[];
-  earliestHoldExpiresAt: Date | null;
   availableResourceCount?: number;
   busyResourceCount?: number;
   totalResourceCount?: number;
@@ -34,15 +30,12 @@ export type ResourceBookingDetail = {
   resourceName: string;
   isActive: boolean;
   count: number;
-  holdCount: number;
   paidCount: number;
   remaining: number;
   isFull: boolean;
-  hasHold: boolean;
   statusLabel: string;
   statusTone: "success" | "warning" | "danger" | "neutral";
   bookings: Order[];
-  earliestHoldExpiresAt: Date | null;
 };
 
 function normalizeValue(value?: string | null) {
@@ -176,41 +169,25 @@ function getUnassignedOverlapOrders(
   });
 }
 
-function getResourceStatusLabel(detail: Pick<ResourceBookingDetail, "isActive" | "isFull" | "hasHold" | "earliestHoldExpiresAt">) {
+function getResourceStatusLabel(detail: Pick<ResourceBookingDetail, "isActive" | "isFull">) {
   if (!detail.isActive) {
     return "Nonaktif";
-  }
-
-  if (detail.isFull && detail.hasHold) {
-    return detail.earliestHoldExpiresAt ? "Hold sampai aktif lagi" : "Sedang di-hold";
   }
 
   if (detail.isFull) {
     return "Penuh";
   }
 
-  if (detail.hasHold) {
-    return "Ditahan sementara";
-  }
-
   return "Kosong";
 }
 
-function getResourceStatusTone(detail: Pick<ResourceBookingDetail, "isActive" | "isFull" | "hasHold">) {
+function getResourceStatusTone(detail: Pick<ResourceBookingDetail, "isActive" | "isFull">) {
   if (!detail.isActive) {
     return "neutral" as const;
   }
 
-  if (detail.isFull && detail.hasHold) {
-    return "warning" as const;
-  }
-
   if (detail.isFull) {
     return "danger" as const;
-  }
-
-  if (detail.hasHold) {
-    return "warning" as const;
   }
 
   return "success" as const;
@@ -226,36 +203,6 @@ export function getBookingDurationMinutes(order?: Pick<Order, "bookingDurationMi
   return duration;
 }
 
-export function getBookingHoldExpiresAt(order?: Pick<Order, "bookingHoldExpiresAt"> | null) {
-  if (!order?.bookingHoldExpiresAt) {
-    return null;
-  }
-
-  const holdExpiresAt = new Date(order.bookingHoldExpiresAt);
-  if (Number.isNaN(holdExpiresAt.getTime())) {
-    return null;
-  }
-
-  return holdExpiresAt;
-}
-
-export function isBookingHoldActive(order: Order, now = new Date()) {
-  if (!order.scheduledDate || !order.scheduledTime) {
-    return false;
-  }
-
-  if (order.status === "BATAL" || order.paymentStatus === "CANCELLED" || order.paymentStatus === "REFUNDED") {
-    return false;
-  }
-
-  if (order.paymentStatus !== "UNPAID" || (order.status !== "WAITING_DP" && order.status !== "INQUIRY")) {
-    return false;
-  }
-
-  const holdExpiresAt = getBookingHoldExpiresAt(order);
-  return Boolean(holdExpiresAt && holdExpiresAt.getTime() > now.getTime());
-}
-
 export function isBookingLocked(order: Order, now = new Date()) {
   if (!order.scheduledDate || !order.scheduledTime) {
     return false;
@@ -263,13 +210,6 @@ export function isBookingLocked(order: Order, now = new Date()) {
 
   if (order.status === "BATAL" || order.status === "SELESAI" || order.paymentStatus === "CANCELLED" || order.paymentStatus === "REFUNDED") {
     return false;
-  }
-
-  if ((order.status === "INQUIRY" || order.status === "WAITING_DP") && order.paymentStatus === "UNPAID") {
-    const holdExpiresAt = getBookingHoldExpiresAt(order);
-    if (holdExpiresAt && holdExpiresAt.getTime() <= now.getTime()) {
-      return false;
-    }
   }
 
   return true;
@@ -438,30 +378,14 @@ export function getBookingAvailability(
 
   const safeCapacity = capacity && capacity > 0 ? capacity : BOOKING_SLOT_CAPACITY;
   const overlappingOrders = getBookingOverlapOrders(orders, date, time, durationMinutes, orderIdToExclude, now);
-  const holdOrders = overlappingOrders.filter((order) => isBookingHoldActive(order, now));
   const count = getBookingSlotCount(orders, date, time, durationMinutesOrExcludeOrderId, orderIdToExclude, now);
 
   return {
     count,
-    holdCount: holdOrders.length,
-    paidCount: overlappingOrders.length - holdOrders.length,
+    paidCount: overlappingOrders.length,
     remaining: Math.max(safeCapacity - count, 0),
     isFull: count >= safeCapacity,
-    hasHold: holdOrders.length > 0,
     overlappingOrders,
-    earliestHoldExpiresAt: holdOrders.reduce<Date | null>((earliest, order) => {
-      const holdExpiresAt = getBookingHoldExpiresAt(order);
-
-      if (!holdExpiresAt) {
-        return earliest;
-      }
-
-      if (!earliest || holdExpiresAt.getTime() < earliest.getTime()) {
-        return holdExpiresAt;
-      }
-
-      return earliest;
-    }, null),
   };
 }
 
@@ -489,7 +413,6 @@ export function getResourceBookingAvailability(
     availability: getResourceAvailabilityForSelection(orders, resource.id, date, time, durationMinutes, orderIdToExclude, now),
   }));
   const unavailableResources = resourceDetails.filter((detail) => detail.availability.isFull);
-  const holdResources = resourceDetails.filter((detail) => detail.availability.hasHold);
   const overlappingOrders = resourceDetails.flatMap((detail) => detail.availability.overlappingOrders);
   const unassignedOverlaps = getUnassignedOverlapOrders(orders, date, time, durationMinutes, orderIdToExclude, now);
   const abstractUnavailableCount = Math.min(unassignedOverlaps.length, activeResources.length);
@@ -498,22 +421,10 @@ export function getResourceBookingAvailability(
 
   return {
     count: effectiveBusyCount,
-    holdCount: holdResources.length,
-    paidCount: unavailableResources.length - holdResources.length,
+    paidCount: unavailableResources.length,
     remaining,
     isFull: activeResources.length > 0 ? remaining <= 0 : true,
-    hasHold: holdResources.length > 0,
     overlappingOrders: [...overlappingOrders, ...unassignedOverlaps],
-    earliestHoldExpiresAt: [...holdResources.flatMap((detail) => (detail.availability.earliestHoldExpiresAt ? [detail.availability.earliestHoldExpiresAt] : [])), ...unassignedOverlaps.flatMap((order) => {
-      const hold = getBookingHoldExpiresAt(order);
-      return hold ? [hold] : [];
-    })].reduce<Date | null>((earliest, value) => {
-      if (!earliest || value.getTime() < earliest.getTime()) {
-        return value;
-      }
-
-      return earliest;
-    }, null),
     availableResourceCount: remaining,
     busyResourceCount: effectiveBusyCount,
     totalResourceCount: activeResources.length,
@@ -540,30 +451,14 @@ export function getResourceAvailabilityForSelection(
   }
 
   const overlappingOrders = getOrdersByResource(orders, resourceId, date, time, durationMinutes, orderIdToExclude, now);
-  const holdOrders = overlappingOrders.filter((order) => isBookingHoldActive(order, now));
   const count = overlappingOrders.length;
 
   return {
     count,
-    holdCount: holdOrders.length,
-    paidCount: overlappingOrders.length - holdOrders.length,
+    paidCount: overlappingOrders.length,
     remaining: Math.max(RESOURCE_BOOKING_RESOURCE_CAPACITY - count, 0),
     isFull: count >= RESOURCE_BOOKING_RESOURCE_CAPACITY,
-    hasHold: holdOrders.length > 0,
     overlappingOrders,
-    earliestHoldExpiresAt: holdOrders.reduce<Date | null>((earliest, order) => {
-      const holdExpiresAt = getBookingHoldExpiresAt(order);
-
-      if (!holdExpiresAt) {
-        return earliest;
-      }
-
-      if (!earliest || holdExpiresAt.getTime() < earliest.getTime()) {
-        return holdExpiresAt;
-      }
-
-      return earliest;
-    }, null),
     availableResourceCount: Math.max(RESOURCE_BOOKING_RESOURCE_CAPACITY - count, 0),
     busyResourceCount: count,
     totalResourceCount: RESOURCE_BOOKING_RESOURCE_CAPACITY,
@@ -589,35 +484,18 @@ export function getResourceBookingDetailsForDate(
       .filter((order) => order.scheduledDate === normalizedDate && order.resourceId === resource.id)
       .sort((left, right) => (left.scheduledTime ?? "").localeCompare(right.scheduledTime ?? ""));
     const lockedBookings = bookings.filter((order) => isBookingLocked(order, now));
-    const holdBookings = lockedBookings.filter((order) => isBookingHoldActive(order, now));
-    const earliestHoldExpiresAt = holdBookings.reduce<Date | null>((earliest, order) => {
-      const holdExpiresAt = getBookingHoldExpiresAt(order);
-
-      if (!holdExpiresAt) {
-        return earliest;
-      }
-
-      if (!earliest || holdExpiresAt.getTime() < earliest.getTime()) {
-        return holdExpiresAt;
-      }
-
-      return earliest;
-    }, null);
 
     const detail: ResourceBookingDetail = {
       resourceId: resource.id,
       resourceName: resource.name,
       isActive: resource.isActive,
       count: lockedBookings.length,
-      holdCount: holdBookings.length,
-      paidCount: lockedBookings.length - holdBookings.length,
+      paidCount: lockedBookings.length,
       remaining: resource.isActive && lockedBookings.length < RESOURCE_BOOKING_RESOURCE_CAPACITY ? 1 : 0,
       isFull: resource.isActive ? lockedBookings.length >= RESOURCE_BOOKING_RESOURCE_CAPACITY : false,
-      hasHold: holdBookings.length > 0,
       statusLabel: "",
       statusTone: "neutral",
       bookings,
-      earliestHoldExpiresAt,
     };
 
     return {
@@ -660,7 +538,6 @@ export function getBookingSlotsForDate(orders: Order[], date?: string | null, ex
     {
       time: string;
       count: number;
-      holdCount: number;
       paidCount: number;
     }
   >();
@@ -700,8 +577,7 @@ export function getBookingSlotsForDate(orders: Order[], date?: string | null, ex
     slotMap.set(time, {
       time,
       count: getBookingSlotCount(orders, normalizedDate, time, representativeDuration, excludeOrderId, now),
-      holdCount: overlappingOrders.filter((order) => isBookingHoldActive(order, now)).length,
-      paidCount: overlappingOrders.filter((order) => !isBookingHoldActive(order, now)).length,
+      paidCount: overlappingOrders.length,
     });
   });
 

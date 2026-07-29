@@ -134,13 +134,17 @@ export function InvoicesPage() {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
  }
 
- function getAvatarGradient(name: string) {
-  const code = name.charCodeAt(0) % 4;
-  if (code === 0) return "from-blue-400 to-indigo-600";
-  if (code === 1) return "from-emerald-400 to-teal-600";
-  if (code === 2) return "from-amber-400 to-orange-600";
-  return "from-pink-400 to-rose-600";
- }
+ const getAvatarGradient = (id: string) => {
+  const num = parseInt(id.replace(/\D/g, '')) || 0;
+  const gradients = [
+   'from-[var(--color-primary)] to-[var(--color-accent)]',
+   'from-[var(--color-success)] to-[var(--color-primary-hover)]',
+   'from-[var(--color-warning)] to-[var(--color-danger)]',
+   'from-[var(--color-accent)] to-[var(--color-danger-hover)]',
+   'from-[var(--color-primary-hover)] to-[var(--color-accent)]'
+  ];
+  return gradients[num % gradients.length];
+ };
 
  return (
   <main className="page-enter space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -175,10 +179,10 @@ export function InvoicesPage() {
 
    {/* SECTION 2: STATS SUMMARY */}
    <section className="animate-fade-up-delay-1">
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md ">
      <div className="p-5">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 text-sm text-[var(--color-text-secondary)]">
+       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)]/60 backdrop-blur-md p-5 text-sm text-[var(--color-text-secondary)]">
         <div className="flex items-center justify-between gap-3">
          <div>
           <p className="font-extrabold text-[var(--color-text)] uppercase tracking-wider text-xs">Penagihan Tagihan &amp; DP</p>
@@ -186,18 +190,18 @@ export function InvoicesPage() {
          </div>
          <ReceiptText className="h-6 w-6 text-[var(--color-primary)] shrink-0" />
         </div>
-        <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+        <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
          <span className="font-bold text-[var(--color-text)]">💡 Informasi Nota:</span> PDF download dan cetak kertas struk thermal akan langsung terformat rapi menyesuaikan ukuran layar penerima.
         </div>
        </div>
 
        <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-5 flex flex-col justify-between">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)]/60 backdrop-blur-md p-5 flex flex-col justify-between">
          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Total Invoice</p>
          <p className="mt-2 text-3xl font-black text-[var(--color-text)] tracking-tight">{invoices.length}</p>
          <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Nota terdaftar</p>
         </div>
-        <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-5 flex flex-col justify-between">
+        <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)]/60 backdrop-blur-md p-5 flex flex-col justify-between">
          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-success-text)]">Invoice Lunas</p>
          <p className="mt-2 text-3xl font-black text-[var(--color-text)] tracking-tight">
           {invoices.filter((invoice) => invoice.paymentStatus === "PAID").length}
@@ -213,7 +217,7 @@ export function InvoicesPage() {
    {/* SECTION 3: INVOICES GRID */}
    <section className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr] animate-fade-up-delay-2">
     {/* Left Card: Invoice List */}
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] ">
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md ">
      <div className="space-y-4 p-5">
       <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
        <div>
@@ -240,14 +244,13 @@ export function InvoicesPage() {
         const active = selectedInvoice?.id === invoice.id;
         
         // Indicator border stripe based on payment status
-        let leftBorderStripe = "border-l-4 border-l-stone-300";
-        if (invoice.paymentStatus === "PAID") {
-         leftBorderStripe = "border-l-4 border-l-emerald-500";
-        } else if (invoice.paymentStatus === "DP_PAID") {
-         leftBorderStripe = "border-l-4 border-l-blue-500";
-        } else if (invoice.paymentStatus === "UNPAID") {
-         leftBorderStripe = "border-l-4 border-l-rose-500";
-        }
+        const leftBorderStripe = invoice.paymentStatus === "PAID" 
+          ? "border-l-4 border-l-[var(--color-success)]" 
+          : invoice.paymentStatus === "DP_PAID" 
+          ? "border-l-4 border-l-[var(--color-warning)]" 
+          : invoice.paymentStatus === "UNPAID" 
+          ? "border-l-4 border-l-[var(--color-danger)]"
+          : "border-l-4 border-l-[var(--color-border)]";
 
         return (
          <button

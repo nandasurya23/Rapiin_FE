@@ -40,6 +40,22 @@ export const OPERATIONAL_MODEL_OPTIONS: OperationalModelOption[] = [
 
 export const RESOURCE_LABEL_SUGGESTIONS = ["Staf", "Tim", "Kapster", "Ruangan", "Meja", "PS", "Lapangan", "Court", "Studio", "Room"] as const;
 
+export const DURATION_OPTIONS = [
+  { value: "15", label: "15 Menit" },
+  { value: "30", label: "30 Menit" },
+  { value: "45", label: "45 Menit" },
+  { value: "60", label: "1 Jam" },
+  { value: "90", label: "1.5 Jam" },
+  { value: "120", label: "2 Jam" },
+  { value: "150", label: "2.5 Jam" },
+  { value: "180", label: "3 Jam" },
+  { value: "240", label: "4 Jam" },
+  { value: "300", label: "5 Jam" },
+  { value: "360", label: "6 Jam" },
+  { value: "720", label: "12 Jam" },
+  { value: "1440", label: "24 Jam (1 Hari)" },
+];
+
 export function getDefaultOperationalModel(mode: BusinessMode): OperationalModel {
   if (mode === "BOOKING_SERVICE") {
     return "APPOINTMENT";
@@ -49,7 +65,7 @@ export function getDefaultOperationalModel(mode: BusinessMode): OperationalModel
 }
 
 export function doesOperationalModelUseResources(model: OperationalModel) {
-  return model === "RESOURCE_BOOKING";
+  return model === "RESOURCE_BOOKING" || model === "APPOINTMENT";
 }
 
 export function createBusinessResources(resourceLabel: string, resourceCount: number): BusinessResource[] {

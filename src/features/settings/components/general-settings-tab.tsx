@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { compressLogoImage } from "@/lib/image";
-import { BUSINESS_MODE_OPTIONS, getDefaultOperationalModel, doesOperationalModelUseResources } from "@/lib/constants/business";
+import { BUSINESS_MODE_OPTIONS } from "@/lib/constants/business";
 import type { BusinessResource, OperationalModel, PublicCatalogItem } from "@/types/business";
 
 export type SettingsFormState = {
@@ -29,6 +29,7 @@ export type SettingsFormState = {
   resources: BusinessResource[];
   services: PublicCatalogItem[];
   logoUrl: string;
+  autoCreateOrderFromSubmission: boolean;
 };
 
 export type FormErrors = Partial<Record<keyof SettingsFormState, string>> & {
@@ -40,16 +41,12 @@ interface GeneralSettingsTabProps {
   form: SettingsFormState;
   errors: FormErrors;
   updateForm: <K extends keyof SettingsFormState>(field: K, value: SettingsFormState[K]) => void;
-  setForm: React.Dispatch<React.SetStateAction<SettingsFormState>>;
-  buildResources: (label: string, count: string, current: BusinessResource[]) => BusinessResource[];
 }
 
 export function GeneralSettingsTab({
   form,
   errors,
   updateForm,
-  setForm,
-  buildResources,
 }: GeneralSettingsTabProps) {
   const toast = useToast();
 
@@ -169,24 +166,13 @@ export function GeneralSettingsTab({
             </span>
             <Select
               value={form.mode}
-              onValueChange={(value) => {
-                const nextMode = value as SettingsFormState["mode"];
-                const nextOperationalModel =
-                  nextMode === "BOOKING_SERVICE" ? form.operationalModel : getDefaultOperationalModel(nextMode);
-                const nextUsesResources = doesOperationalModelUseResources(nextOperationalModel);
-                const nextResources = nextUsesResources
-                  ? buildResources(form.resourceLabel, form.resourceCount, form.resources)
-                  : form.resources.map((resource) => ({ ...resource, isActive: false }));
-
-                setForm((current) => ({
-                  ...current,
-                  mode: nextMode,
-                  operationalModel: nextOperationalModel,
-                  resources: nextResources,
-                }));
-              }}
+              onValueChange={() => {}}
               options={BUSINESS_MODE_OPTIONS}
+              disabled={true}
             />
+            <p className="mt-1.5 text-[11px] text-[var(--color-text-secondary)] font-medium">
+              Mode bisnis dikunci setelah pendaftaran.
+            </p>
           </label>
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
@@ -194,9 +180,13 @@ export function GeneralSettingsTab({
             </span>
             <Input
               value={form.niche}
-              onChange={(e) => updateForm("niche", e.target.value)}
+              onChange={() => {}}
               placeholder="Contoh: Warnet, Barbershop, Rental PS, Futsal..."
+              disabled={true}
             />
+            <p className="mt-1.5 text-[11px] text-[var(--color-text-secondary)] font-medium">
+              Kategori bisnis dikunci untuk menjaga format pesanan.
+            </p>
           </label>
         </div>
 
@@ -220,7 +210,7 @@ export function GeneralSettingsTab({
             </span>
             <div className="flex items-center gap-2">
               <datalist id="time-options">
-                {Array.from({ length: 25 }, (_, i) => (
+                {Array.from({ length: 24 }, (_, i) => (
                   <option key={i} value={`${String(i).padStart(2, "0")}:00`} />
                 ))}
               </datalist>
@@ -228,24 +218,27 @@ export function GeneralSettingsTab({
                 type="text"
                 list="time-options"
                 placeholder="09:00"
-                value={form.openingHours.split(" - ")[0] || "09:00"}
+                value={(form.openingHours.split("-")[0] || "").trim() || "09:00"}
                 onChange={(event) => {
-                  const end = form.openingHours.split(" - ")[1] || "21:00";
-                  updateForm("openingHours", `${event.target.value} - ${end}`);
+                  const end = (form.openingHours.split("-")[1] || "").trim() || "21:00";
+                  updateForm("openingHours", `${event.target.value}-${end}`);
                 }}
               />
               <span className="text-[var(--color-text-secondary)] font-bold">-</span>
               <Input
                 type="text"
                 list="time-options"
-                placeholder="24:00"
-                value={form.openingHours.split(" - ")[1] || "24:00"}
+                placeholder="21:00"
+                value={(form.openingHours.split("-")[1] || "").trim() || "21:00"}
                 onChange={(event) => {
-                  const start = form.openingHours.split(" - ")[0] || "09:00";
-                  updateForm("openingHours", `${start} - ${event.target.value}`);
+                  const start = (form.openingHours.split("-")[0] || "").trim() || "09:00";
+                  updateForm("openingHours", `${start}-${event.target.value}`);
                 }}
               />
             </div>
+            <p className="mt-1.5 text-[11px] text-[var(--color-text-secondary)]">
+              Contoh: 09:00 - 21:00. Mendukung juga jam buka semalaman (overnight), contoh: 20:00 - 05:00.
+            </p>
           </label>
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">

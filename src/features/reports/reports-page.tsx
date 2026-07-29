@@ -80,7 +80,7 @@ export function ReportsPage() {
    {/* SECTION 2: KEY METRICS */}
    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-fade-up-delay-1">
     {/* Omzet */}
-    <div className="border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col justify-between h-32 rounded-md">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-5 flex flex-col justify-between h-32 shadow-sm">
      <div className="flex items-center gap-2 text-[var(--color-accent)]">
       <Wallet className="h-4 w-4" />
       <span className="text-xs font-bold uppercase tracking-wider">Total Omzet</span>
@@ -92,7 +92,7 @@ export function ReportsPage() {
     </div>
 
     {/* Total Orders */}
-    <div className="border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col justify-between h-32 rounded-md">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-5 flex flex-col justify-between h-32 shadow-sm">
      <div className="flex items-center gap-2 text-[var(--color-primary)]">
       <TrendingUp className="h-4 w-4" />
       <span className="text-xs font-bold uppercase tracking-wider">Total Order</span>
@@ -104,7 +104,7 @@ export function ReportsPage() {
     </div>
 
     {/* Customer Baru */}
-    <div className="border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col justify-between h-32 rounded-md">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-5 flex flex-col justify-between h-32 shadow-sm">
      <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
       <Users className="h-4 w-4" />
       <span className="text-xs font-bold uppercase tracking-wider">Customer Baru</span>
@@ -126,28 +126,28 @@ export function ReportsPage() {
      </div>
      
      <div className="grid grid-cols-3 gap-3">
-      <div className="border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-4 rounded-md">
+      <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-4 shadow-sm">
        <CheckCircle2 className="h-5 w-5 text-[var(--color-success)] mb-3" />
-       <p className="text-[10px] font-extrabold uppercase text-[var(--color-text-muted)]">Selesai</p>
+       <p className="text-[10px] font-extrabold uppercase text-[var(--color-success-text)]">Selesai</p>
        <p className="text-2xl font-black text-[var(--color-text)] mt-1">{summary.completedOrders}</p>
       </div>
       
-      <div className="border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] p-4 rounded-md">
+      <div className="rounded-2xl border border-[var(--color-danger-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-4 shadow-sm">
        <XCircle className="h-5 w-5 text-[var(--color-danger)] mb-3" />
-       <p className="text-[10px] font-extrabold uppercase text-[var(--color-text-muted)]">Batal</p>
+       <p className="text-[10px] font-extrabold uppercase text-[var(--color-danger-text)]">Batal</p>
        <p className="text-2xl font-black text-[var(--color-text)] mt-1">{summary.cancelledOrders}</p>
       </div>
       
-      <div className="border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] p-4 rounded-md">
+      <div className="rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-4 shadow-sm">
        <Clock className="h-5 w-5 text-[var(--color-warning)] mb-3" />
-       <p className="text-[10px] font-extrabold uppercase text-[var(--color-text-muted)]">Belum Lunas</p>
+       <p className="text-[10px] font-extrabold uppercase text-[var(--color-warning-text)]">Belum Lunas</p>
        <p className="text-2xl font-black text-[var(--color-text)] mt-1">{summary.unpaidCount}</p>
       </div>
      </div>
     </div>
 
     {/* Right: Top Products */}
-    <div className="space-y-4">
+    <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md p-5 shadow-sm">
      <div className="border-b border-[var(--color-border)] pb-2">
       <h2 className="text-lg font-bold text-[var(--color-text)]">Layanan Terlaris</h2>
       <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Top 3 {periodLabel.toLowerCase()}.</p>
@@ -155,11 +155,11 @@ export function ReportsPage() {
      
      <div className="space-y-3">
       {topItems.length > 0 ? topItems.map((item, index) => (
-       <div key={item.name} className="flex items-center justify-between gap-3 p-3 border-b border-[var(--color-border)] last:border-0">
+       <div key={item.name} className="flex items-center justify-between gap-3 p-3 border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-elevated)] transition-colors rounded-xl">
         <div className="flex items-center gap-3 min-w-0">
          <span className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center text-xs font-black text-[var(--color-text)]",
-          index === 0 ? "text-[var(--color-accent)]" : index === 1 ? "text-[var(--color-navy-500)]" : "text-[var(--color-navy-700)]"
+          "flex h-7 w-7 shrink-0 items-center justify-center text-xs font-black text-[var(--color-text)] rounded-full bg-[var(--color-surface)] shadow-xs",
+          index === 0 ? "text-[var(--color-accent)] border border-[var(--color-accent)]/20" : index === 1 ? "text-[var(--color-text)] border border-[var(--color-border)]" : "text-[var(--color-text-muted)] border border-[var(--color-border)]"
          )}>
           #{index + 1}
          </span>
@@ -180,7 +180,7 @@ export function ReportsPage() {
 
    {/* SECTION 4: ACTIONS */}
    <section className="animate-fade-up-delay-3">
-    <div className="p-5 border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-md">
+    <div className="p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
      <div>
       <h2 className="text-base font-bold text-[var(--color-text)]">Export Data Laporan</h2>
       <p className="text-xs text-[var(--color-text-secondary)] mt-1 max-w-lg">Unduh rangkuman statistik {periodLabel.toLowerCase()} dalam format CSV untuk diolah lebih lanjut di Microsoft Excel atau Google Sheets.</p>

@@ -4,14 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
 import {
-  BOOKING_HOLD_MINUTES,
-  DEFAULT_BOOKING_DURATION_MINUTES,
-  getBookingAvailability,
-  getResourceBookingAvailability,
-  getResourceBookingDetailsForDate,
-  getResourceAvailabilityForSelection,
-} from "@/lib/booking";
-import {
   getPublicCatalog,
   inferCatalogDurationMinutes,
   getPublicFormFields,
@@ -21,6 +13,9 @@ import type { Business, BusinessMode } from "@/types/business";
 import { apiFetch } from "@/lib/api-client";
 import { canCreateOrder as checkCanCreateOrder } from "@/lib/subscription";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
+
+export const BOOKING_HOLD_MINUTES = 30; // updated to 30 mins based on new architecture
+export const DEFAULT_BOOKING_DURATION_MINUTES = 60;
 
 export type FormState = Record<string, string>;
 
@@ -33,6 +28,7 @@ export const initialStateByMode: Record<BusinessMode, FormState> = {
     scheduledTime: "",
     bookingDurationMinutes: "60",
     resourceId: "",
+    staffPreferenceName: "", // 2A: Optional staff preference for APPOINTMENT mode
     notes: "",
     botField: "",
   },
@@ -198,17 +194,9 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
         );
         step = 2;
       }
-    } else if (catalogList.length === 1 && business.mode !== "CUSTOM_REQUEST") {
-      const item = catalogList[0];
-      initialForm = applyCatalogSelectionToForm(
-        business.mode,
-        initialForm,
-        item.name,
-        inferCatalogDurationMinutes(item),
-        item.priceLabel,
-        item.id
-      );
-      step = 2;
+    } else if (catalogList.length > 0 && business.mode !== "CUSTOM_REQUEST") {
+      // Don't auto-select catalog items by default, force user to choose
+      step = 1;
     }
 
     setForm(initialForm);
@@ -237,96 +225,81 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     return parsedDuration;
   }, [form.bookingDurationMinutes]);
 
-  const bookingAvailability = useMemo(
-    () =>
-      business
-        ? getBookingAvailability(
-            orders,
-            form.scheduledDate,
-            form.scheduledTime,
-            bookingDurationMinutes,
-            undefined,
-            undefined,
-            business.bookingCapacity
-          )
-        : {
-            isFull: false,
-            count: 0,
-            hasHold: false,
-            earliestHoldExpiresAt: null,
-            remaining: 0,
-          },
-    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business]
-  );
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [insufficientTimes, setInsufficientTimes] = useState<string[]>([]);
+  const [passedTimes, setPassedTimes] = useState<string[]>([]);
+  const [availableResourcesByTime, setAvailableResourcesByTime] = useState<Record<string, string[]>>({});
+  const [isDateClosed, setIsDateClosed] = useState(false);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
 
-  const resourceBookingAvailability = useMemo(
-    () =>
-      business
-        ? getResourceBookingAvailability(
-            orders,
-            business.resources ?? [],
-            form.scheduledDate,
-            form.scheduledTime,
-            bookingDurationMinutes
-          )
-        : {
-            isFull: false,
-            count: 0,
-            hasHold: false,
-            earliestHoldExpiresAt: null,
-            remaining: 0,
-          },
-    [bookingDurationMinutes, form.scheduledDate, form.scheduledTime, orders, business]
-  );
+  useEffect(() => {
+    if (!business || !form.scheduledDate) {
+      setAvailableTimes([]);
+      setInsufficientTimes([]);
+      setPassedTimes([]);
+      setIsDateClosed(false);
+      return;
+    }
 
-  const specificResourceAvailability = useMemo(() => {
-    if (!form.resourceId || form.resourceId === "ANY") return null;
-    return getResourceAvailabilityForSelection(
-      orders,
-      form.resourceId,
-      form.scheduledDate,
-      form.scheduledTime,
-      bookingDurationMinutes
-    );
-  }, [form.resourceId, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, orders]);
+    let isMounted = true;
+    const fetchAvailability = async () => {
+      setLoadingAvailability(true);
+      try {
+        const query = new URLSearchParams({
+          date: form.scheduledDate,
+        });
+        if (form.serviceId) query.append("serviceId", form.serviceId);
+        if (bookingDurationMinutes) query.append("duration", String(bookingDurationMinutes));
+        query.append("_t", String(Date.now())); // Cache-busting
 
-  const activeAvailability =
-    form.resourceId && form.resourceId !== "ANY"
-      ? specificResourceAvailability!
-      : business?.operationalModel === "RESOURCE_BOOKING"
-      ? resourceBookingAvailability
-      : bookingAvailability;
+        const res = await apiFetch<{ isClosed: boolean; availableTimes: string[]; insufficientTimes?: string[]; passedTimes?: string[]; availableResourcesByTime?: Record<string, string[]> }>(
+          `/api/public/b/${business.slug}/availability?${query.toString()}`
+        );
+        if (isMounted) {
+          setIsDateClosed(res.isClosed);
+          setAvailableTimes(res.availableTimes || []);
+          setInsufficientTimes(res.insufficientTimes || []);
+          setPassedTimes(res.passedTimes || []);
+          setAvailableResourcesByTime(res.availableResourcesByTime || {});
+        }
+      } catch (err) {
+        console.error("Failed to fetch availability", err);
+      } finally {
+        if (isMounted) setLoadingAvailability(false);
+      }
+    };
 
-  const resourceDetailsForDate = useMemo(() => {
-    if (!business || business.operationalModel !== "RESOURCE_BOOKING" || !form.scheduledDate)
-      return [];
-    return getResourceBookingDetailsForDate(orders, business.resources ?? [], form.scheduledDate);
-  }, [business, form.scheduledDate, orders]);
+    fetchAvailability();
+    return () => { isMounted = false; };
+  }, [business, form.scheduledDate, form.serviceId, bookingDurationMinutes]);
 
   const slotHint = useMemo(() => {
     if (!business || business.mode !== "BOOKING_SERVICE") return "";
 
-    if (!form.scheduledDate || !form.scheduledTime) {
-      return `Silakan tentukan tanggal dan jam. Pemesanan tanpa Uang Muka (DP) akan disimpan selama ${BOOKING_HOLD_MINUTES} menit sebelum otomatis dibatalkan.`;
+    if (!form.scheduledDate) {
+      return `Silakan tentukan tanggal untuk melihat ketersediaan. Pemesanan tanpa Uang Muka (DP) akan disimpan selama ${BOOKING_HOLD_MINUTES} menit sebelum otomatis dibatalkan.`;
+    }
+    if (loadingAvailability) return "Sedang memeriksa jadwal...";
+    if (isDateClosed) return "Tanggal ini tutup atau tidak tersedia.";
+    if (availableTimes.length === 0 && insufficientTimes.length === 0) return "Jadwal pada hari ini sudah penuh. Silakan pilih tanggal lain.";
+    
+    let txt = "";
+    if (availableTimes.length === 0 && insufficientTimes.length > 0) {
+       txt = "Tidak ada jadwal yang tersedia untuk durasi ini. ";
+    } else {
+       txt = `Tersedia ${availableTimes.length} pilihan jam. `;
     }
 
-    if (activeAvailability.isFull) {
-      if (activeAvailability.hasHold) {
-        return activeAvailability.earliestHoldExpiresAt
-          ? `Jadwal sementara menunggu konfirmasi pembayaran DP. Akan terbuka kembali jika pembayaran belum selesai pada pukul ${formatHoldReleaseTime(
-              activeAvailability.earliestHoldExpiresAt.toISOString()
-            )}.`
-          : "Jadwal sementara menunggu konfirmasi pembayaran DP.";
-      }
-      return "Jadwal pada jam ini sudah penuh. Silakan pilih jam lain.";
+    if (insufficientTimes.length > 0) {
+      const durHours = bookingDurationMinutes / 60;
+      txt += `Beberapa jam ditutup karena durasi layanan (${durHours} jam) melewati jam tutup operasional toko. `;
     }
 
-    if (activeAvailability.remaining > 0) {
-      return `Tersisa ${activeAvailability.remaining} slot untuk jam ini.`;
+    if (business?.mode === "BOOKING_SERVICE") {
+      txt += `Pemesanan tanpa DP disimpan ${BOOKING_HOLD_MINUTES} menit.`;
     }
-
-    return `Tersedia untuk dipesan. Pemesanan tanpa DP disimpan ${BOOKING_HOLD_MINUTES} menit.`;
-  }, [activeAvailability, business, form.scheduledDate, form.scheduledTime]);
+    return txt;
+  }, [loadingAvailability, isDateClosed, availableTimes.length, insufficientTimes.length, business?.mode, bookingDurationMinutes, form.serviceId]);
 
   function updateField(name: string, value: string) {
     setError("");
@@ -334,6 +307,10 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
       const next = { ...current, [name]: value };
 
       if (name === "scheduledDate" && business && isTimeRequired(business)) {
+        next.scheduledTime = "";
+      }
+
+      if (name === "resourceId") {
         next.scheduledTime = "";
       }
 
@@ -402,17 +379,17 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
       return;
     }
 
+    if (form.name && form.name.trim().length > 0 && form.name.trim().length < 2) {
+      const msg = "Nama pelanggan minimal 2 karakter.";
+      setError(msg);
+      toast.error("Nama Terlalu Pendek", msg);
+      return;
+    }
+
     if (form.whatsappNumber && !isValidPhoneNumber(form.whatsappNumber)) {
       const msg = "Nomor WhatsApp tidak valid. Gunakan format seperti 08123456789.";
       setError(msg);
       toast.error("Format Nomor Salah", msg);
-      return;
-    }
-
-    if (business.mode === "BOOKING_SERVICE" && activeAvailability.isFull) {
-      const msg = "Slot waktu yang dipilih sudah penuh. Silakan pilih jam lain.";
-      setError(msg);
-      toast.error("Slot Penuh", msg);
       return;
     }
 
@@ -444,47 +421,48 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     }
   }
 
-  const getCandidateAvailability = (time: string) => {
-    if (business?.openingHours && business.openingHours.includes("-")) {
-      const [start, end] = business.openingHours.split("-").map((t) => t.trim());
-      if (start && end) {
-        const [targetH, targetM] = time.split(":").map(Number);
-        const targetMin = targetH * 60 + targetM;
-        const finishMin = targetMin + bookingDurationMinutes;
 
-        const [startH, startM] = start.split(":").map(Number);
-        const startMin = startH * 60 + startM;
 
-        const [endH, endM] = end.split(":").map(Number);
-        const endMin = endH * 60 + endM;
+  const isResourceBooking = business?.mode === "BOOKING_SERVICE" && business?.usesResources;
+  const totalSteps = useMemo(() => {
+    if (!business) return 1;
+    if (business.mode !== "BOOKING_SERVICE") return 2;
+    return isResourceBooking ? 4 : 3;
+  }, [business, isResourceBooking]);
 
-        if (targetMin < startMin || finishMin > endMin) {
-          return {
-            count: 1,
-            holdCount: 0,
-            paidCount: 1,
-            remaining: 0,
-            isFull: true,
-            hasHold: false,
-            overlappingOrders: [],
-            earliestHoldExpiresAt: null,
-            availableResourceCount: 0,
-            busyResourceCount: 1,
-            totalResourceCount: 1,
-            unavailableResourceIds: []
-          };
-        }
-      }
+  const canGoNext = useMemo(() => {
+    if (business?.mode !== "BOOKING_SERVICE") {
+      if (currentStep === 1) return !!form.serviceId || !!form.requestDetail || !!form.service;
+      return true;
     }
+    
+    // BOOKING_SERVICE mode
+    if (currentStep === 1) {
+      return !!form.serviceId || !!form.service;
+    }
+    
+    if (isResourceBooking) {
+      if (currentStep === 1) return !!form.serviceId || !!form.service;
+      if (currentStep === 2) return !!form.scheduledDate && !!form.resourceId;
+      if (currentStep === 3) return !!form.scheduledTime;
+    } else {
+      if (currentStep === 2) return !!form.scheduledDate && !!form.scheduledTime;
+    }
+    
+    return true;
+  }, [business, currentStep, form, isResourceBooking]);
 
-    if (business?.operationalModel === "RESOURCE_BOOKING" && form.resourceId && form.resourceId !== "ANY") {
-      return getResourceAvailabilityForSelection(orders, form.resourceId, form.scheduledDate, time, bookingDurationMinutes);
+  function handleNextStep() {
+    if (canGoNext && currentStep < totalSteps) {
+      setCurrentStep(s => s + 1);
     }
-    if (business?.operationalModel === "RESOURCE_BOOKING") {
-      return getResourceBookingAvailability(orders, business.resources ?? [], form.scheduledDate, time, bookingDurationMinutes);
+  }
+
+  function handlePrevStep() {
+    if (currentStep > 1) {
+      setCurrentStep(s => s - 1);
     }
-    return getBookingAvailability(orders, form.scheduledDate, time, bookingDurationMinutes, undefined, undefined, business?.bookingCapacity);
-  };
+  }
 
   return {
     business,
@@ -498,14 +476,23 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     isSubmitting,
     currentStep,
     setCurrentStep,
+    totalSteps,
+    canGoNext,
+    handleNextStep,
+    handlePrevStep,
+    isResourceBooking,
     canCreateOrder,
     bookingDurationMinutes,
-    bookingAvailability,
-    activeAvailability,
-    resourceDetailsForDate,
-    resourceBookingAvailability,
+    bookingAvailability: { isFull: isDateClosed, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: availableTimes.length },
+    activeAvailability: { isFull: isDateClosed, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: availableTimes.length },
+    resourceDetailsForDate: [],
+    resourceBookingAvailability: { isFull: isDateClosed, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: availableTimes.length },
+    loadingAvailability,
+    availableTimes,
+    insufficientTimes,
+    passedTimes,
+    availableResourcesByTime,
     slotHint,
-    getCandidateAvailability,
     updateField,
     handleSelectCatalogItem,
     handleClearCatalogItem,

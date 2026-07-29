@@ -87,10 +87,10 @@ export function SmartPaymentDialog({ isOpen, onClose, order, nextStatus, onConfi
 
  return (
   <Dialog open={isOpen} onOpenChange={onClose}>
-   <DialogContent className="sm:max-w-md">
+   <DialogContent className="sm:max-w-md bg-[var(--color-surface)]/90 backdrop-blur-xl border border-[var(--color-border)] shadow-xl">
     <DialogHeader>
      <DialogTitle>Update Pembayaran</DialogTitle>
-     <DialogDescription className="mt-2">
+     <DialogDescription className="mt-2 text-[var(--color-text-secondary)]">
       Pesanan <strong className="text-[var(--color-text)]">{order.customerName}</strong> dipindah ke status <strong>{nextStatus}</strong>.<br/>
       Silakan perbarui status pembayaran pelanggan.
      </DialogDescription>
@@ -103,14 +103,14 @@ export function SmartPaymentDialog({ isOpen, onClose, order, nextStatus, onConfi
        value={totalAmountStr}
        onValueChange={setTotalAmountStr}
        placeholder="Rp 0"
-       className={parsedTotal <= 0 ? "border-red-400 bg-red-50/50" : ""}
+       className={parsedTotal <= 0 ? "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)]" : "bg-[var(--color-surface)]"}
       />
       {parsedTotal <= 0 && (
-       <p className="mt-1 text-[10px] text-red-500 font-semibold">*Masukkan total tagihan terlebih dahulu.</p>
+       <p className="mt-1 text-[10px] text-[var(--color-danger-text)] font-semibold">*Masukkan total tagihan terlebih dahulu.</p>
       )}
      </div>
 
-     {error && <p className="text-xs text-red-500 font-bold bg-red-50 p-2 rounded-lg border border-red-100">{error}</p>}
+     {error && <p className="text-xs text-[var(--color-danger-text)] font-bold bg-[var(--color-danger-surface)] p-2 rounded-lg border border-[var(--color-danger-border)]">{error}</p>}
 
      {!showCustomDp ? (
       <div className="grid gap-2">
@@ -119,7 +119,7 @@ export function SmartPaymentDialog({ isOpen, onClose, order, nextStatus, onConfi
          type="button" 
          onClick={handleLunasCash} 
          disabled={parsedTotal <= 0}
-         className="w-full h-12 bg-[var(--color-success)] hover:bg-[var(--color-success)]/90 text-white font-bold flex flex-col items-center justify-center gap-0.5 leading-tight"
+         className="w-full h-12 bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] text-white font-bold flex flex-col items-center justify-center gap-0.5 leading-tight shadow-sm"
         >
          <span>LUNAS (Tunai)</span>
          <span className="text-[10px] font-medium opacity-90">{formatCurrency(parsedTotal)}</span>
@@ -128,7 +128,7 @@ export function SmartPaymentDialog({ isOpen, onClose, order, nextStatus, onConfi
          type="button" 
          onClick={handleLunasNonCash} 
          disabled={parsedTotal <= 0}
-         className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold flex flex-col items-center justify-center gap-0.5 leading-tight shadow-sm"
+         className="w-full h-12 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-bold flex flex-col items-center justify-center gap-0.5 leading-tight shadow-sm"
         >
          <span>LUNAS (QRIS/Trf)</span>
          <span className="text-[10px] font-medium opacity-90">{formatCurrency(parsedTotal)}</span>

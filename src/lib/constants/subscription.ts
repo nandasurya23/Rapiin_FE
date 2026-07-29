@@ -1,9 +1,6 @@
 import type { PlanCode, PlanDefinition } from "@/types/subscription";
 
-export const TRIAL_CUSTOMER_LIMIT = 25;
 export const TRIAL_DURATION_DAYS = 30;
-export const PRO_CUSTOMER_LIMIT = 500;
-export const PREMIUM_CUSTOMER_LIMIT = 9999;
 export const TRIAL_WARNING_DAYS = 5;
 
 export const PLAN_DEFINITIONS: PlanDefinition[] = [
@@ -11,7 +8,8 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     code: "FREE_TRIAL",
     label: "Free Trial",
     trialDays: TRIAL_DURATION_DAYS,
-    customerLimit: TRIAL_CUSTOMER_LIMIT,
+    customerLimit: 25, // Display limit for landing page
+    staffLimit: 1,
     features: ["Dashboard harian", "Customer & order", "Pesan cepat", "Nota sederhana", "Backup manual"],
     requiresManualApproval: false,
     readLimitedAfterExpiry: true,
@@ -19,7 +17,8 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
   {
     code: "PRO",
     label: "Pro",
-    customerLimit: PRO_CUSTOMER_LIMIT,
+    customerLimit: 500, // Display limit for landing page
+    staffLimit: 15,
     features: ["Limit customer lebih besar", "Riwayat backup", "Restore nanti", "Support prioritas standar"],
     requiresManualApproval: true,
     readLimitedAfterExpiry: false,
@@ -27,7 +26,8 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
   {
     code: "PREMIUM",
     label: "Premium",
-    customerLimit: PREMIUM_CUSTOMER_LIMIT,
+    customerLimit: 9999, // Display limit for landing page
+    staffLimit: 9999,
     features: ["Limit sangat besar", "Siap multi-admin", "Auto backup nanti", "Support prioritas"],
     requiresManualApproval: true,
     readLimitedAfterExpiry: false,

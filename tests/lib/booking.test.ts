@@ -1,4 +1,4 @@
-import { getBookingDurationMinutes, getBookingInterval, isBookingHoldActive, isBookingLocked } from "@/lib/booking";
+import { getBookingDurationMinutes, getBookingInterval, isBookingLocked } from "@/lib/booking";
 import type { Order } from "@/types/order";
 
 describe("Booking Scheduling Library Tests", () => {
@@ -16,38 +16,6 @@ describe("Booking Scheduling Library Tests", () => {
     });
   });
 
-  describe("isBookingHoldActive", () => {
-    const baseOrder = {
-      id: "ord_1",
-      businessId: "biz_1",
-      customerId: "cust_1",
-      title: "Test Order",
-      mode: "BOOKING_SERVICE",
-      status: "WAITING_DP",
-      paymentStatus: "UNPAID",
-      scheduledDate: "2026-07-11",
-      scheduledTime: "10:00",
-      bookingHoldExpiresAt: "2026-07-11T10:15:00.000Z",
-      createdAt: "2026-07-11T10:00:00.000Z",
-      updatedAt: "2026-07-11T10:00:00.000Z",
-    } as unknown as Order;
-
-    it("should return true if current time is before the hold expiration time", () => {
-      const now = new Date("2026-07-11T10:10:00.000Z");
-      expect(isBookingHoldActive(baseOrder, now)).toBe(true);
-    });
-
-    it("should return false if current time is after the hold expiration time", () => {
-      const now = new Date("2026-07-11T10:20:00.000Z");
-      expect(isBookingHoldActive(baseOrder, now)).toBe(false);
-    });
-
-    it("should return false if the order status is cancelled or refunded", () => {
-      const cancelledOrder = { ...baseOrder, status: "BATAL" } as unknown as Order;
-      const now = new Date("2026-07-11T10:10:00.000Z");
-      expect(isBookingHoldActive(cancelledOrder, now)).toBe(false);
-    });
-  });
 
   describe("isBookingLocked", () => {
     const baseOrder = {
@@ -60,7 +28,6 @@ describe("Booking Scheduling Library Tests", () => {
       paymentStatus: "UNPAID",
       scheduledDate: "2026-07-11",
       scheduledTime: "10:00",
-      bookingHoldExpiresAt: "2026-07-11T10:15:00.000Z",
       createdAt: "2026-07-11T10:00:00.000Z",
       updatedAt: "2026-07-11T10:00:00.000Z",
     } as unknown as Order;
@@ -69,16 +36,6 @@ describe("Booking Scheduling Library Tests", () => {
       const paidOrder = { ...baseOrder, paymentStatus: "PAID", status: "CONFIRMED" } as unknown as Order;
       const now = new Date("2026-07-11T11:00:00.000Z");
       expect(isBookingLocked(paidOrder, now)).toBe(true);
-    });
-
-    it("should return true if the booking hold is active", () => {
-      const now = new Date("2026-07-11T10:10:00.000Z");
-      expect(isBookingLocked(baseOrder, now)).toBe(true);
-    });
-
-    it("should return false if booking hold has expired and no payment was made", () => {
-      const now = new Date("2026-07-11T10:20:00.000Z");
-      expect(isBookingLocked(baseOrder, now)).toBe(false);
     });
   });
 

@@ -113,8 +113,8 @@ export function Select({
       className={cn(
        "absolute left-0 right-0 z-[100] mt-1.5",
        "overflow-hidden rounded-[var(--radius-lg)]",
-      "border border-[var(--color-border-strong)]",
-      "bg-[var(--color-surface)]",
+      "border border-[var(--color-border-strong)] shadow-lg",
+      "bg-[var(--color-surface)]/90 backdrop-blur-xl",
       " ",
       "animate-slide-down",
       menuClassName

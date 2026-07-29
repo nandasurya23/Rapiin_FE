@@ -71,17 +71,6 @@ function createDefaultForm(business: Business): OrderFormState {
  };
 }
 
-function formatDateTime(value?: string | null) {
- if (!value) return "";
- const parsedDate = new Date(value);
- if (Number.isNaN(parsedDate.getTime())) return "";
- return new Intl.DateTimeFormat("id-ID", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  hour12: false,
-  hourCycle: "h23",
- }).format(parsedDate);
-}
 
 function formatWhatsApp(val: string): string {
  let clean = val.replace(/[^\d]/g, "");
@@ -329,11 +318,6 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     : `Pilih tanggal, jam, dan durasi untuk cek overlap.`;
   }
   if (slotAvailability.isFull) {
-   if (slotAvailability.hasHold) {
-    return slotAvailability.earliestHoldExpiresAt
-     ? `Slot penuh (ada pending DP). Terbuka pukul ${formatDateTime(slotAvailability.earliestHoldExpiresAt.toISOString())}.`
-     : `Slot penuh (ada pending DP).`;
-   }
    return isResourceBookingMode
     ? `${business.resourceLabel ?? "Unit"} sudah penuh pada jam tersebut.`
     : "Slot penuh. Maksimal 2 booking overlap.";
@@ -342,9 +326,6 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
    return isResourceBookingMode
     ? `Aman (belum ada booking).`
     : `Aman (belum ada overlap).`;
-  }
-  if (slotAvailability.hasHold) {
-   return `Ada booking pending DP yang overlap.`;
   }
   return isResourceBookingMode
    ? `${slotAvailability.count} booking bentrok di ${business.resourceLabel?.toLowerCase() ?? "unit"} ini.`
@@ -502,19 +483,19 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
          <span className="underline text-[11px]">Tempel & Isi Otomatis →</span>
         </button>
       ) : (
-       <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/50 p-4 space-y-3 dark:border-indigo-900/60 dark:bg-indigo-950/20 animate-fade-in">
+       <div className="rounded-2xl border border-dashed border-[var(--color-primary)]/30 bg-[var(--color-primary-surface)] p-4 space-y-3 animate-fade-in">
         <div className="flex items-center justify-between">
-         <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+         <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-primary)]/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-primary)] shadow-sm">
           <Sparkles className="h-3 w-3 animate-pulse" /> Auto-fill
          </span>
-         <button type="button" onClick={() => setShowPasteChat(false)} className="text-xs font-bold text-gray-500 hover:text-indigo-700 transition">Tutup</button>
+         <button type="button" onClick={() => setShowPasteChat(false)} className="text-xs font-bold text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition">Tutup</button>
         </div>
         <Textarea
          value={chatPasteText}
          onChange={(event) => handleChatPasteChange(event.target.value)}
          placeholder="Paste chat WhatsApp di sini..."
          rows={3}
-         className="bg-white/80 dark:bg-black/20 border-indigo-100 dark:border-indigo-900/50 rounded-xl"
+         className="bg-[var(--color-surface)]/80 backdrop-blur-sm border-[var(--color-primary)]/20 rounded-xl focus:border-[var(--color-primary)]"
         />
        </div>
       )}
@@ -609,9 +590,9 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
        {customerReputation && customerReputation.type !== "REGULAR" && (
         <div className={cn(
          "mt-2 rounded-lg border px-3 py-2 text-[11px] animate-fade-in shadow-sm",
-         customerReputation.type === "VIP" ? "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-300" :
-         customerReputation.type === "BLACKLIST" ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-300" :
-         "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-300"
+         customerReputation.type === "VIP" ? "bg-[var(--color-warning-surface)] border-[var(--color-warning-border)] text-[var(--color-warning-text)]" :
+         customerReputation.type === "BLACKLIST" ? "bg-[var(--color-danger-surface)] border-[var(--color-danger-border)] text-[var(--color-danger-text)]" :
+         "bg-[var(--color-success-surface)] border-[var(--color-success-border)] text-[var(--color-success-text)]"
         )}>
          <div className="flex items-start gap-2">
           <span className="text-sm">
@@ -727,7 +708,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Tanggal</label>
          {isSimplifiedEditMode ? (
           <div className="h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 flex items-center text-sm font-semibold text-[var(--color-text-secondary)]">
-           {form.scheduledDate ? formatDate(form.scheduledDate) : "Belum ditentukan"}
+           {form.scheduledDate ? formatDate(form.scheduledDate, business.timezone) : "Belum ditentukan"}
           </div>
          ) : (
           <DatePicker value={form.scheduledDate} onValueChange={(val) => updateFormField("scheduledDate", val)} />
@@ -872,7 +853,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
               "text-[8px] tracking-wide uppercase font-extrabold",
               isFull ? "text-red-500/80" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"
              )}>
-              {isFull ? "Penuh" : avail.hasHold ? "Ditahan" : "Tersedia"}
+              {isFull ? "Penuh" : "Tersedia"}
              </span>
             </button>
            );
@@ -880,11 +861,11 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
          </div>
          
          {form.scheduledTime && (
-          <div className="pt-2">
-           <p className={`text-xs ${slotAvailability.isFull ? "text-[var(--color-danger)] font-semibold" : slotAvailability.hasHold ? "text-[var(--color-warning-text)]" : "text-[var(--color-text-muted)]"}`}>
-            {slotHint}
-           </p>
-          </div>
+           <div className="pt-2">
+            <p className={`text-xs ${slotAvailability.isFull ? "text-[var(--color-danger)] font-semibold" : "text-[var(--color-text-muted)]"}`}>
+             {slotHint}
+            </p>
+           </div>
          )}
         </div>
        )}
