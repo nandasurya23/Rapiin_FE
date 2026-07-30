@@ -15,6 +15,7 @@ export type BusinessResource = {
   isActive: boolean;
   /** Jam kerja staf. null = ikuti jam operasional bisnis (default). */
   workingHours?: WorkingHours;
+  maxCapacity?: number;
 };
 
 export type PublicCatalogItem = {
@@ -51,6 +52,7 @@ export type Business = Timestamped & {
   closedDates?: Record<string, string>;
   orders?: Partial<Order>[];
   autoCreateOrderFromSubmission?: boolean;
+  subscriptions?: Record<string, unknown>[];
 };
 
 export type BusinessModeOption = {

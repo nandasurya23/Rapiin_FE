@@ -11,7 +11,6 @@ export default async function BusinessJoinPage({
  const { token } = await searchParams;
 
  if (token) {
-  // Redirect to global join page, keeping the token inside parameters
   redirect(`/join?token=${encodeURIComponent(token)}`);
  } else {
   redirect(`/b/${businessSlug}`);

@@ -180,22 +180,42 @@ export function ResourceSettingsTab({
                   key={resource.id}
                   className="flex flex-col justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 hover:border-[var(--color-border-strong)] transition"
                 >
-                  <label className="block flex-1">
-                    <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      {form.resourceLabel || "Unit"} #{index + 1}
-                    </span>
-                    <Input
-                      value={resource.name}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          resources: current.resources.map((item) =>
-                            item.id === resource.id ? { ...item, name: event.target.value } : item
-                          ),
-                        }))
-                      }
-                    />
-                  </label>
+                  <div className="flex gap-3">
+                    <label className="block flex-[2]">
+                      <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+                        {form.resourceLabel || "Unit"} #{index + 1}
+                      </span>
+                      <Input
+                        value={resource.name}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            resources: current.resources.map((item) =>
+                              item.id === resource.id ? { ...item, name: event.target.value } : item
+                            ),
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="block flex-1">
+                      <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-muted)]">
+                        Max Kapasitas
+                      </span>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={resource.maxCapacity ?? 1}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            resources: current.resources.map((item) =>
+                              item.id === resource.id ? { ...item, maxCapacity: parseInt(event.target.value) || 1 } : item
+                            ),
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
 
                   {/* Working Hours Toggle */}
                   <WorkingHoursPill
@@ -287,6 +307,7 @@ export function ResourceSettingsTab({
                       name: `${current.resourceLabel.trim() || "Slot"} ${current.resources.length + 1}`,
                       isActive: true,
                       workingHours: null, // default: ikuti jam bisnis
+                      maxCapacity: 1,
                     },
                   ],
                 }));

@@ -18,31 +18,70 @@ export type OrderStatus =
   | "SELESAI"
   | "BATAL";
 
-export type Order = Timestamped & {
-  id: ID;
-  businessId: ID;
-  customerId: ID;
+export interface Order {
+  id: string;
+  businessId: string;
+  customerId: string;
   customerName: string;
   whatsappNumber: string;
   title: string;
   mode: BusinessMode;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  paymentMethod?: "CASH" | "NON_CASH";
   scheduledDate?: string;
   scheduledTime?: string;
   bookingDurationMinutes?: number;
-  bookingHoldExpiresAt?: string;
-  resourceId?: ID;
+  resourceId?: string;
   resourceNameSnapshot?: string;
-  serviceId?: ID;
+  serviceId?: string;
   totalAmount?: number;
   dpAmount?: number;
+  isLocked: boolean;
   notes?: string;
-  lastFollowUpAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  payments?: Payment[];
   customerStatusSnapshot?: CustomerStatus;
   pointsEarned?: number;
   pointsUsed?: number;
-};
+}
+
+export interface Payment {
+  id: string;
+  businessId: string;
+  orderId: string;
+  amount: number;
+  status: "PENDING" | "VERIFIED" | "REJECTED";
+  createdAt: string;
+  updatedAt: string;
+  proof?: PaymentProof;
+}
+
+export interface PaymentProof {
+  id: string;
+  paymentId: string;
+  fileUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  ocrResult?: OCRResult;
+}
+
+export interface OCRResult {
+  id: string;
+  paymentProofId: string;
+  extractedText: string;
+  extractedAmount?: number;
+  bankName?: string;
+  transferDate?: string;
+  referenceNumber?: string;
+  confidenceScore: number;
+  matchStatus: "MATCH" | "PARTIAL_MATCH" | "MISMATCH" | "UNVERIFIED";
+  recommendationRating?: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type StatusOption = {
   value: OrderStatus;

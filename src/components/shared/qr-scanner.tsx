@@ -13,7 +13,6 @@ export function QRScanner({ onScanSuccess, onScanError }: QRScannerProps) {
   const containerId = "qr-scanner-container";
 
   useEffect(() => {
-    // Check if scanner is already initialized to prevent double rendering in React 18+ StrictMode
     if (!scannerRef.current) {
       const config = {
         fps: 10,
@@ -30,7 +29,6 @@ export function QRScanner({ onScanSuccess, onScanError }: QRScannerProps) {
 
       scanner.render(
         (decodedText) => {
-          // Pause scanning after success to prevent multiple triggers
           if (scannerRef.current) {
             try {
               scannerRef.current.pause(true);
@@ -42,7 +40,6 @@ export function QRScanner({ onScanSuccess, onScanError }: QRScannerProps) {
         },
         (errorMessage) => {
           if (onScanError) {
-            // Filter out common "not found" errors which happen on every frame
             if (!errorMessage.includes("NotFound")) {
               onScanError(errorMessage);
             }
@@ -52,7 +49,6 @@ export function QRScanner({ onScanSuccess, onScanError }: QRScannerProps) {
     }
 
     return () => {
-      // Cleanup on unmount
       if (scannerRef.current) {
         scannerRef.current
           .clear()

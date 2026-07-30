@@ -39,7 +39,6 @@ export function MobileBottomNav() {
     return { ...item, isLocked };
    });
 
- // Close drawer if pathname changes
  useEffect(() => {
   setIsMoreOpen(false);
  }, [pathname]);

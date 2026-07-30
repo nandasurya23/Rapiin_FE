@@ -81,7 +81,6 @@ export default function JoinTeamPage({ searchParams }: { searchParams: Promise<{
 
       toast.success("Berhasil bergabung!", `Selamat, Anda sekarang aktif sebagai tim di ${inviteData.businessName}`);
       
-      // Redirect directly to the business dashboard
       window.location.href = `/dashboard/${inviteData.businessSlug}`;
     } catch (err) {
       const error = err as Error;

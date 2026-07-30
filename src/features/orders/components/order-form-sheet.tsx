@@ -14,6 +14,7 @@ import { useOrders } from "@/hooks/use-orders";
 import { useCustomers } from "@/hooks/use-customers";
 import { getPublicCatalog, inferCatalogDurationMinutes } from "@/lib/public-business";
 import { cn } from "@/lib/cn";
+import { PaymentVerificationPanel } from "./payment-verification-panel";
 
 import {
  BOOKING_HOLD_MINUTES,
@@ -611,6 +612,22 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
      </div>
     </div>
    )}
+
+    {/* Payment Verification Panel */}
+    {editingId && order?.payments && order.payments.length > 0 && (
+      <div className="pt-2 pb-4">
+        <PaymentVerificationPanel 
+          payment={order.payments[0]} 
+          invoiceAmount={order.totalAmount || 0}
+          onVerifySuccess={() => {
+            // Kita biarkan user me-refresh page atau the hook will auto refresh, 
+            // tapi minimal kita update state lokal jika perlu
+            toast.success("Halaman akan dimuat ulang untuk memperbarui status pesanan");
+            setTimeout(() => window.location.reload(), 1500);
+          }}
+        />
+      </div>
+    )}
 
     {/* Order Details */}
     {!isSimplifiedEditMode && (

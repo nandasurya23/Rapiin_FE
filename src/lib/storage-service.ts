@@ -300,7 +300,6 @@ export function createOrderRecord(input: {
   scheduledDate?: string;
   scheduledTime?: string;
   bookingDurationMinutes?: number;
-  bookingHoldExpiresAt?: string;
   resourceId?: string;
   resourceNameSnapshot?: string;
   totalAmount?: number;
@@ -323,13 +322,13 @@ export function createOrderRecord(input: {
     scheduledDate: input.scheduledDate,
     scheduledTime: input.scheduledTime,
     bookingDurationMinutes: input.bookingDurationMinutes,
-    bookingHoldExpiresAt: input.bookingHoldExpiresAt,
     resourceId: input.resourceId,
     resourceNameSnapshot: input.resourceNameSnapshot,
     totalAmount: input.totalAmount,
     dpAmount: input.dpAmount,
     notes: input.notes,
     customerStatusSnapshot: input.customerStatusSnapshot,
+    isLocked: false,
     createdAt: timestamp,
     updatedAt: timestamp,
   };

@@ -16,7 +16,6 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
  const planCode = subscriptionForCurrentBusiness?.planCode || "FREE_TRIAL";
  const modalRef = useRef<HTMLDivElement>(null);
 
- // Close on ESC key
  useEffect(() => {
   function handleKeyDown(e: KeyboardEvent) {
    if (e.key === "Escape") {

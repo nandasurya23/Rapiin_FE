@@ -29,6 +29,7 @@ export interface OrderDTO {
   notes?: string;
   lastFollowUpAt?: string;
   customerStatusSnapshot?: CustomerStatus;
+  isLocked?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,13 +38,13 @@ export class OrderMapper implements Mapper<OrderDTO, Order> {
   toDomain(raw: OrderDTO): Order {
     return {
       ...raw,
+      isLocked: raw.isLocked ?? false,
     };
   }
 
   toDTO(domain: Order): OrderDTO {
-    return {
-      ...domain,
-    };
+    const { pointsEarned, pointsUsed, payments, proof, ...rest } = domain as Order & Record<string, unknown>;
+    return rest as unknown as OrderDTO;
   }
 }
 
