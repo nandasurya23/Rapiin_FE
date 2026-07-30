@@ -413,7 +413,7 @@ export function PublicInvoicePage({
       ) : (
        <PaymentProofUpload 
         invoiceId={invoice.id} 
-        isPro={business.subscriptions?.[0]?.planCode === "PRO" || business.subscriptions?.[0]?.planCode === "PREMIUM"} 
+        isPro={true} 
        />
       )}
 

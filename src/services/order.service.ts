@@ -30,6 +30,7 @@ export interface OrderDTO {
   lastFollowUpAt?: string;
   customerStatusSnapshot?: CustomerStatus;
   isLocked?: boolean;
+  payments?: any[];
   createdAt: string;
   updatedAt: string;
 }
