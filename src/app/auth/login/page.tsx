@@ -15,8 +15,6 @@ export default async function LoginPage() {
  let appHost = "";
  try { appHost = appUrl ? new URL(appUrl.startsWith("http") ? appUrl : `https://${appUrl}`).host : ""; } catch {}
 
- // Di local, appHost dan adminHost seringkali sama (localhost:3000)
- // Cegah infinite redirect / salah arah jika mereka identik
  if (adminHost && adminHost !== appHost && host === adminHost) {
   redirect(ROUTES.superAdminLogin);
  }

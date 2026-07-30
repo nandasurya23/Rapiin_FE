@@ -32,7 +32,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   window.localStorage.setItem("rapiin-sidebar-collapsed", String(sidebarCollapsed));
  }, [sidebarCollapsed]);
 
- // Global keydown listener for Cmd+K / Ctrl+K
  useEffect(() => {
   function handleKeyDown(e: KeyboardEvent) {
    if (currentUserRole === "SUPER_ADMIN") return;
@@ -126,7 +125,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     return;
    }
 
-   // Check route permission
    if (!canAccessRoute(pathname, business.slug)) {
     router.replace(ROUTES.dashboard(business.slug));
    }

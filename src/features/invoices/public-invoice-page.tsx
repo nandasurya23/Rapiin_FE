@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/cn";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
-
+import { PaymentProofUpload } from "@/features/invoices/components/payment-proof-upload";
 
 import { apiFetch } from "@/lib/api-client";
 import { InvoiceSheet } from "@/features/invoices/invoice-sheet";
@@ -411,11 +411,10 @@ export function PublicInvoicePage({
         </div>
        </>
       ) : (
-       <div className="bg-[var(--color-surface)]/60 backdrop-blur-md p-4 rounded-xl border border-[var(--color-border)] text-center">
-        <p className="text-sm font-medium text-[var(--color-text-secondary)]">
-         Fitur unduh nota belum tersedia karena pesanan ini masih berstatus <strong>Belum Bayar</strong>.
-        </p>
-       </div>
+       <PaymentProofUpload 
+        invoiceId={invoice.id} 
+        isPro={business.subscriptions?.[0]?.planCode === "PRO" || business.subscriptions?.[0]?.planCode === "PREMIUM"} 
+       />
       )}
 
       <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4 mt-2">

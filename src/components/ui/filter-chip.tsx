@@ -3,10 +3,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/* ============================================================
-  FILTER CHIP — Unified filter/tab selector component
-  Replaces all inline button filter implementations across pages.
-  ============================================================ */
 
 type FilterChipOption<T extends string> = {
  value: T;

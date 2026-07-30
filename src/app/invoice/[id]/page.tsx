@@ -1,5 +1,8 @@
 import { PublicInvoicePage as PublicInvoiceView } from "@/features/invoices/public-invoice-page";
 import { apiFetch } from "@/lib/api-client";
+import type { Invoice } from "@/types/invoice";
+import type { Order } from "@/types/order";
+import type { Business } from "@/types/business";
 
 export default async function PublicInvoicePage({
  params,
@@ -11,8 +14,7 @@ export default async function PublicInvoicePage({
  let initialData = null;
  if (id) {
   try {
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const response = await apiFetch<any>(`/api/public/invoice/${id}`);
+   const response = await apiFetch<Invoice & { order: Order; business: Business }>(`/api/public/invoice/${id}`);
    if (response) {
     initialData = {
      invoice: response,

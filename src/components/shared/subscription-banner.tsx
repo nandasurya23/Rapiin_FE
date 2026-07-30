@@ -39,12 +39,10 @@ export function SubscriptionBanner() {
  const showWarning = isTrialWarningActive(subscriptionForCurrentBusiness);
  const isReadOnly = Boolean(readOnlyReason);
 
- // Trigger warning only if customer count is at 90% or more of the plan limit
  const isAlmostFull = currentBusinessUsage.limit > 0 && 
   currentBusinessUsage.used > 0 &&
   currentBusinessUsage.used >= Math.floor(currentBusinessUsage.limit * 0.9);
 
- // If there's no reason to show the banner at all
  if (
   !isReadOnly &&
   !showWarning &&
@@ -53,7 +51,6 @@ export function SubscriptionBanner() {
   return null;
  }
 
- // If the owner dismissed the warning and it's not a read-only hard block, don't show it
  if (dismissed && !isReadOnly) {
   return null;
  }

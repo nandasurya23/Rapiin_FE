@@ -52,12 +52,12 @@ export const mockOrder: Order = {
   scheduledDate: "2026-07-15",
   scheduledTime: "10:00",
   bookingDurationMinutes: 60,
-  bookingHoldExpiresAt: "2026-07-11T12:00:00.000Z",
   resourceId: "res_1",
   resourceNameSnapshot: "Budi",
   totalAmount: 50000,
   dpAmount: 10000,
   notes: "Harap wangi lavender",
+  isLocked: false,
   createdAt: "2026-07-10T00:00:00.000Z",
   updatedAt: "2026-07-10T00:00:00.000Z",
 };

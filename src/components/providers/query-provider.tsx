@@ -9,9 +9,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
    new QueryClient({
     defaultOptions: {
      queries: {
-      staleTime: 2 * 60 * 1000, // 2 minutes default stale time for transaction records (orders, customers, invoices)
+      staleTime: 2 * 60 * 1000, 
       refetchOnWindowFocus: false,
-      retry: false, // Prevent retrying failed requests to avoid hitting rate limits (429)
+      retry: false, 
      },
     },
    })

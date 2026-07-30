@@ -231,27 +231,29 @@ export function PublicOrderForm({
                            name="service"
                            value={form.service || ""}
                            onChange={(e) => updateField("service", e.target.value)}
-                           placeholder="Contoh: Sewa Studio A"
+                           placeholder="Contoh: Layanan Konsultasi"
                            required
                          />
                        </label>
-                       <label className="block">
-                         <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi (Jam) *</span>
-                         <Input
-                           name="bookingDurationMinutes"
-                           type="number"
-                           min="0.5"
-                           step="0.5"
-                           value={form.bookingDurationMinutes ? String(Number(form.bookingDurationMinutes) / 60) : ""}
-                           onChange={(e) => {
-                             const val = Number(e.target.value);
-                             if (val > 0) updateField("bookingDurationMinutes", String(val * 60));
-                             else updateField("bookingDurationMinutes", "");
-                           }}
-                           placeholder="Contoh: 3"
-                           required
-                         />
-                       </label>
+                       {isResourceBooking && (
+                         <label className="block">
+                           <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi (Jam) *</span>
+                           <Input
+                             name="bookingDurationMinutes"
+                             type="number"
+                             min="0.5"
+                             step="0.5"
+                             value={form.bookingDurationMinutes ? String(Number(form.bookingDurationMinutes) / 60) : ""}
+                             onChange={(e) => {
+                               const val = Number(e.target.value);
+                               if (val > 0) updateField("bookingDurationMinutes", String(val * 60));
+                               else updateField("bookingDurationMinutes", "");
+                             }}
+                             placeholder="Contoh: 3"
+                             required
+                           />
+                         </label>
+                       )}
                      </div>
                    )}
                  </>

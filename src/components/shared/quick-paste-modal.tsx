@@ -53,7 +53,6 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
  const [error, setError] = useState("");
  const [isSubmitting, setIsSubmitting] = useState(false);
 
- // Sync default status when mode changes
  useEffect(() => {
   const statusOptions = ORDER_STATUS_BY_MODE[mode];
   if (statusOptions && statusOptions.length > 0) {
@@ -61,7 +60,6 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
   }
  }, [mode]);
 
- // Handle parsing when chatText changes
  function handleChatPasteChange(text: string) {
   setChatText(text);
   const parsed = parseWhatsAppChatText(text);
@@ -84,7 +82,6 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
   }
  }
 
- // Detect duplicate customer by WA
  const existingCustomer = useMemo(() => {
   const normalized = normalizePhoneNumber(whatsappNumber);
   if (!normalized || normalized.length < 9) return null;
@@ -93,7 +90,6 @@ export function QuickPasteModal({ isOpen, onClose }: QuickPasteModalProps) {
   );
  }, [customers, whatsappNumber]);
 
- // Balance calculation
  const balanceAmount = useMemo(() => {
   const total = parseIndonesianNumber(totalAmount) ?? 0;
   const dp = parseIndonesianNumber(dpAmount) ?? 0;

@@ -11,7 +11,6 @@ export default async function SuperAdminLoginPage() {
  let adminHost = "";
  try { adminHost = adminUrl ? new URL(adminUrl.startsWith("http") ? adminUrl : `https://${adminUrl}`).host : ""; } catch {}
 
- // If we are on app domain but accessing super-admin login, redirect to admin domain
  if (adminHost && host !== adminHost) {
   redirect(`${adminUrl}${ROUTES.superAdminLogin}`);
  }
