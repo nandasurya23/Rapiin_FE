@@ -11,5 +11,6 @@ export type Invoice = Timestamped & {
   customerName: string;
   totalAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMethod?: "CASH" | "NON_CASH";
   notes?: string;
 };

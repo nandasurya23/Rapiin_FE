@@ -2,7 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { doesOperationalModelUseResources, DURATION_OPTIONS } from "@/lib/constants/business";
+import { doesOperationalModelUseResources, DURATION_OPTIONS, PAYMENT_TIMING_OPTIONS } from "@/lib/constants/business";
 import type { BusinessResource, OperationalModel } from "@/types/business";
 import type { FormErrors, SettingsFormState } from "./general-settings-tab";
 
@@ -109,19 +109,36 @@ export function OperationalSettingsTab({
           </div>
         ) : null}
 
+        <div className="pt-4 border-t border-[var(--color-border)]">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              Kapan Pelanggan Harus Membayar?
+            </span>
+            <div className="flex w-full items-center justify-between rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-3 text-sm text-[var(--color-text-muted)] cursor-not-allowed opacity-80">
+              <div>
+                <p className="font-bold text-[var(--color-text)]">
+                  {PAYMENT_TIMING_OPTIONS.find((opt) => opt.value === form.paymentTiming)?.label || form.paymentTiming}
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                  {PAYMENT_TIMING_OPTIONS.find((opt) => opt.value === form.paymentTiming)?.helperText}
+                </p>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] font-bold text-[var(--color-warning-text)]">
+              🔒 Timing pembayaran telah dikunci untuk menjaga konsistensi alur Invoice dan OCR.
+            </p>
+          </label>
+        </div>
+
         {/* 1E: autoCreateOrderFromSubmission toggle */}
         <div className="pt-4 border-t border-[var(--color-border)]">
-          <button
-            type="button"
-            onClick={() => updateForm("autoCreateOrderFromSubmission", !form.autoCreateOrderFromSubmission)}
-            className="flex w-full items-start gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-left transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface)]"
-          >
-              <div className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${
+          <div className="flex w-full items-start gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 text-left cursor-not-allowed opacity-80">
+              <div className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full ${
                 form.autoCreateOrderFromSubmission
                   ? "bg-[var(--color-primary)]"
                   : "bg-[var(--color-border-strong)]"
               }`}>
-                <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow ${
                   form.autoCreateOrderFromSubmission ? "translate-x-4" : "translate-x-0"
                 }`} />
               </div>
@@ -135,7 +152,28 @@ export function OperationalSettingsTab({
                     : "🔴 Nonaktif — Permintaan masuk sebagai Submission terlebih dahulu. Anda perlu review manual sebelum menjadi Order."}
                 </p>
               </div>
+            </div>
+            <p className="mt-2 text-[10px] font-bold text-[var(--color-warning-text)]">
+              🔒 Alur pesanan otomatis dikunci berdasarkan mode bisnis saat Onboarding.
+            </p>
+        </div>
+
+        <div className="pt-6 border-t border-[var(--color-border)] mt-4">
+          <div className="rounded-2xl border border-[var(--color-primary-surface)] bg-[var(--color-primary-surface)]/20 p-5">
+            <h3 className="text-sm font-bold text-[var(--color-text)] mb-2">Perubahan Model Bisnis</h3>
+            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mb-4">
+              Konfigurasi bisnis di atas telah dikunci untuk menjaga konsistensi data transaksi Anda. Jika model bisnis Anda berubah, Anda dapat mengajukan perubahan konfigurasi melalui proses review oleh Admin Rapiin.
+            </p>
+            <button
+              type="button"
+              className="px-4 py-2 bg-[var(--color-primary)] text-white text-xs font-bold rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
+              onClick={() => {
+                alert("Mohon hubungi Support Rapiin melalui WhatsApp untuk mengajukan perubahan model bisnis.");
+              }}
+            >
+              Ajukan Perubahan Mode Bisnis
             </button>
+          </div>
         </div>
       </div>
     </div>

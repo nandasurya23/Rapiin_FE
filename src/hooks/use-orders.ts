@@ -32,6 +32,7 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
   });
 
@@ -60,6 +61,7 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
   });
 
@@ -88,6 +90,7 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
   });
 

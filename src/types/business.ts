@@ -3,6 +3,7 @@ import type { Order } from "@/types/order";
 
 export type BusinessMode = "BOOKING_SERVICE" | "PRODUCT_ORDER" | "CUSTOM_REQUEST";
 export type OperationalModel = "APPOINTMENT" | "RESOURCE_BOOKING" | "ORDER_REQUEST";
+export type PaymentTiming = "NO_PAYMENT" | "PAYMENT_ON_BOOKING" | "PAYMENT_AFTER_CONFIRMATION" | "PAYMENT_AFTER_INVOICE";
 
 export type NicheTemplate = string;
 
@@ -22,6 +23,7 @@ export type PublicCatalogItem = {
   id: string;
   name: string;
   description: string;
+  price?: number;
   priceLabel?: string;
   durationMinutes?: number;
   duration?: number;
@@ -35,6 +37,7 @@ export type Business = Timestamped & {
   whatsappNumber: string;
   mode: BusinessMode;
   operationalModel: OperationalModel;
+  paymentTiming: PaymentTiming;
   usesResources: boolean;
   resourceLabel?: string;
   resourceCount?: number;
@@ -63,6 +66,12 @@ export type BusinessModeOption = {
 
 export type OperationalModelOption = {
   value: OperationalModel;
+  label: string;
+  helperText: string;
+};
+
+export type PaymentTimingOption = {
+  value: PaymentTiming;
   label: string;
   helperText: string;
 };

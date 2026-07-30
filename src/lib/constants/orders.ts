@@ -22,6 +22,9 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   DEAL: "Deal / Disetujui",
   SELESAI: "Selesai & Lunas",
   BATAL: "Dibatalkan",
+  CHECK_IN: "Check In",
+  CHECK_OUT: "Check Out",
+  NO_SHOW: "Tidak Hadir",
 };
 
 export const ORDER_STATUS_BY_MODE: Record<BusinessMode, StatusOption[]> = {

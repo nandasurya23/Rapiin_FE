@@ -45,7 +45,23 @@ export function useCustomers(options?: { enablePolling?: boolean; intervalMs?: n
       }
       return customerService.updateCustomer(id, payload);
     },
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      await queryClient.cancelQueries({ queryKey: ["customers"] });
+      const previousCustomers = queryClient.getQueryData<CustomerDTO[]>(["customers", business?.id]);
+      if (previousCustomers) {
+        queryClient.setQueryData<CustomerDTO[]>(
+          ["customers", business?.id],
+          previousCustomers.map((c) => (c.id === id ? ({ ...c, ...payload } as CustomerDTO) : c))
+        );
+      }
+      return { previousCustomers };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousCustomers) {
+        queryClient.setQueryData(["customers", business?.id], context.previousCustomers);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
   });
@@ -57,7 +73,23 @@ export function useCustomers(options?: { enablePolling?: boolean; intervalMs?: n
       }
       return customerService.deleteCustomer(id);
     },
-    onSuccess: () => {
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["customers"] });
+      const previousCustomers = queryClient.getQueryData<CustomerDTO[]>(["customers", business?.id]);
+      if (previousCustomers) {
+        queryClient.setQueryData<CustomerDTO[]>(
+          ["customers", business?.id],
+          previousCustomers.filter((c) => c.id !== id)
+        );
+      }
+      return { previousCustomers };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousCustomers) {
+        queryClient.setQueryData(["customers", business?.id], context.previousCustomers);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
   });

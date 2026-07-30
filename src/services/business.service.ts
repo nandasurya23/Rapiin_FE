@@ -1,5 +1,5 @@
 import type { Mapper } from "./mapper";
-import type { Business, BusinessMode, OperationalModel, NicheTemplate, BusinessResource, PublicCatalogItem } from "@/types/business";
+import type { Business, BusinessMode, OperationalModel, NicheTemplate, BusinessResource, PublicCatalogItem, PaymentTiming } from "@/types/business";
 import { apiFetch } from "@/lib/api-client";
 import { logServiceError } from "./utils";
 
@@ -19,6 +19,7 @@ export interface BusinessDTO {
   whatsappNumber: string;
   mode: BusinessMode;
   operationalModel: OperationalModel;
+  paymentTiming?: PaymentTiming;
   usesResources: boolean;
   resourceLabel?: string;
   resourceCount?: number;
@@ -35,6 +36,7 @@ export interface BusinessDTO {
   paymentInstructions?: string;
   closedDates?: Record<string, string>;
   autoCreateOrderFromSubmission?: boolean;
+  subscriptions?: Record<string, unknown>[];
   createdAt: string;
   updatedAt: string;
 }
@@ -43,12 +45,14 @@ export class BusinessMapper implements Mapper<BusinessDTO, Business> {
   toDomain(raw: BusinessDTO): Business {
     return {
       ...raw,
+      paymentTiming: raw.paymentTiming ?? "NO_PAYMENT",
       services: raw.services?.map((s: ServiceDTO) => {
         const priceNum = s.price !== undefined ? Number(s.price) : 0;
         return {
           id: s.id,
           name: s.name,
           description: s.description || "",
+          price: priceNum,
           priceLabel: priceNum > 0 ? `Rp ${priceNum.toLocaleString("id-ID")}` : "Gratis",
           durationMinutes: s.duration !== undefined ? Number(s.duration) : 60,
         };
@@ -85,6 +89,7 @@ export interface BusinessUpdateInput {
   whatsappNumber?: string;
   mode?: BusinessMode;
   operationalModel?: OperationalModel;
+  paymentTiming?: PaymentTiming;
   usesResources?: boolean;
   resourceLabel?: string;
   resourceCount?: number;
@@ -109,6 +114,7 @@ export interface BusinessUpdateInput {
   paymentInstructions?: string;
   closedDates?: Record<string, string>;
   autoCreateOrderFromSubmission?: boolean;
+  subscriptions?: Record<string, unknown>[];
 }
 
 export interface BusinessService {

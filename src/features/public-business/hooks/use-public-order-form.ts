@@ -31,6 +31,9 @@ export const initialStateByMode: Record<BusinessMode, FormState> = {
     staffPreferenceName: "", // 2A: Optional staff preference for APPOINTMENT mode
     notes: "",
     botField: "",
+    tempProofUrl: "",
+    tempProofHash: "",
+    totalAmount: "",
   },
   PRODUCT_ORDER: {
     name: "",
@@ -40,6 +43,9 @@ export const initialStateByMode: Record<BusinessMode, FormState> = {
     deliveryMethod: "",
     notes: "",
     botField: "",
+    tempProofUrl: "",
+    tempProofHash: "",
+    totalAmount: "",
   },
   CUSTOM_REQUEST: {
     name: "",
@@ -49,6 +55,9 @@ export const initialStateByMode: Record<BusinessMode, FormState> = {
     budget: "",
     notes: "",
     botField: "",
+    tempProofUrl: "",
+    tempProofHash: "",
+    totalAmount: "",
   },
 };
 
@@ -225,6 +234,27 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     return parsedDuration;
   }, [form.bookingDurationMinutes]);
 
+  const totalAmount = useMemo(() => {
+    if (!business) return 0;
+    
+    if (business.mode === "BOOKING_SERVICE") {
+      const selectedItem = getPublicCatalog(business).find(i => i.id === form.serviceId);
+      return selectedItem?.price || 0;
+    }
+    if (business.mode === "PRODUCT_ORDER") {
+      const selectedItem = getPublicCatalog(business).find(i => i.id === form.serviceId);
+      return (selectedItem?.price || 0) * Math.max(1, Number(form.quantity) || 1);
+    }
+    return 0;
+  }, [business, form.serviceId, form.quantity]);
+
+  useEffect(() => {
+    if (totalAmount > 0) {
+      updateField("totalAmount", String(totalAmount));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAmount]);
+
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [insufficientTimes, setInsufficientTimes] = useState<string[]>([]);
   const [passedTimes, setPassedTimes] = useState<string[]>([]);
@@ -299,6 +329,7 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
       txt += `Pemesanan tanpa DP disimpan ${BOOKING_HOLD_MINUTES} menit.`;
     }
     return txt;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingAvailability, isDateClosed, availableTimes.length, insufficientTimes.length, business?.mode, bookingDurationMinutes, form.serviceId]);
 
   function updateField(name: string, value: string) {
@@ -493,6 +524,7 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     passedTimes,
     availableResourcesByTime,
     slotHint,
+    totalAmount,
     updateField,
     handleSelectCatalogItem,
     handleClearCatalogItem,

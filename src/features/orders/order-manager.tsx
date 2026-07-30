@@ -54,7 +54,18 @@ export function OrderManager() {
   }
  }, [searchParams]);
 
- const statusOptions = ORDER_STATUS_BY_MODE[mode] ?? ORDER_STATUS_BY_MODE["BOOKING_SERVICE"];
+ const rawStatusOptions = ORDER_STATUS_BY_MODE[mode] ?? ORDER_STATUS_BY_MODE["BOOKING_SERVICE"];
+ const statusOptions = useMemo(() => {
+   if (business.paymentTiming === "PAYMENT_ON_BOOKING") {
+     return rawStatusOptions.map(opt => {
+       if (opt.value === "WAITING_DP") {
+         return { ...opt, label: "Menunggu Pembayaran / Bukti" };
+       }
+       return opt;
+     });
+   }
+   return rawStatusOptions;
+ }, [rawStatusOptions, business.paymentTiming]);
 
  const filteredOrders = useMemo(() => {
   return orders.filter((order) => {
@@ -137,7 +148,7 @@ export function OrderManager() {
 
   if (order.status === "WAITING_DP" || order.paymentStatus === "UNPAID" || order.paymentStatus === "DP_PAID") {
    category = "PEMBAYARAN";
-   label = "Tagih DP/Bayar";
+   label = business.paymentTiming === "PAYMENT_ON_BOOKING" ? "Tagih Pembayaran" : "Tagih DP/Bayar";
   } else if (order.status === "CONFIRMED") {
    category = "BOOKING_ORDER";
    label = "Kirim Jadwal";
@@ -168,7 +179,9 @@ export function OrderManager() {
   // Smart Defaults (Killer Feature Free Plan)
   if (category === "PEMBAYARAN") {
    if (order.paymentStatus === "UNPAID") {
-     defaultMsg = `Halo Kak ${order.customerName},\n\nPesanan "${order.title}" sudah kami terima dengan total tagihan *${values.total_amount}*.\nMohon segera selesaikan pembayaran atau uang muka (DP) agar pesanan dapat segera diproses ya Kak.\n\nTerima kasih, ${business.name}.`;
+     const isPaymentOnBooking = business.paymentTiming === "PAYMENT_ON_BOOKING";
+     const typeText = isPaymentOnBooking ? "pembayaran" : "pembayaran atau uang muka (DP)";
+     defaultMsg = `Halo Kak ${order.customerName},\n\nPesanan "${order.title}" sudah kami terima dengan total tagihan *${values.total_amount}*.\nMohon segera selesaikan ${typeText} agar pesanan dapat segera diproses ya Kak.\n\nTerima kasih, ${business.name}.`;
    } else if (order.paymentStatus === "DP_PAID") {
      defaultMsg = `Halo Kak ${order.customerName},\n\nPembayaran DP sebesar *${values.dp_amount}* untuk pesanan "${order.title}" sudah kami terima.\nSisa tagihan yang perlu dilunasi adalah *${formatCurrency((order.totalAmount ?? 0) - (order.dpAmount ?? 0))}*.\n\nTerima kasih, ${business.name}.`;
    }

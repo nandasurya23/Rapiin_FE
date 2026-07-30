@@ -13,6 +13,8 @@ export interface CustomerDTO {
   notes?: string;
   lastInteractionAt?: string;
   lastOrderSummary?: string;
+  pointsBalance?: number;
+  deletedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,11 +40,10 @@ export interface CustomerService {
 export class ApiCustomerService implements CustomerService {
   private mapper = new CustomerMapper();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getCustomers(_businessId: string): Promise<Customer[]> {
+  async getCustomers(businessId: string): Promise<Customer[]> {
     try {
       // Use large limit to load all customers for dashboard/lists
-      const response = await apiFetch<CustomerDTO[]>("/api/customers?limit=100");
+      const response = await apiFetch<CustomerDTO[]>(`/api/customers?limit=100&businessId=${businessId}`);
       return response.map((item) => this.mapper.toDomain(item));
     } catch (err) {
       logServiceError("Failed to fetch customers", err);
@@ -52,8 +53,8 @@ export class ApiCustomerService implements CustomerService {
 
   async getCustomerById(id: string): Promise<Customer | null> {
     try {
-      const customers = await this.getCustomers("");
-      return customers.find((c) => c.id === id) || null;
+      const response = await apiFetch<Customer>(`/api/customers/${id}`);
+      return response;
     } catch (err) {
       logServiceError("Failed to fetch customer by ID", err);
       return null;

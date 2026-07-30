@@ -10,6 +10,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { useToast } from "@/components/ui/toast-provider";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { useQueryClient } from "@tanstack/react-query";
 import { useOrders } from "@/hooks/use-orders";
 import { useCustomers } from "@/hooks/use-customers";
 import { getPublicCatalog, inferCatalogDurationMinutes } from "@/lib/public-business";
@@ -107,6 +108,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
  const { business, readOnlyReason } = useAppData();
  const { customers } = useCustomers();
  const { orders, createOrder, updateOrder, canCreateOrder } = useOrders();
+ const queryClient = useQueryClient();
  
  const [form, setForm] = useState<OrderFormState>(createDefaultForm(business));
  const [isSubmitting, setIsSubmitting] = useState(false);
@@ -620,10 +622,10 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
           payment={order.payments[0]} 
           invoiceAmount={order.totalAmount || 0}
           onVerifySuccess={() => {
-            // Kita biarkan user me-refresh page atau the hook will auto refresh, 
-            // tapi minimal kita update state lokal jika perlu
-            toast.success("Halaman akan dimuat ulang untuk memperbarui status pesanan");
-            setTimeout(() => window.location.reload(), 1500);
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+            queryClient.invalidateQueries({ queryKey: ["customers"] });
+            toast.success("Status pesanan telah diperbarui");
           }}
         />
       </div>

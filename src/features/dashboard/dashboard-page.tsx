@@ -89,7 +89,7 @@ export function DashboardPage() {
   if (!customer) return;
 
   try {
-   updateCustomer(customerId, {
+   await updateCustomer(customerId, {
     name: customer.name,
     whatsappNumber: customer.whatsappNumber,
     status: "DONE",

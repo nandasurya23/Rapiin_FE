@@ -18,6 +18,9 @@ const ORDER_STATUS_TONES: Record<OrderStatus, StatusTone> = {
  DEAL: "success",
  SELESAI: "success",
  BATAL: "danger",
+ CHECK_IN: "info",
+ CHECK_OUT: "neutral",
+ NO_SHOW: "danger",
 };
 
 const PAYMENT_STATUS_TONES: Record<PaymentStatus, StatusTone> = {

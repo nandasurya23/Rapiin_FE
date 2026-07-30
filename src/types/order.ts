@@ -8,6 +8,9 @@ export type OrderStatus =
   | "INQUIRY"
   | "WAITING_DP"
   | "CONFIRMED"
+  | "CHECK_IN"
+  | "CHECK_OUT"
+  | "NO_SHOW"
   | "ORDER_BARU"
   | "DIPROSES"
   | "DIKIRIM_DIAMBIL"
@@ -45,6 +48,13 @@ export interface Order {
   customerStatusSnapshot?: CustomerStatus;
   pointsEarned?: number;
   pointsUsed?: number;
+  bookingHoldExpiresAt?: string;
+  assignedStaffId?: string;
+  cancelledByUserId?: string;
+  createdByUserId?: string;
+  updatedByUserId?: string;
+  lastFollowUpAt?: string;
+  deletedAt?: string;
 }
 
 export interface Payment {
@@ -76,7 +86,7 @@ export interface OCRResult {
   transferDate?: string;
   referenceNumber?: string;
   confidenceScore: number;
-  matchStatus: "MATCH" | "PARTIAL_MATCH" | "MISMATCH" | "UNVERIFIED";
+  matchStatus: "MATCH" | "PARTIAL_MATCH" | "MISMATCH" | "LOW_CONFIDENCE";
   recommendationRating?: number;
   metadata?: Record<string, unknown>;
   createdAt: string;

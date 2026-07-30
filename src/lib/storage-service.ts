@@ -173,6 +173,7 @@ const emptyBusiness: Business = {
   whatsappNumber: "",
   mode: "BOOKING_SERVICE",
   operationalModel: "RESOURCE_BOOKING",
+  paymentTiming: "NO_PAYMENT",
   usesResources: true,
   resourceLabel: "Staf",
   resourceCount: 0,
