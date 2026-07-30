@@ -62,6 +62,13 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
       <span className="text-sm text-[var(--color-text-secondary)]">Status</span>
       <PaymentStatusBadge status={invoice.paymentStatus} />
      </div>
+     {invoice.paymentMethod && (
+      <InvoiceRow 
+        label="Metode Bayar" 
+        value={invoice.paymentMethod === "CASH" ? "Tunai (Kasir)" : "Non-Tunai"} 
+        valueClass="text-sm font-semibold text-[var(--color-text)]"
+      />
+     )}
      <InvoiceRow label="No. Nota" value={invoice.invoiceCode} valueClass="font-mono text-sm font-semibold text-[var(--color-text)]" />
      <InvoiceRow label="Tanggal" value={formatDateTime(invoice.createdAt)} />
      <InvoiceRow label="Customer" value={invoice.customerName} />

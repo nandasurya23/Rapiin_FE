@@ -19,6 +19,8 @@ import {
 import type { Business, BusinessResource } from "@/types/business";
 import { usePublicOrderForm } from "./hooks/use-public-order-form";
 import { PublicOrderReceipt } from "./components/public-order-receipt";
+import { TempPaymentProofUpload } from "./components/temp-payment-proof-upload";
+import { formatCurrency } from "@/lib/format";
 
 export function PublicOrderForm({
   slug,
@@ -55,6 +57,7 @@ export function PublicOrderForm({
     availableResourcesByTime,
     loadingAvailability,
     canCreateOrder,
+    totalAmount,
   } = usePublicOrderForm(slug, initialBusiness);
 
   useEffect(() => {
@@ -579,6 +582,36 @@ export function PublicOrderForm({
                    ⚠️ {error}
                  </div>
                )}
+               
+               {business.paymentTiming === "PAYMENT_ON_BOOKING" && (
+                 <div className="mt-6 border-t border-[var(--color-border)]/50 pt-6">
+                   {totalAmount > 0 ? (
+                     <div className="mb-4 bg-[var(--color-surface-elevated)] p-4 rounded-xl border border-[var(--color-border)] flex items-center justify-between">
+                       <span className="text-sm font-bold text-[var(--color-text)]">Total Tagihan:</span>
+                       <span className="text-lg font-black text-[var(--color-primary)]">{formatCurrency(totalAmount)}</span>
+                     </div>
+                   ) : (
+                     <div className="mb-4 bg-[var(--color-surface-elevated)] p-4 rounded-xl border border-[var(--color-border)] flex flex-col">
+                       <span className="text-sm font-bold text-[var(--color-text)] mb-1">Total Tagihan Belum Ditentukan</span>
+                       <span className="text-xs text-[var(--color-text-secondary)]">Silakan selesaikan pesanan terlebih dahulu, atau hubungi admin untuk nominal pastinya.</span>
+                     </div>
+                   )}
+                   
+                   {totalAmount > 0 && (
+                     <TempPaymentProofUpload
+                       businessSlug={business.slug}
+                       onUploadSuccess={(url, hash) => {
+                         updateField("tempProofUrl", url);
+                         updateField("tempProofHash", hash);
+                       }}
+                       onClear={() => {
+                         updateField("tempProofUrl", "");
+                         updateField("tempProofHash", "");
+                       }}
+                     />
+                   )}
+                 </div>
+               )}
              </div>
           )}
 
@@ -604,8 +637,11 @@ export function PublicOrderForm({
                    type="submit"
                    className="flex-1 h-12 font-black text-base rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] shadow-lg shadow-[var(--color-primary)]/20 hover:-translate-y-0.5 transition-all"
                    isLoading={isSubmitting}
+                   disabled={(business.paymentTiming === "PAYMENT_ON_BOOKING" && totalAmount > 0 && !form.tempProofUrl)}
                 >
-                   Kirim Pemesanan
+                   {business.paymentTiming === "PAYMENT_ON_BOOKING" && totalAmount > 0 && !form.tempProofUrl 
+                      ? "Unggah Bukti Dahulu" 
+                      : "Kirim Pemesanan"}
                 </Button>
              )}
           </div>

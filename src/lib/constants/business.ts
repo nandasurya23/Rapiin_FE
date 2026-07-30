@@ -1,4 +1,4 @@
-import type { BusinessMode, BusinessModeOption, BusinessResource, OperationalModel, OperationalModelOption } from "@/types/business";
+import type { BusinessMode, BusinessModeOption, BusinessResource, OperationalModel, OperationalModelOption, PaymentTimingOption } from "@/types/business";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/lib/booking";
 
 export const BUSINESS_MODE_OPTIONS: BusinessModeOption[] = [
@@ -37,6 +37,28 @@ export const OPERATIONAL_MODEL_OPTIONS: OperationalModelOption[] = [
   },
 ];
 
+export const PAYMENT_TIMING_OPTIONS: PaymentTimingOption[] = [
+  {
+    value: "PAYMENT_ON_BOOKING",
+    label: "Saat Mengisi Form",
+    helperText: "Pelanggan harus membayar (DP/Full) dan upload bukti sebelum pesanan terkirim. Cocok untuk sewa studio, lapangan, atau layanan yang butuh komitmen awal.",
+  },
+  {
+    value: "PAYMENT_AFTER_CONFIRMATION",
+    label: "Setelah Dikonfirmasi Admin",
+    helperText: "Pelanggan kirim form dulu, admin cek jadwal, lalu kirim tagihan. Cocok untuk klinik, dokter, salon, atau layanan berbasis appointment.",
+  },
+  {
+    value: "PAYMENT_AFTER_INVOICE",
+    label: "Setelah Invoice/Penawaran Diterbitkan",
+    helperText: "Pelanggan kirim request detail, admin buatkan penawaran harga, baru dibayar. Cocok untuk percetakan, katering, jasa kontraktor.",
+  },
+  {
+    value: "NO_PAYMENT",
+    label: "Tanpa Pembayaran Online",
+    helperText: "Tidak ada sistem tagihan online. Bayar langsung di tempat (Cash On Delivery/On Site).",
+  },
+];
 
 export const RESOURCE_LABEL_SUGGESTIONS = ["Staf", "Tim", "Kapster", "Ruangan", "Meja", "PS", "Lapangan", "Court", "Studio", "Room"] as const;
 

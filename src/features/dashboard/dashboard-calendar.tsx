@@ -219,6 +219,8 @@ export const DashboardCalendar = memo(function DashboardCalendar({ business, ord
    }));
 
    toast.success("Order diperbarui", "Status dari modal kalender sudah tersimpan.");
+  } catch (err) {
+   toast.error("Gagal memperbarui order", err instanceof Error ? err.message : "Terjadi kesalahan.");
   } finally {
    setSavingOrderId(null);
   }

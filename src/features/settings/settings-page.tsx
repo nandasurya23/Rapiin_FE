@@ -64,6 +64,7 @@ function createFormStateFromBusiness(
     services: business.services ?? getPublicCatalog(business),
     logoUrl: business.logoUrl ?? "",
     autoCreateOrderFromSubmission: business.autoCreateOrderFromSubmission ?? true,
+    paymentTiming: business.paymentTiming ?? "PAYMENT_AFTER_CONFIRMATION",
   };
 }
 
@@ -256,6 +257,7 @@ export function SettingsPage() {
         paymentInstructions: form.paymentInstructions.trim() || undefined,
         logoUrl: form.logoUrl.trim() || undefined,
         autoCreateOrderFromSubmission: form.autoCreateOrderFromSubmission,
+        paymentTiming: form.paymentTiming,
       });
       toast.success("Pengaturan bisnis disimpan", "Flow form dan booking sudah ikut menyesuaikan.");
     } catch (err) {

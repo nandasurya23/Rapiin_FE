@@ -55,7 +55,7 @@ export function CatalogSettingsTab({ form, errors, setForm }: CatalogSettingsTab
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 pr-8">
+                <div className="grid gap-4 md:grid-cols-3 pr-8">
                   <label className="block">
                     <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">
                       Nama
@@ -75,16 +75,35 @@ export function CatalogSettingsTab({ form, errors, setForm }: CatalogSettingsTab
                   </label>
                   <label className="block">
                     <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                      Harga (Label)
+                      Harga (Label Teks)
                     </span>
                     <Input
                       value={service.priceLabel || ""}
-                      placeholder="Contoh: Rp 50.000 atau Gratis"
+                      placeholder="Contoh: Mulai Rp 50.000"
                       onChange={(event) =>
                         setForm((current) => ({
                           ...current,
                           services: current.services.map((item) =>
-                            item.id === service.id ? { ...item, priceLabel: formatRupiahInput(event.target.value) } : item
+                            item.id === service.id ? { ...item, priceLabel: event.target.value } : item
+                          ),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                      Harga Angka (Untuk Kalkulasi)
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={service.price ?? ""}
+                      placeholder="Contoh: 50000"
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          services: current.services.map((item) =>
+                            item.id === service.id ? { ...item, price: parseInt(event.target.value, 10) || 0 } : item
                           ),
                         }))
                       }
@@ -149,6 +168,7 @@ export function CatalogSettingsTab({ form, errors, setForm }: CatalogSettingsTab
                     name: "",
                     description: "",
                     priceLabel: "",
+                    price: 0,
                     durationMinutes: current.mode === "BOOKING_SERVICE" ? 60 : undefined,
                   },
                 ],

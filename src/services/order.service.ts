@@ -1,5 +1,5 @@
 import type { Mapper } from "./mapper";
-import type { Order, OrderStatus, PaymentStatus } from "@/types/order";
+import type { Order, OrderStatus, PaymentStatus, Payment } from "@/types/order";
 import type { BusinessMode } from "@/types/business";
 import type { CustomerStatus } from "@/types/customer";
 import { apiFetch } from "@/lib/api-client";
@@ -30,7 +30,14 @@ export interface OrderDTO {
   lastFollowUpAt?: string;
   customerStatusSnapshot?: CustomerStatus;
   isLocked?: boolean;
-  payments?: any[];
+  pointsEarned?: number;
+  pointsUsed?: number;
+  payments?: Payment[];
+  assignedStaffId?: string;
+  cancelledByUserId?: string;
+  createdByUserId?: string;
+  updatedByUserId?: string;
+  deletedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,8 +51,7 @@ export class OrderMapper implements Mapper<OrderDTO, Order> {
   }
 
   toDTO(domain: Order): OrderDTO {
-    const { pointsEarned, pointsUsed, payments, proof, ...rest } = domain as Order & Record<string, unknown>;
-    return rest as unknown as OrderDTO;
+    return domain as unknown as OrderDTO;
   }
 }
 
@@ -60,10 +66,10 @@ export interface OrderService {
 export class ApiOrderService implements OrderService {
   private mapper = new OrderMapper();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getOrders(_businessId: string): Promise<Order[]> {
+  async getOrders(businessId: string): Promise<Order[]> {
     try {
-      const response = await apiFetch<OrderDTO[]>("/api/orders?limit=100");
+      // businessId passed for context/logging or if BE supports admin override
+      const response = await apiFetch<OrderDTO[]>(`/api/orders?limit=100&businessId=${businessId}`);
       return response.map((item) => this.mapper.toDomain(item));
     } catch (err) {
       logServiceError("Failed to fetch orders", err);
@@ -73,8 +79,8 @@ export class ApiOrderService implements OrderService {
 
   async getOrderById(id: string): Promise<Order | null> {
     try {
-      const orders = await this.getOrders("");
-      return orders.find((o) => o.id === id) || null;
+      const response = await apiFetch<OrderDTO>(`/api/orders/${id}`);
+      return this.mapper.toDomain(response);
     } catch (err) {
       logServiceError("Failed to fetch order by ID", err);
       return null;

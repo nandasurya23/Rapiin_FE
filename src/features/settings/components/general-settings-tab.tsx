@@ -11,7 +11,7 @@ import { compressLogoAsBlob, compressLogoImage } from "@/lib/image";
 import { supabase } from "@/lib/supabase";
 import { useBusiness } from "@/hooks/use-business";
 import { BUSINESS_MODE_OPTIONS } from "@/lib/constants/business";
-import type { BusinessResource, OperationalModel, PublicCatalogItem } from "@/types/business";
+import type { BusinessResource, OperationalModel, PaymentTiming, PublicCatalogItem } from "@/types/business";
 
 export type SettingsFormState = {
   name: string;
@@ -32,6 +32,7 @@ export type SettingsFormState = {
   services: PublicCatalogItem[];
   logoUrl: string;
   autoCreateOrderFromSubmission: boolean;
+  paymentTiming: PaymentTiming;
 };
 
 export type FormErrors = Partial<Record<keyof SettingsFormState, string>> & {
@@ -102,6 +103,11 @@ export function GeneralSettingsTab({
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
+                    
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("Ukuran file maksimal 5MB.");
+                      return;
+                    }
                     
                     toast.info("Sedang mengunggah logo...", "Mohon tunggu sebentar.");
                     try {

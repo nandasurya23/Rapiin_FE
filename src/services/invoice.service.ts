@@ -14,6 +14,7 @@ export interface InvoiceDTO {
   customerName: string;
   totalAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMethod?: "CASH" | "NON_CASH";
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -41,10 +42,9 @@ export interface InvoiceService {
 export class ApiInvoiceService implements InvoiceService {
   private mapper = new InvoiceMapper();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getInvoices(_businessId: string): Promise<Invoice[]> {
+  async getInvoices(businessId: string): Promise<Invoice[]> {
     try {
-      const response = await apiFetch<InvoiceDTO[]>("/api/invoices?limit=100");
+      const response = await apiFetch<InvoiceDTO[]>(`/api/invoices?limit=100&businessId=${businessId}`);
       return response.map((item) => this.mapper.toDomain(item));
     } catch (err) {
       logServiceError("Failed to fetch invoices", err);

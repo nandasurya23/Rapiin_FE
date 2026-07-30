@@ -76,33 +76,6 @@ export function PublicInvoicePage({
   }
  }, [invoice]);
 
- // --- LIVE TRACKER LOGIC ---
- const [queueAhead, setQueueAhead] = useState(0);
-
- useEffect(() => {
-  if (!order) return;
-  
-  function calculateQueue() {
-   if (!order) return;
-   // Hitung order aktif (PROSES, MENUNGGU, WAITING_DP) yang masuk sebelum order ini
-   const activeStatuses = ["MENUNGGU", "WAITING_DP", "PROSES"];
-   const businessOrders = (business?.orders || []) as Order[];
-   const ahead = businessOrders.filter((o) => 
-    activeStatuses.includes(o.status) && 
-    new Date(o.createdAt).getTime() < new Date(order.createdAt).getTime()
-   );
-   setQueueAhead(ahead.length);
-  }
-
-  calculateQueue();
-  // Auto refresh setiap 30 detik (polling lokal)
-  const interval = setInterval(() => {
-    if (document.visibilityState === "visible") {
-      calculateQueue();
-    }
-  }, 30000); 
-  return () => clearInterval(interval);
- }, [order, business?.orders]);
  // ---------------------------
 
  if (loading) {
@@ -266,15 +239,14 @@ export function PublicInvoicePage({
 
      {/* Live Order Tracker */}
      {order && order.status !== "BATAL" && (() => {
-      const getTrackerState = () => {
-       if (order.status === "SELESAI") return { step: 4, title: "Selesai" };
-       if (order.status === "WAITING_DP" || order.status === "CONFIRMED") return { step: 1, title: "Menunggu" };
-       if (order.status === "DIPROSES") {
-        if (queueAhead > 0) return { step: 2, title: "Dalam Antrean" };
-        return { step: 3, title: "Sedang Diproses" };
-       }
-       return { step: 1, title: "Dikonfirmasi" };
-      };
+       const getTrackerState = () => {
+        if (order.status === "SELESAI") return { step: 4, title: "Selesai" };
+        if (order.status === "WAITING_DP" || order.status === "CONFIRMED") return { step: 1, title: "Menunggu" };
+        if (order.status === "DIPROSES") {
+         return { step: 3, title: "Sedang Diproses" };
+        }
+        return { step: 1, title: "Dikonfirmasi" };
+       };
       const trackerState = getTrackerState();
 
       return (
@@ -283,30 +255,22 @@ export function PublicInvoicePage({
          {/* Glow background */}
          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-hover)] to-[var(--color-accent)] opacity-80" />
          
-         <div className="flex items-center justify-between mb-8">
-          <div>
-           <h3 className="text-base font-black tracking-tight text-[var(--color-text)]">Live Tracker</h3>
-           <div className="flex items-center gap-1.5 mt-1">
-            {trackerState.step < 4 && (
-             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-primary)] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-primary)]"></span>
+          <div className="flex items-center justify-between mb-8">
+           <div>
+            <h3 className="text-base font-black tracking-tight text-[var(--color-text)]">Live Tracker</h3>
+            <div className="flex items-center gap-1.5 mt-1">
+             {trackerState.step < 4 && (
+              <span className="relative flex h-2 w-2">
+               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-primary)] opacity-75"></span>
+               <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-primary)]"></span>
+              </span>
+             )}
+             <span className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest">
+              {trackerState.step < 4 ? "Live Update Aktif" : "Pesanan Selesai"}
              </span>
-            )}
-            <span className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest">
-             {trackerState.step < 4 ? "Live Update Aktif" : "Pesanan Selesai"}
-            </span>
+            </div>
            </div>
           </div>
-          {trackerState.step === 2 && queueAhead > 0 && (
-           <div className="flex flex-col items-end bg-[var(--color-surface)] px-4 py-2 rounded-2xl border border-[var(--color-border)]">
-            <span className="text-3xl font-black text-[var(--color-primary)] leading-none">{queueAhead}</span>
-            <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-1">
-             {business.mode === "BOOKING_SERVICE" ? "Orang Antre" : "Antrean"}
-            </span>
-           </div>
-          )}
-         </div>
 
          {/* Steps */}
          <div className="space-y-0 relative before:absolute before:inset-0 before:ml-[15px] before:-translate-x-px before:h-[calc(100%-32px)] before:w-0.5 before:bg-gradient-to-b before:from-[var(--color-border)] before:to-transparent">
@@ -413,7 +377,9 @@ export function PublicInvoicePage({
       ) : (
        <PaymentProofUpload 
         invoiceId={invoice.id} 
-        isPro={true} 
+        isPro={business.subscriptions?.[0]?.planCode === "PRO" || business.subscriptions?.[0]?.planCode === "PREMIUM"} 
+        initialHasPending={order?.payments && order.payments.length > 0}
+        hideUploadOption={business.paymentTiming === "PAYMENT_ON_BOOKING"}
        />
       )}
 

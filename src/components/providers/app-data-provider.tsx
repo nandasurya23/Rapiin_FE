@@ -116,9 +116,6 @@ type AppDataContextValue = AppStorageState & {
  reactivateBusiness: (businessId: string) => Promise<null>;
  downloadBusinessBackup: (businessId: string, businessSlug: string) => Promise<void>;
  deleteBusiness: (businessId: string) => Promise<null>;
- inviteTeamMember: (payload: Omit<AuthUser, "id" | "trialUsed" | "isActive" | "createdAt" | "updatedAt">) => Promise<AuthUser>;
- updateTeamMember: (updatedMember: AuthUser) => Promise<AuthUser>;
- deleteTeamMember: (id: string) => Promise<void>;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
@@ -363,18 +360,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    }
   };
  }, [logout]);
-
- const inviteTeamMember = useCallback(async () => {
-  throw new Error("inviteTeamMember is not implemented. Use teamService instead.");
- }, []);
-
- const updateTeamMember = useCallback(async () => {
-  throw new Error("updateTeamMember is not implemented. Use teamService instead.");
- }, []);
-
- const deleteTeamMember = useCallback(async () => {
-  throw new Error("deleteTeamMember is not implemented. Use teamService instead.");
- }, []);
 
  const requestForgotPassword = useCallback(async (email: string) => {
   return authService.requestForgotPassword(email);
@@ -621,9 +606,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   reactivateBusiness,
   downloadBusinessBackup,
   deleteBusiness,
-  inviteTeamMember,
-  updateTeamMember,
-  deleteTeamMember,
  }), [
   state,
   business,
@@ -656,9 +638,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   reactivateBusiness,
   downloadBusinessBackup,
   deleteBusiness,
-  inviteTeamMember,
-  updateTeamMember,
-  deleteTeamMember,
  ]);
 
  return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
