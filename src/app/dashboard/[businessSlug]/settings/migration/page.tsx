@@ -129,7 +129,7 @@ export default function MigrationDashboardPage() {
                       {getStatusBadge(req.status)}
                     </div>
                     <p className="text-sm font-bold text-[var(--color-text)]">
-                      {req.currentConfig?.mode} ➔ {req.requestedConfig?.mode}
+                      {String(req.currentConfig?.mode || "-")} ➔ {String(req.requestedConfig?.mode || "-")}
                     </p>
                     <p className="mt-1 text-xs text-[var(--color-text-secondary)] max-w-xl line-clamp-2">
                       {req.reason}

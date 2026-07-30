@@ -30,14 +30,14 @@ export interface BusinessMigrationRequestDTO {
   businessId: string;
   requestedByUserId: string;
   status: MigrationRequestStatus;
-  currentConfig: Record<string, any>;
-  requestedConfig: Record<string, any>;
+  currentConfig: Record<string, unknown>;
+  requestedConfig: Record<string, unknown>;
   reason: string;
   ownerConsent: boolean;
   riskScore: MigrationRiskScore;
-  riskAnalysis?: Record<string, any>;
+  riskAnalysis?: Record<string, unknown>;
   adminNotes?: string;
-  executionReport?: Record<string, any>;
+  executionReport?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
   executedAt?: string;

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { migrationService, BusinessMigrationRequestDTO } from "@/services/migration.service";
+import { BusinessMigrationRequestDTO } from "@/services/migration.service";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, ArrowRight, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Search, Filter, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function SuperAdminMigrationsPage() {
@@ -106,7 +106,7 @@ export default function SuperAdminMigrationsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((req: any) => (
+                filteredRequests.map((req: BusinessMigrationRequestDTO & { business?: { name: string } }) => (
                   <tr key={req.id} className="hover:bg-[var(--color-surface-elevated)]/50 transition-colors">
                     <td className="px-6 py-4">
                       <p className="font-bold text-[var(--color-text)]">{req.business?.name || req.businessId}</p>
@@ -114,9 +114,9 @@ export default function SuperAdminMigrationsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-xs font-semibold">
-                        <span className="text-[var(--color-text-secondary)]">{req.currentConfig?.mode}</span>
+                        <span className="text-[var(--color-text-secondary)]">{String(req.currentConfig?.mode || "-")}</span>
                         <ArrowRight className="h-3 w-3 text-[var(--color-text-muted)]" />
-                        <span className="text-[var(--color-text)]">{req.requestedConfig?.mode}</span>
+                        <span className="text-[var(--color-text)]">{String(req.requestedConfig?.mode || "-")}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

@@ -14,7 +14,7 @@ describe("ApiCustomerService", () => {
     mockApiFetch.mockResolvedValueOnce([mockCustomer]);
 
     const result = await service.getCustomers("biz_123");
-    expect(mockApiFetch).toHaveBeenCalledWith("/api/customers?limit=100");
+    expect(mockApiFetch).toHaveBeenCalledWith("/api/customers?limit=100&businessId=biz_123");
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("John Doe");
   });
