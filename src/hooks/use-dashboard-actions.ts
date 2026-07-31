@@ -51,7 +51,7 @@ export function useDashboardActions({
       return renderTemplate(template.content, values) || defaultText;
     }
 
-    const unpaidItems = orders
+    const unpaidItems = (orders || [])
       .filter(
         (order) =>
           (order.scheduledDate === selectedDate ||
@@ -88,7 +88,7 @@ export function useDashboardActions({
         };
       });
 
-    const staleItems = customers
+    const staleItems = (customers || [])
       .filter((customer) => {
         if (customer.status !== "NEED_FOLLOW_UP" && customer.status !== "NEW") return false;
         const lastDateStr = customer.lastInteractionAt ?? customer.createdAt;
@@ -115,7 +115,7 @@ export function useDashboardActions({
         ),
       }));
 
-    const reviewItems = orders
+    const reviewItems = (orders || [])
       .filter((order) => {
         if (order.status !== "SELESAI") return false;
         const askDate = new Date(new Date(order.updatedAt || order.createdAt).getTime() + 24 * 60 * 60 * 1000);

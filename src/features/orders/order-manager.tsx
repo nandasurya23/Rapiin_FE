@@ -73,7 +73,7 @@ export function OrderManager() {
  }, [rawStatusOptions, business.paymentTiming]);
 
  const filteredOrders = useMemo(() => {
-  return orders.filter((order) => {
+  return (orders || []).filter((order) => {
    const matchesQuery =
     !query.trim() ||
     order.customerName.toLowerCase().includes(query.toLowerCase()) ||

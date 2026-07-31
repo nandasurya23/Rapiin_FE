@@ -88,7 +88,7 @@ export function useCalendarState({ business, orders, selectedDate, onDateSelect 
   [orders]
  );
 
- const selectedOrders = useMemo(() => orders.filter((order) => order.scheduledDate === selectedDate), [orders, selectedDate]);
+ const selectedOrders = useMemo(() => (orders || []).filter((order) => order.scheduledDate === selectedDate), [orders, selectedDate]);
  const selectedSlotSummaries = useMemo(() => getBookingSlotsForDate(selectedOrders, selectedDate, null, new Date(), business.bookingCapacity), [selectedOrders, selectedDate, business.bookingCapacity]);
  const selectedResourceDetails = useMemo(
   () => getResourceBookingDetailsForDate(selectedOrders, business.resources ?? [], selectedDate),
