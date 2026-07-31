@@ -79,6 +79,8 @@ export function isWithinPeriod(value: string, period: ReportPeriod, referenceDat
 }
 
 export function getDashboardSummary(orders: Order[], customers: Customer[], referenceDate = new Date()): DashboardSummary {
+  orders = orders || [];
+  customers = customers || [];
   const today = toDateKey(referenceDate);
   const todayOrders = orders.filter((order) => order.scheduledDate === today);
   const completedToday = todayOrders.filter((order) => order.status === "SELESAI");
@@ -102,6 +104,8 @@ export function getDashboardSummary(orders: Order[], customers: Customer[], refe
 }
 
 export function getReportSummary(orders: Order[], customers: Customer[], period: ReportPeriod, referenceDate = new Date()): ReportSummary {
+  orders = orders || [];
+  customers = customers || [];
   const periodOrders = orders.filter((order) => isWithinPeriod(getOrderReferenceDate(order), period, referenceDate));
   const periodCustomers = customers.filter((customer) => isWithinPeriod(toDateKey(new Date(customer.createdAt)), period, referenceDate));
 

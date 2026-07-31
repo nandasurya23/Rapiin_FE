@@ -46,8 +46,10 @@ export class BusinessMapper implements Mapper<BusinessDTO, Business> {
   toDomain(raw: BusinessDTO): Business {
     return {
       ...raw,
+      resources: raw.resources || [],
+      subscriptions: raw.subscriptions || [],
       paymentTiming: raw.paymentTiming ?? "NO_PAYMENT",
-      services: raw.services?.map((s: ServiceDTO) => {
+      services: (raw.services || []).map((s: ServiceDTO) => {
         const priceNum = s.price !== undefined ? Number(s.price) : 0;
         return {
           id: s.id,
@@ -64,7 +66,7 @@ export class BusinessMapper implements Mapper<BusinessDTO, Business> {
   toDTO(domain: Business): BusinessDTO {
     return {
       ...domain,
-      services: domain.services?.map((s: PublicCatalogItem) => {
+      services: (domain.services || []).map((s: PublicCatalogItem) => {
         let priceNum = 0;
         if (s.priceLabel) {
           const clean = s.priceLabel.replace(/[^0-9]/g, "");
