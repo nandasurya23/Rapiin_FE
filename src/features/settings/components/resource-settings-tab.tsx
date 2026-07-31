@@ -109,8 +109,6 @@ export function ResourceSettingsTab({
   const { business, subscriptions } = useAppData();
   const subscription = getSubscriptionForBusiness(subscriptions, business.id);
   const planDef = getPlanDefinition(subscription?.planCode ?? "FREE_TRIAL");
-  const staffLimit = planDef.staffLimit;
-  const isLimitReached = form.resources.length >= staffLimit;
 
   return (
     <section className="animate-fade-up">
@@ -289,36 +287,30 @@ export function ResourceSettingsTab({
 
           {errors.resources ? <p className="text-xs font-bold text-[var(--color-danger)]">{errors.resources}</p> : null}
 
-          {isLimitReached ? (
-            <div className="mt-2 rounded-xl bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] p-3 text-xs text-[var(--color-warning-text)]">
-              Batas maksimal <strong>{staffLimit} {form.resourceLabel.toLowerCase()}</strong> untuk paket {planDef.label} telah tercapai. Upgrade ke Pro untuk menambah lebih banyak unit.
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setForm((current) => ({
-                  ...current,
-                  resourceCount: String(current.resources.length + 1),
-                  resources: [
-                    ...current.resources,
-                    {
-                      id: `res_${Date.now()}_${current.resources.length + 1}`,
-                      name: `${current.resourceLabel.trim() || "Slot"} ${current.resources.length + 1}`,
-                      isActive: true,
-                      workingHours: null, // default: ikuti jam bisnis
-                      maxCapacity: 1,
-                    },
-                  ],
-                }));
-                toast.success("Unit baru ditambahkan", "Jangan lupa Simpan Pengaturan agar permanen.");
-              }}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:underline active:scale-95 mt-2"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Tambah Unit Baru
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                resourceCount: String(current.resources.length + 1),
+                resources: [
+                  ...current.resources,
+                  {
+                    id: `res_${Date.now()}_${current.resources.length + 1}`,
+                    name: `${current.resourceLabel.trim() || "Slot"} ${current.resources.length + 1}`,
+                    isActive: true,
+                    workingHours: null,
+                    maxCapacity: 1,
+                  },
+                ],
+              }));
+              toast.success("Unit baru ditambahkan", "Jangan lupa Simpan Pengaturan agar permanen.");
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:underline active:scale-95 mt-2"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Tambah Unit Baru
+          </button>
         </div>
       </div>
     </section>

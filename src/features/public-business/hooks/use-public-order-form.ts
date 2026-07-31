@@ -11,7 +11,6 @@ import {
 } from "@/lib/public-business";
 import type { Business, BusinessMode } from "@/types/business";
 import { apiFetch } from "@/lib/api-client";
-import { canCreateOrder as checkCanCreateOrder } from "@/lib/subscription";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/validation";
 
 export const BOOKING_HOLD_MINUTES = 30; // updated to 30 mins based on new architecture
@@ -151,11 +150,6 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     load();
   }, [slug, initialBusiness]);
 
-  const orders = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (business?.orders || []) as any[];
-  }, [business?.orders]);
-
   const defaultBookingDuration =
     business?.defaultBookingDurationMinutes ?? DEFAULT_BOOKING_DURATION_MINUTES;
 
@@ -214,17 +208,6 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     setCurrentStep(step);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.mode, defaultBookingDuration]);
-
-  const canCreateOrder = useMemo(() => {
-    if (!business) return false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subscriptions = (business as any).subscriptions || [];
-    return checkCanCreateOrder({
-      business,
-      subscriptions,
-      orders,
-    });
-  }, [business, orders]);
 
   const bookingDurationMinutes = useMemo(() => {
     const parsedDuration = Number(form.bookingDurationMinutes);
@@ -393,13 +376,6 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
       return;
     }
 
-    if (!canCreateOrder) {
-      const msg = "Maaf, bisnis ini sementara tidak dapat menerima pesanan baru.";
-      setError(msg);
-      toast.error("Gagal Mengirim", msg);
-      return;
-    }
-
     const reqFields = requiredFieldsForBusiness(business);
     const missing = reqFields.filter((field) => !form[field]?.trim());
 
@@ -429,7 +405,10 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
 
     try {
       const cleanPhone = normalizePhoneNumber(form.whatsappNumber);
-      const payload = { ...form, whatsappNumber: cleanPhone };
+      const payload: Record<string, unknown> = { ...form, whatsappNumber: cleanPhone };
+
+      if (!payload.tempProofUrl) delete payload.tempProofUrl;
+      if (!payload.tempProofHash) delete payload.tempProofHash;
 
       await apiFetch<unknown>(`/api/public/b/${business.slug}/submit`, {
         method: "POST",
@@ -498,7 +477,6 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
   return {
     business,
     loading,
-    orders,
     form,
     setForm,
     submitted,
@@ -512,7 +490,6 @@ export function usePublicOrderForm(slug: string, initialBusiness?: Business | nu
     handleNextStep,
     handlePrevStep,
     isResourceBooking,
-    canCreateOrder,
     bookingDurationMinutes,
     bookingAvailability: { isFull: isDateClosed, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: availableTimes.length },
     activeAvailability: { isFull: isDateClosed, count: 0, hasHold: false, earliestHoldExpiresAt: null, remaining: availableTimes.length },

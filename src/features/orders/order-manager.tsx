@@ -101,12 +101,12 @@ export function OrderManager() {
     return;
    }
 
-   if (order.paymentStatus === "UNPAID" || !order.paymentStatus) {
+   if ((order.paymentStatus === "UNPAID" || !order.paymentStatus) && business.paymentTiming === "PAYMENT_ON_BOOKING") {
     setSmartPaymentOrder({ order, nextStatus });
    } else {
     void handleUpdateOrderStatus(order, nextStatus);
    }
-  } else if ((nextStatus === "DIPROSES" || nextStatus === "DEAL") && (order.paymentStatus === "UNPAID" || !order.paymentStatus)) {
+  } else if ((nextStatus === "DIPROSES" || nextStatus === "DEAL") && (order.paymentStatus === "UNPAID" || !order.paymentStatus) && business.paymentTiming === "PAYMENT_ON_BOOKING") {
    setSmartPaymentOrder({ order, nextStatus });
   } else {
    void handleUpdateOrderStatus(order, nextStatus);
