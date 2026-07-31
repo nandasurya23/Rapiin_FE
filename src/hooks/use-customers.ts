@@ -17,8 +17,9 @@ export function useCustomers(options?: { enablePolling?: boolean; intervalMs?: n
     refetchOnWindowFocus: options?.enablePolling ? true : undefined,
   });
 
-  const canCreateCustomer = canCreateCustomerByState({ business: business!, subscriptions, customers });
-  const currentBusinessUsage = getCustomerUsage({ business: business!, subscriptions, customers });
+  const { businessUsage } = useAppData();
+  const canCreateCustomer = canCreateCustomerByState({ businessUsage, business: business!, subscriptions, customers });
+  const currentBusinessUsage = getCustomerUsage({ businessUsage, business: business!, subscriptions, customers });
 
   const createMutation = useMutation({
     mutationFn: async (payload: Omit<CustomerDTO, "id" | "createdAt" | "updatedAt" | "businessId">) => {

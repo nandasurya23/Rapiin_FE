@@ -163,18 +163,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      businessDirectory: mappedBusinesses,
      upgradeRequests: upgradesResponse.data || [],
     }));
-   } else {
-    const business = await businessService.getBusinessById("");
-    if (!business) return;
+    } else {
+     const [business, businessUsage] = await Promise.all([
+       businessService.getBusinessById(""),
+       businessService.getBusinessUsage()
+     ]);
+     if (!business) return;
 
-    setState((prev) => ({
-     ...prev,
-     business,
-     subscriptions: (business as Business & { subscriptions?: BusinessSubscription[] }).subscriptions || prev.subscriptions,
-     upgradeRequests: (business as Business & { upgradeRequests?: UpgradeRequest[] }).upgradeRequests || prev.upgradeRequests,
-    }));
-   }
-  } catch (err) {
+     setState((prev) => ({
+      ...prev,
+      business,
+      businessUsage,
+      subscriptions: (business as Business & { subscriptions?: BusinessSubscription[] }).subscriptions || prev.subscriptions,
+      upgradeRequests: (business as Business & { upgradeRequests?: UpgradeRequest[] }).upgradeRequests || prev.upgradeRequests,
+     }));
+    }
+   } catch (err) {
    console.error("Failed to load backend data", err);
   }
  }, []);
@@ -224,8 +228,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
  );
  const currentUserRole = currentUser?.role ?? null;
  const isSuperAdmin = currentUserRole === "SUPER_ADMIN";
- const canAccessWriteMode = canWriteMode(subscriptionForCurrentBusiness);
- const readOnlyReason = getReadOnlyReason(subscriptionForCurrentBusiness);
+ const canAccessWriteMode = canWriteMode(subscriptionForCurrentBusiness, state.businessUsage);
+ const readOnlyReason = getReadOnlyReason(subscriptionForCurrentBusiness, state.businessUsage);
 
  const businessDirectory = useMemo(
   () => {

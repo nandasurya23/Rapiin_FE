@@ -17,7 +17,7 @@ import { normalizePhoneNumber } from "@/lib/validation";
 import { Select } from "@/components/ui/select";
 import { getPlanDefinition, getSubscriptionForBusiness } from "@/lib/subscription";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 const NICHE_OPTIONS = [
  { value: "BARBERSHOP", label: "Barbershop" },
@@ -175,7 +175,7 @@ export function OnboardingFlow() {
   if (!validateStep(step)) {
    return;
   }
-  setStep((current) => Math.min(3, current + 1) as Step);
+  setStep((current) => Math.min(4, current + 1) as Step);
  }
 
  function back() {
@@ -184,41 +184,46 @@ export function OnboardingFlow() {
 
  const [isSubmitting, setIsSubmitting] = useState(false);
 
- async function finish(action?: "new-order" | "share-link") {
-  if (isSubmitting) return;
-  if (!validateStep(3)) {
-   return;
-  }
-  setIsSubmitting(true);
-  try {
-   const response = await completeOnboarding({
-    ...form,
-    whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
-    resourceCount: form.usesResources ? 1 : undefined,
-    resources: form.usesResources ? [{ id: "temp", name: `${form.resourceLabel || "Unit"} 1`, isActive: true }] : [],
-    defaultBookingDurationMinutes: 60,
-    bookingCapacity: 1,
-   });
-   toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
-   let redirectUrl = `/dashboard/${response?.slug || business.slug}`;
-   if (action === "new-order") {
-    redirectUrl = `/dashboard/${response?.slug || business.slug}/orders?action=new-order`;
-   } else if (action === "share-link") {
-    redirectUrl = `/dashboard/${response?.slug || business.slug}/business-link`;
+ async function submitData() {
+   if (isSubmitting) return;
+   if (!validateStep(3)) {
+    return;
    }
-   router.push(redirectUrl);
-  } catch (err) {
-   toast.error("Gagal memproses onboarding", err instanceof Error ? err.message : "Kesalahan sistem.");
-  } finally {
-   setIsSubmitting(false);
+   setIsSubmitting(true);
+   try {
+    const response = await completeOnboarding({
+     ...form,
+     whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
+     resourceCount: form.usesResources ? 1 : undefined,
+     resources: form.usesResources ? [{ id: "temp", name: `${form.resourceLabel || "Unit"} 1`, isActive: true }] : [],
+     defaultBookingDurationMinutes: 60,
+     bookingCapacity: 1,
+    });
+    setStep(4);
+   } catch (err) {
+    toast.error("Gagal memproses onboarding", err instanceof Error ? err.message : "Kesalahan sistem.");
+   } finally {
+    setIsSubmitting(false);
+   }
   }
- }
+
+  function finish(action?: "new-order" | "share-link") {
+    toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
+    let redirectUrl = `/dashboard/${business.slug}`;
+    if (action === "new-order") {
+     redirectUrl = `/dashboard/${business.slug}/orders?action=new-order`;
+    } else if (action === "share-link") {
+     redirectUrl = `/dashboard/${business.slug}/business-link`;
+    }
+    router.push(redirectUrl);
+  }
 
 
  const stepTitles: Record<number, { title: string; subtitle: string }> = {
   1: { title: "Info Dasar Bisnis", subtitle: "Nama dan nomor WhatsApp aktif bisnis kamu." },
   2: { title: "Mode Operasi", subtitle: "Cara jualan yang paling sesuai dengan model bisnismu." },
-  3: { title: "Kategori & Finalisasi", subtitle: "Pilih kategori dan deskripsi untuk landing page publikmu." },
+  3: { title: "Kategori & Deskripsi", subtitle: "Pilih kategori dan deskripsi untuk landing page publikmu." },
+  4: { title: "Setup Selesai", subtitle: "Bisnis kamu siap beroperasi dengan Rapiin." },
  };
  const currentStepInfo = stepTitles[step] ?? stepTitles[1];
 
@@ -519,50 +524,47 @@ export function OnboardingFlow() {
          />
          {errors.description ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.description}</p> : null}
         </label>
+       </div>
+      ) : null}
 
-        {/* Setup Summary Card */}
+      {step === 4 ? (
+       <div className="grid gap-6 animate-fade-up">
         <div className="relative overflow-hidden rounded-2xl shadow-[var(--shadow-md)] border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-primary-surface)] via-[var(--color-surface-elevated)] to-[var(--color-surface)] p-6 space-y-4">
          <div className="flex items-center gap-2">
           <CheckCircle2 className="h-6 w-6 text-[var(--color-primary)] animate-scale-in" />
           <h3 className="text-xl font-bold text-[var(--color-text)]">Dashboard kamu sudah siap 🎉</h3>
          </div>
-         <p className="text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
-          Dashboard Anda siap digunakan. Anda bisa mengatur jam operasional, menambah daftar layanan/produk, dan membagikan link booking ke pelanggan.
-         </p>
          
+         <div className="rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-surface)] p-4 shadow-sm mb-4">
+           <p className="text-sm font-bold text-[var(--color-info-text)] mb-2 flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Paket Free Trial Aktif
+           </p>
+           <p className="text-[14px] text-[var(--color-info-text)]/90 leading-relaxed">
+            Selamat! Bisnis Anda kini berada di Paket Free Trial. Anda bisa menambahkan hingga <strong>25 pelanggan pertama</strong> secara gratis tanpa batas waktu. Jika bisnis Anda bertumbuh, Anda bisa Upgrade ke Pro kapan saja.
+           </p>
+         </div>
+
          {form.mode === "BOOKING_SERVICE" && form.usesResources && (
            <div className="mt-4 rounded-xl bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] p-4 shadow-sm">
              <p className="text-sm font-bold text-[var(--color-warning-text)] flex items-center gap-2">
                ⚠️ Tindakan Lanjutan:
              </p>
              <p className="text-[13px] font-medium text-[var(--color-warning-text)]/90 mt-1.5 leading-relaxed">
-               Sistem telah membuatkan 1 {form.resourceLabel || "Unit"} sementara untuk kelancaran setup. Jangan lupa masuk ke menu <strong>Pengaturan Unit</strong> di Dashboard setelah ini untuk merubah namanya menjadi unit asli Anda (contoh: Lapangan 1, Kapster Budi, dll).
+               Sistem telah membuatkan 1 {form.resourceLabel || "Unit"} sementara untuk kelancaran setup. Jangan lupa masuk ke menu <strong>Pengaturan Unit</strong> di Dashboard setelah ini untuk merubah namanya menjadi unit asli Anda.
              </p>
            </div>
          )}
-         
-         <div className="rounded-xl border border-[var(--color-border)] bg-white/50 backdrop-blur-sm px-5 py-5 space-y-3 mt-4">
-          <p className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Ringkasan Setup</p>
-          <div className="space-y-2 text-[15px]">
-           <p className="text-[var(--color-text)]"><span className="font-bold text-[var(--color-primary)]">Mode bisnis:</span> {form.mode === "BOOKING_SERVICE" ? "Booking Jasa" : form.mode === "PRODUCT_ORDER" ? "Jual Produk Fisik" : "Request Custom"}</p>
-           {form.mode === "BOOKING_SERVICE" && (
-            <p className="text-[var(--color-text)]">
-             <span className="font-bold text-[var(--color-primary)]">Cara kerja:</span>{" "}
-             {form.operationalModel === "RESOURCE_BOOKING" ? `Booking per ${form.resourceLabel}` : "Jadwal kosong langsung"}
-            </p>
-           )}
-          </div>
-         </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-         <Button type="button" variant="secondary" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-sm)]" onClick={() => void finish("new-order")} isLoading={isSubmitting} disabled={isSubmitting}>
+        <div className="grid gap-4 sm:grid-cols-3 mt-4">
+         <Button type="button" variant="secondary" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-sm)]" onClick={() => finish("new-order")}>
           Tambah Order
          </Button>
-         <Button type="button" variant="secondary" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-sm)]" onClick={() => void finish("share-link")} isLoading={isSubmitting} disabled={isSubmitting}>
+         <Button type="button" variant="secondary" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-sm)]" onClick={() => finish("share-link")}>
           Bagikan Link
          </Button>
-         <Button type="button" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]" onClick={() => void finish()} isLoading={isSubmitting} disabled={isSubmitting}>
+         <Button type="button" className="rounded-xl h-12 text-sm font-bold shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]" onClick={() => finish()}>
           Lihat Dashboard
          </Button>
         </div>
@@ -570,12 +572,18 @@ export function OnboardingFlow() {
       ) : null}
 
       <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border)] pt-6">
-       <Button type="button" variant="secondary" className="rounded-xl h-12 px-6 font-bold text-[15px]" onClick={back} disabled={step === 1 || isSubmitting}>
-        ← Kembali
-       </Button>
+       {step < 4 ? (
+        <Button type="button" variant="secondary" className="rounded-xl h-12 px-6 font-bold text-[15px]" onClick={back} disabled={step === 1 || isSubmitting}>
+         ← Kembali
+        </Button>
+       ) : <div />}
        {step < 3 ? (
         <Button type="button" className="rounded-xl h-12 px-6 font-bold text-[15px] shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]" onClick={next}>
-         {step === 2 ? "Review Setup →" : "Lanjut →"}
+         Lanjut →
+        </Button>
+       ) : step === 3 ? (
+        <Button type="button" className="rounded-xl h-12 px-6 font-bold text-[15px] shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]" onClick={submitData} isLoading={isSubmitting} disabled={isSubmitting}>
+         Simpan & Selesaikan →
         </Button>
        ) : null}
       </div>

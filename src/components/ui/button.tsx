@@ -15,7 +15,7 @@ type BaseProps = {
 };
 
 type ButtonProps = BaseProps & ButtonHTMLAttributes<HTMLButtonElement>;
-type LinkButtonProps = BaseProps & { href: string; className?: string };
+type LinkButtonProps = BaseProps & { href: string; className?: string; onClick?: () => void };
 
 /* ============================================================
   VARIANT STYLES — All using brand tokens

@@ -354,14 +354,8 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
    setError(`Pilih ${business.resourceLabel?.toLowerCase() ?? "tim/staf"} dulu.`);
    return;
   }
-  if (
-   form.scheduledDate &&
-   form.scheduledTime &&
-   (isResourceBookingMode
-    ? slotAvailability.isFull
-    : isBookingSlotFull(orders, form.scheduledDate, form.scheduledTime, bookingDurationMinutes, editingId, undefined, business.bookingCapacity))
-  ) {
-   setError("Jadwal sudah penuh. Pilih jam lain.");
+  if (isResourceBookingMode && !form.resourceId) {
+   setError(`Pilih ${business.resourceLabel?.toLowerCase() ?? "tim/staf"} dulu.`);
    return;
   }
 
@@ -762,20 +756,15 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
           <button
            type="button"
            onClick={() => {
-            if (!resourceBookingAvailability.isFull) {
              updateFormField("resourceId", "ANY");
              updateFormField("scheduledTime", "");
-            }
            }}
            className={cn(
             "p-3 rounded-xl border text-left transition-all flex justify-between items-center",
-            resourceBookingAvailability.isFull
-             ? "bg-red-500/5 border-red-500/10 text-red-500/40 cursor-not-allowed"
-             : form.resourceId === "ANY"
+             form.resourceId === "ANY"
               ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.02]"
               : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
            )}
-           disabled={resourceBookingAvailability.isFull}
           >
            <div>
             <div className="font-bold text-sm">Bebas / Pilihkan Untuk Saya</div>
@@ -853,21 +842,18 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
              key={time}
              type="button"
              onClick={() => {
-              if (!isFull) {
-               updateFormField("scheduledTime", time);
-              }
+              updateFormField("scheduledTime", time);
              }}
              className={cn(
               "py-2 px-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-0.5",
               isFull
-               ? "bg-red-50 border-red-200 text-red-500 cursor-not-allowed opacity-70"
+               ? "bg-red-50 border-red-200 text-red-500 opacity-70"
                : isSelected
                 ? "bg-[var(--color-primary)] text-white border-transparent shadow-sm scale-[1.02]"
                 : "bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)] hover:scale-[1.01] active:scale-[0.99] text-[var(--color-text)]"
              )}
-             disabled={isFull}
             >
-             <span className={cn("text-xs font-bold", isFull && "line-through")}>{time}</span>
+             <span className="text-xs font-bold">{time}</span>
              <span className={cn(
               "text-[8px] tracking-wide uppercase font-extrabold",
               isFull ? "text-red-500/80" : isSelected ? "text-white/80" : "text-[var(--color-text-muted)]"

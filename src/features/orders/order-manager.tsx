@@ -26,6 +26,7 @@ import { OrderFormSheet } from "./components/order-form-sheet";
 import { ConfirmFinishOrderDialog } from "./components/confirm-finish-order-dialog";
 import { SmartPaymentDialog } from "./components/smart-payment-dialog";
 import { ShiftReportDialog } from "./components/shift-report-dialog";
+import { UpgradeModal } from "@/components/shared/upgrade-modal";
 
 type FilterValue = "ALL" | OrderStatus;
 type PaymentFilterValue = "ALL" | PaymentStatus;
@@ -47,7 +48,11 @@ export function OrderManager() {
  const [editingId, setEditingId] = useState<string | null>(null);
  const [finishingOrder, setFinishingOrder] = useState<Order | null>(null);
  const [smartPaymentOrder, setSmartPaymentOrder] = useState<{ order: Order; nextStatus: OrderStatus } | null>(null);
-
+ const [upgradeModalOpen, setUpgradeModalOpen] = useState<{ isOpen: boolean; title: string; description: string }>({
+   isOpen: false,
+   title: "",
+   description: "",
+ });
  useEffect(() => {
   if (searchParams && searchParams.get("action") === "new-order") {
    setIsFormOpen(true);
@@ -208,6 +213,14 @@ export function OrderManager() {
  }
 
  function handleCreateNew() {
+  if (!canCreateOrder) {
+   setUpgradeModalOpen({
+     isOpen: true,
+     title: "Akses Mode Baca Saja",
+     description: "Masa coba Anda telah berakhir. Upgrade sekarang untuk melanjutkan operasional tanpa batas!"
+   });
+   return;
+  }
   setEditingId(null);
   setMode(business.mode);
   setIsFormOpen(true);
@@ -231,7 +244,11 @@ export function OrderManager() {
        variant="secondary"
        onClick={() => {
          if (subscriptionForCurrentBusiness?.planCode === "FREE_TRIAL") {
-           toast.info("Fitur Terkunci", "Silakan upgrade paket Anda untuk menggunakan fitur laporan dan shift.");
+           setUpgradeModalOpen({
+             isOpen: true,
+             title: "Fitur Eksklusif PRO",
+             description: "Laporan Tutup Shift harian hanya tersedia untuk paket Pro dan Premium."
+           });
          } else {
            setIsShiftReportOpen(true);
          }
@@ -254,11 +271,14 @@ export function OrderManager() {
        type="button"
        variant="secondary"
        onClick={handleCreateNew}
-       disabled={!canCreateOrder}
        className="shadow-sm font-bold"
       >
        <Plus className="mr-2 h-5 w-5" />
-       Tambah Order
+       {business.operationalModel === "APPOINTMENT" 
+         ? "Buat Janji" 
+         : business.operationalModel === "RESOURCE_BOOKING" 
+           ? "Buat Booking" 
+           : "Tambah Pesanan"}
       </Button>
      </div>
     }
@@ -356,6 +376,13 @@ export function OrderManager() {
     onClose={() => setFinishingOrder(null)}
     order={finishingOrder}
     onConfirm={handleUpdateOrderStatus}
+   />
+   
+   <UpgradeModal
+    isOpen={upgradeModalOpen.isOpen}
+    onClose={() => setUpgradeModalOpen(prev => ({ ...prev, isOpen: false }))}
+    title={upgradeModalOpen.title}
+    description={upgradeModalOpen.description}
    />
 
    {/* SECTION 6: SMART PAYMENT DIALOG */}
