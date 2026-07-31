@@ -12,6 +12,8 @@ import { PLAN_LABELS } from "@/lib/constants/subscription";
 import { useToast } from "@/components/ui/toast-provider";
 import { ROUTES } from "@/lib/routes";
 import { usePermission } from "@/hooks/use-permission";
+import { useState } from "react";
+import { UpgradeModal } from "@/components/shared/upgrade-modal";
 
 type SidebarProps = {
  collapsed: boolean;
@@ -31,6 +33,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
  } = useAppData();
  const { logout } = useAuth();
  const { canAccessRoute } = usePermission();
+ const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const navItems = isSuperAdmin 
    ? SUPER_ADMIN_NAV_ITEMS.map(i => ({ ...i, isLocked: false }))
    : getAppNavItems(business.slug).filter(item => canAccessRoute(item.href, business.slug)).map(item => {
@@ -153,53 +156,55 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         return (
          <Link
-          key={item.href}
-          href={item.isLocked ? ROUTES.plan(business.slug) : item.href}
-          onClick={(e) => {
-            if (item.isLocked) {
-              e.preventDefault();
-              toast.info("Fitur Terkunci", "Silakan upgrade paket Anda untuk menggunakan fitur ini.");
-            }
-          }}
-          aria-label={item.label}
-          title={collapsed ? item.label : undefined}
-          className={cn(
-           "group flex items-center gap-3",
-           "text-sm font-medium",
-           "transition-all duration-200",
-           "outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold-300)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-navy-900)]",
-
-           collapsed ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto rounded-xl" : "px-3 py-2.5 rounded-xl",
-
-           active
-            ? [
-              "bg-[var(--color-navy-800)] shadow-sm",
-              "text-white",
-             ]
-            : [
-              "text-white/60",
-              "hover:bg-white/[0.04] hover:text-white",
-             ]
-          )}
-         >
-          <Icon
+           key={item.href}
+           href={item.isLocked ? ROUTES.plan(business.slug) : item.href}
+           onClick={(e) => {
+             if (item.isLocked) {
+               e.preventDefault();
+               setUpgradeModalOpen(true);
+             }
+           }}
+           aria-label={item.label}
+           title={collapsed ? item.label : undefined}
            className={cn(
-            "h-[18px] w-[18px] shrink-0 transition-colors",
-            active ? "text-[var(--color-gold-300)]" : "text-white/50 group-hover:text-white/80"
+            "group flex items-center gap-3",
+            "text-sm font-medium",
+            "transition-all duration-200",
+            "outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold-300)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-navy-900)]",
+
+            collapsed ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto rounded-xl" : "px-3 py-2.5 rounded-xl",
+
+            active
+             ? [
+               "bg-[var(--color-navy-800)] shadow-sm",
+               "text-white",
+              ]
+             : [
+               "text-white/60",
+               "hover:bg-white/[0.04] hover:text-white",
+              ]
            )}
-          />
-           <span
+          >
+           <Icon
             className={cn(
-             "truncate transition-all duration-300",
-             collapsed ? "w-0 opacity-0 overflow-hidden" : "opacity-100 flex-1"
+             "h-[18px] w-[18px] shrink-0 transition-colors",
+             active ? "text-[var(--color-gold-300)]" : "text-white/50 group-hover:text-white/80"
             )}
-           >
-            {item.label}
-           </span>
-           {item.isLocked && !collapsed && (
-            <Lock className="h-3.5 w-3.5 text-white/30 shrink-0" />
-           )}
-          </Link>
+           />
+            <span
+             className={cn(
+              "truncate transition-all duration-300",
+              collapsed ? "w-0 opacity-0 overflow-hidden" : "opacity-100 flex-1"
+             )}
+            >
+             {item.label}
+            </span>
+            {item.isLocked && !collapsed && (
+             <span className="text-[9px] font-bold tracking-wider text-[var(--color-navy-900)] bg-[var(--color-gold-400)] px-1.5 py-0.5 rounded-sm shrink-0">
+               PRO
+             </span>
+            )}
+           </Link>
          );
         })}
       </div>
@@ -298,6 +303,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
      </button>
     </div>
    </div>
+
+   <UpgradeModal
+    isOpen={upgradeModalOpen}
+    onClose={() => setUpgradeModalOpen(false)}
+    title="Fitur Eksklusif PRO"
+    description="Menu ini hanya tersedia untuk paket berbayar. Upgrade sekarang untuk membuka seluruh fitur Rapiin."
+   />
   </aside>
  );
 }

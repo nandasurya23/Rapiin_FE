@@ -23,6 +23,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Sheet } from "@/components/ui/sheet";
 import { cn } from "@/lib/cn";
 import { SkeletonCard } from "@/components/shared/loading";
+import { UpgradeModal } from "@/components/shared/upgrade-modal";
 
 type FilterValue = "ALL" | CustomerStatus;
 
@@ -49,6 +50,7 @@ export function CustomerManager() {
  const [currentPage, setCurrentPage] = useState(1);
  const [chatPasteText, setChatPasteText] = useState("");
  const [isFormOpen, setIsFormOpen] = useState(false);
+ const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
  const isDuplicatePhone = useMemo(() => {
   const normalized = normalizePhoneNumber(form.whatsappNumber);
@@ -106,6 +108,10 @@ export function CustomerManager() {
  }
 
  function handleCreateNew() {
+  if (!canCreateCustomer) {
+   setUpgradeModalOpen(true);
+   return;
+  }
   resetForm();
   setIsFormOpen(true);
  }
@@ -211,7 +217,6 @@ export function CustomerManager() {
             type="button"
             variant="secondary"
             onClick={handleCreateNew}
-            disabled={!canCreateCustomer}
             className="font-bold"
             >
             <Plus className="mr-2 h-5 w-5" />
@@ -525,6 +530,13 @@ export function CustomerManager() {
      </div>
     </div>
    </Sheet>
+
+   <UpgradeModal 
+    isOpen={upgradeModalOpen} 
+    onClose={() => setUpgradeModalOpen(false)} 
+    title="Kuota Pelanggan Penuh" 
+    description={readOnlyReason ?? `Anda telah mencapai batas maksimal ${currentBusinessUsage.limit} pelanggan untuk paket ini. Upgrade sekarang untuk menambah pelanggan tanpa batas!`}
+   />
   </main>
  );
 }

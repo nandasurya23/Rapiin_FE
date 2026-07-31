@@ -98,7 +98,7 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
        <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
         <span className="text-sm font-semibold text-[var(--color-danger)]">Sisa Tagihan</span>
         <span className="text-lg font-bold tracking-tight text-[var(--color-danger)]">
-         {formatCurrency((Number(invoice.totalAmount) || 0) - (Number(order.dpAmount) || 0))}
+         {formatCurrency(invoice.remainingAmount ?? ((Number(invoice.totalAmount) || 0) - (Number(order.dpAmount) || 0)))}
         </span>
        </div>
       </div>

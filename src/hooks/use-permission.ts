@@ -83,6 +83,15 @@ export function usePermission() {
     if (cleanPath.startsWith("/plan")) {
       return hasPermission("billing:write");
     }
+    
+    // Feature restriction based on plan
+    if (cleanPath.startsWith("/invoice-checker")) {
+      return subscriptionForCurrentBusiness?.planCode !== "FREE_TRIAL";
+    }
+    if (cleanPath.startsWith("/assistant")) {
+      return subscriptionForCurrentBusiness?.planCode === "PREMIUM";
+    }
+    
     return true;
   }
 

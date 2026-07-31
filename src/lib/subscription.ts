@@ -1,6 +1,5 @@
-
 import { PLAN_DEFINITIONS, TRIAL_WARNING_DAYS } from "@/lib/constants/subscription";
-import type { BusinessSubscription, PlanCode, SubscriptionStatus } from "@/types/subscription";
+import type { BusinessSubscription, PlanCode, SubscriptionStatus, BusinessUsage } from "@/types/subscription";
 import type { Order } from "@/types/order";
 
 export function getPlanDefinition(planCode: PlanCode) {
@@ -14,33 +13,37 @@ export function getSubscriptionForBusiness(subscriptions: BusinessSubscription[]
   return subscriptions.find((subscription) => subscription.businessId === businessId) ?? subscriptions[0] ?? null;
 }
 
-export function getSubscriptionStatus(subscription: BusinessSubscription | null): SubscriptionStatus | null {
-  if (!subscription) {
-    return null;
-  }
-
+export function getSubscriptionStatus(
+  subscription: BusinessSubscription | null,
+  businessUsage?: BusinessUsage
+): SubscriptionStatus | null {
+  if (businessUsage) return businessUsage.subscription.status;
+  if (!subscription) return null;
   if (subscription.status === "ACTIVE" || subscription.status === "SUSPENDED" || subscription.status === "PENDING_UPGRADE_APPROVAL") {
     return subscription.status;
   }
-
   if (new Date(subscription.expiresAt).getTime() < Date.now()) {
     return "TRIAL_EXPIRED";
   }
-
   return "TRIAL_ACTIVE";
 }
 
-export function getDaysUntilExpiry(subscription: BusinessSubscription | null) {
-  if (!subscription) {
-    return null;
-  }
+export function getDaysUntilExpiry(
+  subscription: BusinessSubscription | null,
+  businessUsage?: BusinessUsage
+) {
+  const expiresAt = businessUsage?.subscription.expiresAt || subscription?.expiresAt;
+  if (!expiresAt) return null;
 
-  const diff = new Date(subscription.expiresAt).getTime() - Date.now();
+  const diff = new Date(expiresAt).getTime() - Date.now();
   return Math.ceil(diff / (24 * 60 * 60 * 1000));
 }
 
-export function isTrialWarningActive(subscription: BusinessSubscription | null) {
-  const days = getDaysUntilExpiry(subscription);
+export function isTrialWarningActive(
+  subscription: BusinessSubscription | null,
+  businessUsage?: BusinessUsage
+) {
+  const days = getDaysUntilExpiry(subscription, businessUsage);
   if (days === null) {
     return false;
   }
@@ -48,73 +51,60 @@ export function isTrialWarningActive(subscription: BusinessSubscription | null) 
   return days >= 0 && days <= TRIAL_WARNING_DAYS;
 }
 
-export function canAccessWriteMode(subscription: BusinessSubscription | null) {
-  const status = getSubscriptionStatus(subscription);
+export function canAccessWriteMode(
+  subscription: BusinessSubscription | null,
+  businessUsage?: BusinessUsage
+) {
+  if (businessUsage) return !businessUsage.permissions.isReadOnly;
 
-  if (!status) {
-    return false;
-  }
+  const status = getSubscriptionStatus(subscription, businessUsage);
+  if (!status) return false;
 
   return status === "TRIAL_ACTIVE" || status === "ACTIVE";
 }
 
-export function canCreateCustomer(state: { business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
-  const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
-  if (!canAccessWriteMode(subscription)) {
-    return false;
+export function canCreateCustomer(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
+  if (state.businessUsage) return state.businessUsage.limits.customers.canAdd;
+  return false;
+}
+
+export function canCreateOrder(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
+  if (state.businessUsage) return state.businessUsage.permissions.canCreateOrder;
+  return false;
+}
+
+export function getOrderUsage(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
+  if (state.businessUsage) {
+    return { used: state.orders?.length || 0, limit: 99999, remaining: 99999, expiresAt: state.businessUsage.subscription.expiresAt };
   }
-  return state.customers.length < (subscription?.customerLimit ?? 0);
+  return { used: 0, limit: 99999, remaining: 99999, expiresAt: "" };
 }
 
-export function canCreateOrder(state: { business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
-  const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
-  return canAccessWriteMode(subscription);
+export function canCreateInvoice(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[] }) {
+  if (state.businessUsage) return !state.businessUsage.permissions.isReadOnly;
+  return false;
 }
 
-export function getOrderUsage(state: { business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
-  const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
-  if (!subscription) {
-    return { used: 0, limit: 0, remaining: 0, expiresAt: "" };
+export function getCustomerUsage(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
+  if (state.businessUsage) {
+    const limits = state.businessUsage.limits.customers;
+    return {
+      used: limits.used,
+      limit: limits.limit,
+      remaining: Math.max(limits.limit - limits.used, 0),
+    };
   }
-
-  const startedTime = new Date(subscription.startedAt).getTime();
-  const expiresTime = new Date(subscription.expiresAt).getTime();
-
-  const cycleOrders = (state.orders || []).filter((order) => {
-    if (order.status === "BATAL" || order.paymentStatus === "CANCELLED") {
-      return false;
-    }
-    const orderCreatedTime = new Date(order.createdAt).getTime();
-    return orderCreatedTime >= startedTime && orderCreatedTime <= expiresTime;
-  });
-
-  const limit = subscription.customerLimit;
-  const used = cycleOrders.length;
-
-  return {
-    used,
-    limit,
-    remaining: Math.max(limit - used, 0),
-    expiresAt: subscription.expiresAt,
-  };
+  return { used: 0, limit: 0, remaining: 0 };
 }
 
-export function canCreateInvoice(state: { business: { id: string }; subscriptions: BusinessSubscription[] }) {
-  const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
-  return canAccessWriteMode(subscription);
-}
-
-export function getCustomerUsage(state: { business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
-  const subscription = getSubscriptionForBusiness(state.subscriptions, state.business.id);
-  return {
-    used: state.customers.length,
-    limit: subscription?.customerLimit ?? 0,
-    remaining: Math.max((subscription?.customerLimit ?? 0) - state.customers.length, 0),
-  };
-}
-
-export function getReadOnlyReason(subscription: BusinessSubscription | null) {
-  const status = getSubscriptionStatus(subscription);
+export function getReadOnlyReason(
+  subscription: BusinessSubscription | null,
+  businessUsage?: BusinessUsage
+) {
+  if (businessUsage && businessUsage.permissions.isReadOnly) {
+    return businessUsage.permissions.readOnlyReason;
+  }
+  const status = getSubscriptionStatus(subscription, businessUsage);
 
   if (status === "TRIAL_EXPIRED") {
     return "Masa coba selesai. Upgrade untuk lanjut tambah customer dan order baru.";

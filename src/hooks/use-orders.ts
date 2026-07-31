@@ -17,8 +17,9 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     refetchOnWindowFocus: options?.enablePolling ? true : undefined,
   });
 
-  const canCreateOrder = canCreateOrderByState({ business: business!, subscriptions, orders });
-  const currentOrderUsage = getOrderUsage({ business: business!, subscriptions, orders });
+  const { businessUsage } = useAppData();
+  const canCreateOrder = canCreateOrderByState({ businessUsage, business: business!, subscriptions, orders });
+  const currentOrderUsage = getOrderUsage({ businessUsage, business: business!, subscriptions, orders });
 
   const createMutation = useMutation({
     mutationFn: async (payload: Omit<OrderDTO, "id" | "createdAt" | "updatedAt" | "businessId" | "customerId">) => {

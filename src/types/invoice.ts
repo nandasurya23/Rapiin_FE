@@ -13,4 +13,5 @@ export type Invoice = Timestamped & {
   paymentStatus: PaymentStatus;
   paymentMethod?: "CASH" | "NON_CASH";
   notes?: string;
+  remainingAmount?: number;
 };

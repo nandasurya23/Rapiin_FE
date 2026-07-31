@@ -276,7 +276,7 @@ export function PlanPage() {
          {/* Limit Info */}
          <div className="mb-4 flex items-center gap-2 text-xs font-bold text-[var(--color-text)]">
           <Users className="h-4 w-4 text-[var(--color-primary)]" />
-          <span>Maks. {plan.customerLimit.toLocaleString("id-ID")} Pelanggan</span>
+          <span>Maks. {plan.code === "PRO" ? "500" : plan.code === "PREMIUM" ? "9.999" : "25"} Pelanggan</span>
          </div>
 
          {/* Features */}

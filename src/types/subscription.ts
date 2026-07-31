@@ -19,11 +19,26 @@ export type PlanDefinition = {
   code: PlanCode;
   label: string;
   trialDays?: number;
-  customerLimit: number;
-  staffLimit: number;
   features: string[];
   requiresManualApproval: boolean;
   readLimitedAfterExpiry: boolean;
+};
+
+export type BusinessUsage = {
+  subscription: {
+    planCode: PlanCode;
+    status: SubscriptionStatus;
+    expiresAt: string;
+  };
+  limits: {
+    customers: { limit: number; used: number; canAdd: boolean };
+    staff: { limit: number; used: number; canAdd: boolean };
+  };
+  permissions: {
+    isReadOnly: boolean;
+    readOnlyReason: string | null;
+    canCreateOrder: boolean;
+  };
 };
 
 export type BusinessSubscription = Timestamped & {

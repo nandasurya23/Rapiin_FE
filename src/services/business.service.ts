@@ -1,4 +1,5 @@
 import type { Mapper } from "./mapper";
+import type { BusinessUsage } from "@/types/subscription";
 import type { Business, BusinessMode, OperationalModel, NicheTemplate, BusinessResource, PublicCatalogItem, PaymentTiming } from "@/types/business";
 import { apiFetch } from "@/lib/api-client";
 import { logServiceError } from "./utils";
@@ -121,6 +122,7 @@ export interface BusinessService {
   getBusinessById(id: string): Promise<Business | null>;
   getBusinessBySlug(slug: string): Promise<Business | null>;
   updateBusiness(id: string, payload: BusinessUpdateInput): Promise<Business | null>;
+  getBusinessUsage(): Promise<BusinessUsage | undefined>;
 }
 
 export class ApiBusinessService implements BusinessService {
@@ -158,5 +160,15 @@ export class ApiBusinessService implements BusinessService {
 
     }
     return this.mapper.toDomain(response);
+  }
+
+  async getBusinessUsage(): Promise<BusinessUsage | undefined> {
+    try {
+      const response = await apiFetch<BusinessUsage>("/api/business/usage");
+      return response;
+    } catch (err) {
+      logServiceError("Failed to fetch business usage", err);
+      return undefined;
+    }
   }
 }

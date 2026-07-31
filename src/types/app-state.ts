@@ -74,6 +74,7 @@ export type AppStorageState = {
     superAdminUserIds: ID[];
     planCatalog: PlanDefinition[];
   };
+  businessUsage?: import("@/types/subscription").BusinessUsage;
 
   businessDirectory?: Array<{
     business: Business;
