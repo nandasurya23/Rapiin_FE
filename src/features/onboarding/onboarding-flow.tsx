@@ -149,8 +149,8 @@ export function OnboardingFlow() {
    if (!form.niche.trim()) {
     nextErrors.niche = "Kategori bisnis wajib diisi.";
    }
-   if (!form.openingHours || !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(form.openingHours)) {
-    nextErrors.openingHours = "Format jam buka harus HH:MM-HH:MM (contoh: 08:00-21:00)";
+   if (!form.openingHours) {
+    nextErrors.openingHours = "Jam operasional wajib diisi.";
    }
    if (!form.timezone) {
     nextErrors.timezone = "Zona waktu wajib diisi.";
@@ -158,19 +158,7 @@ export function OnboardingFlow() {
   }
 
   if (currentStep === 2) {
-    if (form.usesResources) {
-     if (!form.resourceLabel.trim()) {
-      nextErrors.resourceLabel = "Sebutan unit/tim wajib diisi.";
-     }
-     const count = Number(form.resourceCount);
-     const maxLimit = getPlanDefinition(subscriptionForCurrentBusiness?.planCode || "FREE_TRIAL").staffLimit;
-
-     if (!form.resourceCount.trim() || isNaN(count) || count < 1) {
-      nextErrors.resourceCount = "Jumlah unit/tim minimal 1.";
-     } else if (count > maxLimit) {
-      nextErrors.resourceCount = `Paket Anda saat ini maksimal ${maxLimit} ${form.resourceLabel.toLowerCase()}. Upgrade paket untuk menambah lebih banyak.`;
-     }
-    }
+    // Konfirmasi mode saja, tidak ada validasi teknis tambahan
   }
 
   if (currentStep === 3) {
@@ -206,10 +194,10 @@ export function OnboardingFlow() {
    const response = await completeOnboarding({
     ...form,
     whatsappNumber: normalizePhoneNumber(form.whatsappNumber),
-    resourceCount: form.usesResources ? Math.max(1, Number(form.resourceCount) || 1) : undefined,
-    resources: form.usesResources ? form.resources : [],
-    defaultBookingDurationMinutes: Number(form.defaultBookingDurationMinutes) || 60,
-    bookingCapacity: Number(form.bookingCapacity) || 1,
+    resourceCount: form.usesResources ? 1 : undefined,
+    resources: form.usesResources ? [{ id: "temp", name: `${form.resourceLabel || "Unit"} 1`, isActive: true }] : [],
+    defaultBookingDurationMinutes: 60,
+    bookingCapacity: 1,
    });
    toast.success("Setup bisnis selesai", "Dashboard siap dipakai.");
    let redirectUrl = `/dashboard/${response?.slug || business.slug}`;
@@ -512,182 +500,7 @@ export function OnboardingFlow() {
          </div>
         </div>
 
-        <div className="grid transition-[grid-template-rows] duration-500 ease-in-out overflow-hidden" style={{ gridTemplateRows: form.mode === "BOOKING_SERVICE" ? "1fr" : "0fr" }}>
-         <div className="min-h-0">
-          <div className="grid gap-5 pt-8 border-t border-[var(--color-border)]">
-           <div>
-            <h3 className="text-xl font-bold text-[var(--color-text)]">Cara Booking Jadwal</h3>
-            <p className="text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed mt-1">
-             Apakah pelanggan cukup pilih jam kosong, atau mereka harus memilih unit/staf tertentu?
-            </p>
-           </div>
-           
-           <div className="grid gap-4 sm:grid-cols-2">
-            <button
-             type="button"
-             onClick={() => {
-              setForm((current) => ({
-               ...current,
-               operationalModel: "APPOINTMENT",
-               usesResources: true,
-               resources: current.resources.length > 0 ? current.resources : updateResources(current.resourceLabel, current.resourceCount),
-              }));
-             }}
-             className={cn(
-              "rounded-2xl border p-5 text-left transition-all duration-300 relative flex flex-col justify-between",
-              form.operationalModel === "APPOINTMENT"
-               ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] shadow-[var(--shadow-md)] ring-2 ring-[var(--color-primary)]/20 scale-[1.02]"
-               : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:shadow-[var(--shadow-sm)]"
-             )}
-            >
-             {form.operationalModel === "APPOINTMENT" && (
-              <div className="absolute top-4 right-4 text-[var(--color-primary)] animate-scale-in">
-               <CheckCircle2 className="h-5 w-5" />
-              </div>
-             )}
-             <div>
-              <div className="text-lg font-bold text-[var(--color-text)]">Bebas Jam Kosong</div>
-              <p className="mt-2 text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed">
-               Sistem otomatis alokasikan slot asal belum penuh. Cocok untuk salon, servis.
-              </p>
-             </div>
-            </button>
 
-            <button
-             type="button"
-             onClick={() => {
-              setForm((current) => ({
-               ...current,
-               operationalModel: "RESOURCE_BOOKING",
-               usesResources: true,
-               resources: updateResources(current.resourceLabel, current.resourceCount),
-              }));
-             }}
-             className={cn(
-              "rounded-2xl border p-5 text-left transition-all duration-300 relative flex flex-col justify-between",
-              form.operationalModel === "RESOURCE_BOOKING"
-               ? "border-[var(--color-primary)] bg-[var(--color-primary-surface)] shadow-[var(--shadow-md)] ring-2 ring-[var(--color-primary)]/20 scale-[1.02]"
-               : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-elevated)] hover:shadow-[var(--shadow-sm)]"
-             )}
-            >
-             {form.operationalModel === "RESOURCE_BOOKING" && (
-              <div className="absolute top-4 right-4 text-[var(--color-primary)] animate-scale-in">
-               <CheckCircle2 className="h-5 w-5" />
-              </div>
-             )}
-             <div>
-              <div className="text-lg font-bold text-[var(--color-text)]">Pilih Unit / Orang</div>
-              <p className="mt-2 text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed">
-               Pelanggan wajib pilih spesifik (misal: Lapangan 1, Kapster Budi).
-              </p>
-             </div>
-            </button>
-           </div>
-          </div>
-
-          <div className="grid transition-[grid-template-rows] duration-500 ease-in-out overflow-hidden" style={{ gridTemplateRows: form.mode === "BOOKING_SERVICE" ? "1fr" : "0fr" }}>
-           <div className="min-h-0">
-            <div className="grid gap-5 pt-8 border-t border-[var(--color-border)] mt-8">
-             <div>
-              <h3 className="text-xl font-bold text-[var(--color-text)]">Setup Unit / Staf</h3>
-              <p className="mt-1 text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
-               Daftar kapster, terapis, atau unit yang bisa dipilih customer saat booking.
-               Mereka <strong>tidak perlu akun login</strong> — yang perlu login adalah kasir/admin yang mengelola order.
-              </p>
-             </div>
-             <div className="grid gap-5 sm:grid-cols-2">
-              <label className="block relative">
-               <div className="flex justify-between items-center mb-1.5">
-                 <span className="block text-sm font-bold text-[var(--color-text)]">Sebutan Unit (Contoh: Staf, Kapster)</span>
-               </div>
-               <Input
-                value={form.resourceLabel}
-                onChange={(e) => setForm(c => ({ ...c, resourceLabel: e.target.value, resources: updateResources(e.target.value, c.resourceCount) }))}
-                placeholder="Contoh: Staf"
-                hasError={!!errors.resourceLabel}
-               />
-               {errors.resourceLabel ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.resourceLabel}</p> : null}
-              </label>
-              <label className="block relative">
-               <div className="flex justify-between items-center mb-1.5">
-                 <span className="block text-sm font-bold text-[var(--color-text)]">Jumlah {form.resourceLabel || "Unit"}</span>
-               </div>
-               <div className="flex items-center gap-2">
-                <Button
-                 type="button"
-                 variant="secondary"
-                 className="h-10 w-10 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg shadow-none"
-                 onClick={() => {
-                  const nextCount = Math.max(1, (Number(form.resourceCount) || 1) - 1);
-                  setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
-                 }}
-                >
-                 -
-                </Button>
-                <Input
-                 type="number"
-                 min="1"
-                 className="text-center"
-                 value={form.resourceCount}
-                 onChange={(e) => setForm(c => ({ ...c, resourceCount: e.target.value, resources: updateResources(c.resourceLabel, e.target.value) }))}
-                 hasError={!!errors.resourceCount}
-                />
-                <Button
-                 type="button"
-                 variant="secondary"
-                 className="h-10 w-10 rounded-xl font-bold flex items-center justify-center p-0 shrink-0 text-lg shadow-none"
-                 onClick={() => {
-                  const nextCount = (Number(form.resourceCount) || 1) + 1;
-                  setForm(c => ({ ...c, resourceCount: String(nextCount), resources: updateResources(c.resourceLabel, String(nextCount)) }));
-                 }}
-                >
-                 +
-                </Button>
-               </div>
-               {errors.resourceCount ? <p className="mt-1.5 text-xs text-[var(--color-danger)] font-medium animate-fade-in">{errors.resourceCount}</p> : null}
-              </label>
-             </div>
-            </div>
-           </div>
-          </div>
-
-          <div className="grid transition-[grid-template-rows] duration-500 ease-in-out overflow-hidden" style={{ gridTemplateRows: form.operationalModel === "APPOINTMENT" ? "1fr" : "0fr" }}>
-           <div className="min-h-0">
-            <div className="grid gap-5 pt-8 border-t border-[var(--color-border)] mt-8 sm:grid-cols-2">
-             <label className="block relative">
-              <div className="flex justify-between items-center mb-1.5">
-                <span className="block text-sm font-bold text-[var(--color-text)]">Kapasitas Maksimal per Waktu</span>
-              </div>
-              <Input
-               type="number"
-               min="1"
-               value={form.bookingCapacity}
-               onChange={(event) => setForm((current) => ({ ...current, bookingCapacity: event.target.value }))}
-               placeholder="1"
-              />
-              <p className="mt-1.5 text-[13px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
-               Berapa banyak booking bisa masuk di jam yang sama? Isi sesuai jumlah kapster/terapis aktif.
-              </p>
-             </label>
-             <label className="block relative">
-              <div className="flex justify-between items-center mb-1.5">
-                <span className="block text-sm font-bold text-[var(--color-text)]">Durasi Layanan Default (Menit)</span>
-              </div>
-              <Select
-               value={String(form.defaultBookingDurationMinutes)}
-               options={DURATION_OPTIONS}
-               onValueChange={(val) => setForm((current) => ({ ...current, defaultBookingDurationMinutes: val }))}
-               placeholder="Pilih Durasi"
-              />
-              <p className="mt-1.5 text-[13px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
-               Durasi rata-rata sesi pelayanan. Digunakan untuk menghitung slot tersedia jika layanan tidak dipilih.
-              </p>
-             </label>
-            </div>
-           </div>
-          </div>
-         </div>
-        </div>
        </div>
       ) : null}
 
@@ -714,8 +527,20 @@ export function OnboardingFlow() {
           <h3 className="text-xl font-bold text-[var(--color-text)]">Dashboard kamu sudah siap 🎉</h3>
          </div>
          <p className="text-[15px] font-medium text-[var(--color-text-secondary)] leading-relaxed">
-          Sekarang Anda bisa langsung mengatur jam buka toko, mengelola jadwal kosong, dan membagikan link booking ke pelanggan.
+          Dashboard Anda siap digunakan. Anda bisa mengatur jam operasional, menambah daftar layanan/produk, dan membagikan link booking ke pelanggan.
          </p>
+         
+         {form.mode === "BOOKING_SERVICE" && form.usesResources && (
+           <div className="mt-4 rounded-xl bg-[var(--color-warning-surface)] border border-[var(--color-warning-border)] p-4 shadow-sm">
+             <p className="text-sm font-bold text-[var(--color-warning-text)] flex items-center gap-2">
+               ⚠️ Tindakan Lanjutan:
+             </p>
+             <p className="text-[13px] font-medium text-[var(--color-warning-text)]/90 mt-1.5 leading-relaxed">
+               Sistem telah membuatkan 1 {form.resourceLabel || "Unit"} sementara untuk kelancaran setup. Jangan lupa masuk ke menu <strong>Pengaturan Unit</strong> di Dashboard setelah ini untuk merubah namanya menjadi unit asli Anda (contoh: Lapangan 1, Kapster Budi, dll).
+             </p>
+           </div>
+         )}
+         
          <div className="rounded-xl border border-[var(--color-border)] bg-white/50 backdrop-blur-sm px-5 py-5 space-y-3 mt-4">
           <p className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Ringkasan Setup</p>
           <div className="space-y-2 text-[15px]">
@@ -726,7 +551,6 @@ export function OnboardingFlow() {
              {form.operationalModel === "RESOURCE_BOOKING" ? `Booking per ${form.resourceLabel}` : "Jadwal kosong langsung"}
             </p>
            )}
-           {form.mode === "BOOKING_SERVICE" && form.resources.length > 0 ? <p className="text-[var(--color-text)]"><span className="font-bold text-[var(--color-primary)]">Unit aktif:</span> {form.resources.map((resource: BusinessResource) => resource.name).join(", ")}</p> : null}
           </div>
          </div>
         </div>
