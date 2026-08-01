@@ -5,13 +5,34 @@ import { canCreateOrder as canCreateOrderByState, getOrderUsage } from "@/lib/su
 
 const orderService = new ApiOrderService();
 
-export function useOrders(options?: { enablePolling?: boolean; intervalMs?: number }) {
+export function useOrders(options?: {
+  enablePolling?: boolean;
+  intervalMs?: number;
+  // Scope the fetch to a booking/appointment date range instead of the default
+  // "most recently created" page — use this for calendar/dashboard/timeline views.
+  scheduledFrom?: string;
+  scheduledTo?: string;
+  limit?: number;
+}) {
   const queryClient = useQueryClient();
   const { business, canAccessWriteMode, readOnlyReason, subscriptions } = useAppData();
 
+  // Preserve the exact ["orders", businessId] key for default (unscoped) usage so
+  // existing optimistic-update targeting below keeps working unchanged. Only append
+  // extra key segments when a date-scoped fetch is actually requested.
+  const isScoped = !!(options?.scheduledFrom || options?.scheduledTo || options?.limit);
+  const ordersQueryKey = isScoped
+    ? (["orders", business?.id, options?.scheduledFrom, options?.scheduledTo, options?.limit] as const)
+    : (["orders", business?.id] as const);
+
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["orders", business?.id],
-    queryFn: () => orderService.getOrders(business?.id || ""),
+    queryKey: ordersQueryKey,
+    queryFn: () =>
+      orderService.getOrders(business?.id || "", {
+        scheduledFrom: options?.scheduledFrom,
+        scheduledTo: options?.scheduledTo,
+        limit: options?.limit,
+      }),
     enabled: !!business?.id && business.id !== "biz_default",
     refetchInterval: options?.enablePolling ? (options.intervalMs ?? 30000) : false,
     refetchOnWindowFocus: options?.enablePolling ? true : undefined,
@@ -46,10 +67,10 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     },
     onMutate: async ({ id, payload }) => {
       await queryClient.cancelQueries({ queryKey: ["orders"] });
-      const previousOrders = queryClient.getQueryData<OrderDTO[]>(["orders", business?.id]);
+      const previousOrders = queryClient.getQueryData<OrderDTO[]>(ordersQueryKey);
       if (previousOrders) {
         queryClient.setQueryData<OrderDTO[]>(
-          ["orders", business?.id],
+          ordersQueryKey,
           previousOrders.map((o) => (o.id === id ? ({ ...o, ...payload } as OrderDTO) : o))
         );
       }
@@ -57,7 +78,7 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     },
     onError: (_err, _variables, context) => {
       if (context?.previousOrders) {
-        queryClient.setQueryData(["orders", business?.id], context.previousOrders);
+        queryClient.setQueryData(ordersQueryKey, context.previousOrders);
       }
     },
     onSettled: () => {
@@ -75,10 +96,10 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     },
     onMutate: async (id: string) => {
       await queryClient.cancelQueries({ queryKey: ["orders"] });
-      const previousOrders = queryClient.getQueryData<OrderDTO[]>(["orders", business?.id]);
+      const previousOrders = queryClient.getQueryData<OrderDTO[]>(ordersQueryKey);
       if (previousOrders) {
         queryClient.setQueryData<OrderDTO[]>(
-          ["orders", business?.id],
+          ordersQueryKey,
           previousOrders.filter((o) => o.id !== id)
         );
       }
@@ -86,7 +107,7 @@ export function useOrders(options?: { enablePolling?: boolean; intervalMs?: numb
     },
     onError: (_err, _variables, context) => {
       if (context?.previousOrders) {
-        queryClient.setQueryData(["orders", business?.id], context.previousOrders);
+        queryClient.setQueryData(ordersQueryKey, context.previousOrders);
       }
     },
     onSettled: () => {

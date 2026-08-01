@@ -56,8 +56,17 @@ export class OrderMapper implements Mapper<OrderDTO, Order> {
   }
 }
 
+export interface OrderListFilters {
+  // Scope to a booking/appointment date range (YYYY-MM-DD) rather than record-creation time.
+  // Use this for calendar/dashboard/timeline views so bookings outside the "most recently
+  // created" window aren't silently dropped once a business has more than the page limit.
+  scheduledFrom?: string;
+  scheduledTo?: string;
+  limit?: number;
+}
+
 export interface OrderService {
-  getOrders(businessId: string): Promise<Order[]>;
+  getOrders(businessId: string, filters?: OrderListFilters): Promise<Order[]>;
   getOrderById(id: string): Promise<Order | null>;
   createOrder(payload: Omit<OrderDTO, "id" | "createdAt" | "updatedAt" | "customerId">): Promise<Order>;
   updateOrder(id: string, payload: Partial<Omit<OrderDTO, "id" | "createdAt" | "updatedAt">>): Promise<Order | null>;
@@ -67,10 +76,17 @@ export interface OrderService {
 export class ApiOrderService implements OrderService {
   private mapper = new OrderMapper();
 
-  async getOrders(businessId: string): Promise<Order[]> {
+  async getOrders(businessId: string, filters?: OrderListFilters): Promise<Order[]> {
     try {
       // businessId passed for context/logging or if BE supports admin override
-      const response = await apiFetch<OrderDTO[]>(`/api/orders?limit=100&businessId=${businessId}`);
+      const params = new URLSearchParams({
+        limit: String(filters?.limit ?? 100),
+        businessId,
+      });
+      if (filters?.scheduledFrom) params.set("scheduledFrom", filters.scheduledFrom);
+      if (filters?.scheduledTo) params.set("scheduledTo", filters.scheduledTo);
+
+      const response = await apiFetch<OrderDTO[]>(`/api/orders?${params.toString()}`);
       return response.map((item) => this.mapper.toDomain(item));
     } catch (err) {
       logServiceError("Failed to fetch orders", err);
