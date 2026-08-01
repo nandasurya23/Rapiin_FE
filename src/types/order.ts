@@ -40,6 +40,7 @@ export interface Order {
   serviceId?: string;
   totalAmount?: number;
   dpAmount?: number;
+  items?: { name: string; quantity: number; price?: number }[];
   isLocked: boolean;
   notes?: string;
   createdAt: string;

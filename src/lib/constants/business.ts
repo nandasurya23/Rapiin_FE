@@ -4,18 +4,18 @@ import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/lib/booking";
 export const BUSINESS_MODE_OPTIONS: BusinessModeOption[] = [
   {
     value: "BOOKING_SERVICE",
-    label: "Booking Jasa",
-    helperText: "Jadwal, layanan, & janji temu. Contoh: Salon, Barbershop, Klinik, Studio Foto, Futsal.",
+    label: "Booking Jasa (Appointment & Resource)",
+    helperText: "Jadwal, layanan, janji temu, dan sewa unit. Contoh: Salon, Klinik, Barbershop, Futsal, Rental PS, Studio Foto, Warnet.",
   },
   {
     value: "PRODUCT_ORDER",
-    label: "Order Produk",
-    helperText: "Penjualan barang atau makanan fisik. Contoh: Toko Online, Toko Kue, Katering, Makanan.",
+    label: "Order Produk (Barang FIsik)",
+    helperText: "Penjualan barang, makanan fisik, atau hampers multi-item. Contoh: Toko Roti, Bakery, Florist, Hampers, Katering.",
   },
   {
     value: "CUSTOM_REQUEST",
-    label: "Request Custom",
-    helperText: "Layanan sesuai permintaan khusus. Contoh: Jahit Baju, Service AC, Desain Grafis.",
+    label: "Service Order & Request Custom",
+    helperText: "Layanan berbasis order atau permintaan khusus tanpa batas jam ketat. Contoh: Laundry, Cuci Sepatu, Jahit Baju, Service AC.",
   },
 ];
 

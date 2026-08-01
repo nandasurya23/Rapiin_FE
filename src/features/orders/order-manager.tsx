@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonCard } from "@/components/shared/loading";
 import { cn } from "@/lib/cn";
 
-import { ORDER_STATUS_BY_MODE, PAYMENT_FILTER_OPTIONS } from "@/lib/constants/orders";
+import { getOrderStatusOptions, PAYMENT_FILTER_OPTIONS } from "@/lib/constants/orders";
 import { renderTemplate } from "@/lib/messages";
 import { formatDate, formatCurrency } from "@/lib/format";
 import type { BusinessMode } from "@/types/business";
@@ -59,7 +59,7 @@ export function OrderManager() {
   }
  }, [searchParams]);
 
- const rawStatusOptions = ORDER_STATUS_BY_MODE[mode] ?? ORDER_STATUS_BY_MODE["BOOKING_SERVICE"];
+ const rawStatusOptions = getOrderStatusOptions(mode, business.operationalModel) ?? getOrderStatusOptions("BOOKING_SERVICE", business.operationalModel);
  const statusOptions = useMemo(() => {
    if (business.paymentTiming === "PAYMENT_ON_BOOKING") {
      return rawStatusOptions.map(opt => {

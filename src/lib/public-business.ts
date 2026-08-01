@@ -40,8 +40,7 @@ const orderRequestFieldsByMode: Record<Exclude<BusinessMode, "BOOKING_SERVICE">,
 export function isTimeRequired(input: Business | BusinessMode): boolean {
   if (typeof input === "string") return true;
   if (input.operationalModel === "ORDER_REQUEST") return false;
-  const noTimeNiches = ["LAUNDRY", "KATERING"];
-  if (noTimeNiches.includes(input.niche)) return false;
+  if (input.mode !== "BOOKING_SERVICE") return false;
   return true;
 }
 
@@ -144,4 +143,8 @@ export function getPublicPageSubtitle(input: Business | BusinessMode) {
 
 export function isBusinessSlugMatch(business: Business, slug: string) {
   return business.slug === slug;
+}
+
+export function isPaymentProofRequired(paymentTiming: string | undefined, mode: BusinessMode): boolean {
+  return paymentTiming === "PAYMENT_ON_BOOKING" && mode !== "CUSTOM_REQUEST";
 }

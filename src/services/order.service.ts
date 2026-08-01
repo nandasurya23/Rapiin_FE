@@ -26,6 +26,7 @@ export interface OrderDTO {
   serviceId?: string;
   totalAmount?: number;
   dpAmount?: number;
+  items?: { name: string; quantity: number; price?: number }[];
   notes?: string;
   lastFollowUpAt?: string;
   customerStatusSnapshot?: CustomerStatus;

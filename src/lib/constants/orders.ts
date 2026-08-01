@@ -65,7 +65,9 @@ export const ORDER_STATUS_TRANSITIONS_BY_MODE_FE: Record<string, Partial<Record<
   BOOKING_SERVICE: {
     INQUIRY: ["WAITING_DP", "CONFIRMED", "SELESAI", "BATAL"],
     WAITING_DP: ["INQUIRY", "CONFIRMED", "SELESAI", "BATAL"],
-    CONFIRMED: ["INQUIRY", "WAITING_DP", "SELESAI", "BATAL"],
+    CONFIRMED: ["INQUIRY", "WAITING_DP", "CHECK_IN", "SELESAI", "BATAL"],
+    CHECK_IN: ["CHECK_OUT", "SELESAI", "BATAL"],
+    CHECK_OUT: ["SELESAI", "BATAL"],
     SELESAI: ["INQUIRY", "WAITING_DP", "CONFIRMED", "BATAL"],
     BATAL: ["INQUIRY", "WAITING_DP", "CONFIRMED", "SELESAI"],
   },
@@ -86,8 +88,24 @@ export const ORDER_STATUS_TRANSITIONS_BY_MODE_FE: Record<string, Partial<Record<
   },
 };
 
-export function getValidStatusOptions(currentStatus: OrderStatus | undefined, mode: BusinessMode): StatusOption[] {
-  const allOptions = ORDER_STATUS_BY_MODE[mode] ?? [];
+export function getOrderStatusOptions(mode: BusinessMode, operationalModel?: string): StatusOption[] {
+  const options = [...(ORDER_STATUS_BY_MODE[mode] ?? [])];
+  if (mode === "BOOKING_SERVICE" && operationalModel === "RESOURCE_BOOKING") {
+    // Insert CHECK_IN and CHECK_OUT before SELESAI
+    const selesaiIndex = options.findIndex((o) => o.value === "SELESAI");
+    const insertIdx = selesaiIndex >= 0 ? selesaiIndex : options.length;
+    options.splice(
+      insertIdx,
+      0,
+      { value: "CHECK_IN", label: "Check In", tone: "info" },
+      { value: "CHECK_OUT", label: "Check Out", tone: "warning" }
+    );
+  }
+  return options;
+}
+
+export function getValidStatusOptions(currentStatus: OrderStatus | undefined, mode: BusinessMode, operationalModel?: string): StatusOption[] {
+  const allOptions = getOrderStatusOptions(mode, operationalModel);
   if (!currentStatus) {
     return allOptions;
   }

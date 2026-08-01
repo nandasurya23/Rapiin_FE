@@ -240,12 +240,25 @@ export function PublicInvoicePage({
      {/* Live Order Tracker */}
      {order && order.status !== "BATAL" && (() => {
        const getTrackerState = () => {
-        if (order.status === "SELESAI") return { step: 4, title: "Selesai" };
-        if (order.status === "WAITING_DP" || order.status === "CONFIRMED") return { step: 1, title: "Menunggu" };
-        if (order.status === "DIPROSES") {
-         return { step: 3, title: "Sedang Diproses" };
+        if (order.mode === "PRODUCT_ORDER") {
+         if (order.status === "SELESAI") return { step: 4, title: "Selesai" };
+         if (order.status === "DIKIRIM_DIAMBIL") return { step: 3, title: "Sedang Diproses" };
+         if (order.status === "DIPROSES") return { step: 2, title: "Dalam Antrean" };
+         return { step: 1, title: "Pesanan Diterima" }; // ORDER_BARU
         }
-        return { step: 1, title: "Dikonfirmasi" };
+        
+        if (order.mode === "CUSTOM_REQUEST") {
+         if (order.status === "SELESAI") return { step: 4, title: "Selesai" };
+         if (order.status === "DEAL") return { step: 3, title: "Sedang Diproses" };
+         if (order.status === "PENAWARAN_DIKIRIM" || order.status === "DIBAHAS") return { step: 2, title: "Dalam Antrean" };
+         return { step: 1, title: "Pesanan Diterima" }; // REQUEST_MASUK
+        }
+
+        // BOOKING_SERVICE (default)
+        if (order.status === "SELESAI" || order.status === "CHECK_OUT") return { step: 4, title: "Selesai" };
+        if (order.status === "DIPROSES" || order.status === "CHECK_IN") return { step: 3, title: "Sedang Diproses" };
+        if (order.status === "WAITING_DP" || order.status === "CONFIRMED") return { step: 2, title: "Dalam Antrean" };
+        return { step: 1, title: "Pesanan Diterima" }; // INQUIRY
        };
       const trackerState = getTrackerState();
 
