@@ -432,7 +432,7 @@ export function CalendarDetailContent({
             <Select
               value={getDraftStatus(order)}
               onValueChange={(value) => onDraftStatusChange(order.id, value as OrderStatus)}
-              options={getValidStatusOptions(order.status, order.mode)}
+              options={getValidStatusOptions(order.status, order.mode, undefined, order.allowedNextStatuses)}
             />
            </label>
            <label className="block">

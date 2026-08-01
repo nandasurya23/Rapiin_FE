@@ -104,12 +104,24 @@ export function getOrderStatusOptions(mode: BusinessMode, operationalModel?: str
   return options;
 }
 
-export function getValidStatusOptions(currentStatus: OrderStatus | undefined, mode: BusinessMode, operationalModel?: string): StatusOption[] {
+/**
+ * @param allowedNextStatuses Backend-computed set of legal next statuses for this
+ * order (Order.allowedNextStatuses from the API response) — the single source of
+ * truth for which transitions are valid. When omitted (e.g. stale cached data from
+ * before this field existed), falls back to the local copy of the transition rules,
+ * which may drift from the backend and should not be relied upon going forward.
+ */
+export function getValidStatusOptions(
+  currentStatus: OrderStatus | undefined,
+  mode: BusinessMode,
+  operationalModel?: string,
+  allowedNextStatuses?: OrderStatus[]
+): StatusOption[] {
   const allOptions = getOrderStatusOptions(mode, operationalModel);
   if (!currentStatus) {
     return allOptions;
   }
-  const allowedNext = ORDER_STATUS_TRANSITIONS_BY_MODE_FE[mode]?.[currentStatus] ?? [];
+  const allowedNext = allowedNextStatuses ?? ORDER_STATUS_TRANSITIONS_BY_MODE_FE[mode]?.[currentStatus] ?? [];
   return allOptions.filter(
     (opt) => opt.value === currentStatus || allowedNext.includes(opt.value)
   );

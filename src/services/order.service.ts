@@ -39,6 +39,7 @@ export interface OrderDTO {
   createdByUserId?: string;
   updatedByUserId?: string;
   deletedAt?: string;
+  allowedNextStatuses?: OrderStatus[];
   createdAt: string;
   updatedAt: string;
 }

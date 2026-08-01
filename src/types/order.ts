@@ -56,6 +56,11 @@ export interface Order {
   updatedByUserId?: string;
   lastFollowUpAt?: string;
   deletedAt?: string;
+  // Backend-computed set of statuses this order can legally transition to next —
+  // single source of truth for status transitions (see order.state-machine.ts on
+  // the backend). The Frontend must render status options from this, not its own
+  // copy of the transition rules.
+  allowedNextStatuses?: OrderStatus[];
 }
 
 export interface Payment {
