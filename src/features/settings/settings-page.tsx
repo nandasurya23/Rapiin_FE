@@ -260,6 +260,10 @@ export function SettingsPage() {
         logoUrl: form.logoUrl.trim() || undefined,
         autoCreateOrderFromSubmission: form.autoCreateOrderFromSubmission,
         paymentTiming: form.paymentTiming,
+        // Optimistic concurrency: backend rejects with 409 if another admin saved
+        // settings since this page was loaded, instead of silently overwriting
+        // their changes (e.g. a staff/resource they just added).
+        expectedUpdatedAt: business.updatedAt,
       });
       toast.success("Pengaturan bisnis disimpan", "Flow form dan booking sudah ikut menyesuaikan.");
     } catch (err) {

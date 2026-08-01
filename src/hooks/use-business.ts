@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ApiBusinessService } from "@/services/business.service";
+import { ApiBusinessService, type BusinessUpdateInput } from "@/services/business.service";
 import { useAppData } from "@/components/providers/app-data-provider";
 import type { Business } from "@/types/business";
 
@@ -19,7 +19,7 @@ export function useBusiness() {
   const business = (queryBusiness || initialBusiness) as Business;
 
   const updateBusinessMutation = useMutation({
-    mutationFn: async (payload: Partial<Business>) => {
+    mutationFn: async (payload: BusinessUpdateInput) => {
       if (!canAccessWriteMode) {
         throw new Error(readOnlyReason || "Mode baca saja aktif.");
       }
@@ -35,8 +35,8 @@ export function useBusiness() {
   return {
     business,
     isLoading,
-    updateBusiness: (payload: Partial<Business>) => updateBusinessMutation.mutateAsync(payload),
-    saveBusinessSettings: (payload: Partial<Business>) => updateBusinessMutation.mutateAsync(payload),
+    updateBusiness: (payload: BusinessUpdateInput) => updateBusinessMutation.mutateAsync(payload),
+    saveBusinessSettings: (payload: BusinessUpdateInput) => updateBusinessMutation.mutateAsync(payload),
     refreshBusiness: async () => {
       await queryClient.invalidateQueries({ queryKey: ["business"] });
     },
