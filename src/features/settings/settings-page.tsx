@@ -179,16 +179,18 @@ export function SettingsPage() {
         nextErrors.resources = "Minimal ada 1 unit aktif.";
       }
 
-      // Validasi workingHours: jam selesai harus setelah jam mulai
+      // Validasi workingHours: mirror backend's rule exactly (business.schema.ts
+      // workingHoursSchema) — overnight shifts (e.g. 20:00-05:00) are valid;
+      // only reject when start and end are exactly the same (zero-duration shift).
       const invalidShift = form.resources.find((resource) => {
         const wh = resource.workingHours;
         if (!wh) return false;
         const [sH, sM] = wh.start.split(":").map(Number);
         const [eH, eM] = wh.end.split(":").map(Number);
-        return eH * 60 + eM <= sH * 60 + sM;
+        return eH * 60 + eM === sH * 60 + sM;
       });
       if (invalidShift) {
-        nextErrors.resources = `Jam selesai "${invalidShift.name}" harus setelah jam mulai.`;
+        nextErrors.resources = `Jam mulai dan jam selesai "${invalidShift.name}" tidak boleh sama.`;
       }
     }
 
