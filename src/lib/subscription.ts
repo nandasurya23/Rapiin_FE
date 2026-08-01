@@ -65,12 +65,17 @@ export function canAccessWriteMode(
 
 export function canCreateCustomer(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
   if (state.businessUsage) return state.businessUsage.limits.customers.canAdd;
-  return false;
+  
+  const sub = getSubscriptionForBusiness(state.subscriptions, state.business.id);
+  const limit = sub?.customerLimit ?? 25;
+  return (state.customers?.length || 0) < limit;
 }
 
 export function canCreateOrder(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
   if (state.businessUsage) return state.businessUsage.permissions.canCreateOrder;
-  return false;
+  
+  const status = getSubscriptionStatus(getSubscriptionForBusiness(state.subscriptions, state.business.id));
+  return status === "ACTIVE" || status === "TRIAL_ACTIVE";
 }
 
 export function getOrderUsage(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; orders: Order[] }) {
@@ -82,7 +87,8 @@ export function getOrderUsage(state: { businessUsage?: BusinessUsage; business: 
 
 export function canCreateInvoice(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[] }) {
   if (state.businessUsage) return !state.businessUsage.permissions.isReadOnly;
-  return false;
+  
+  return canAccessWriteMode(getSubscriptionForBusiness(state.subscriptions, state.business.id));
 }
 
 export function getCustomerUsage(state: { businessUsage?: BusinessUsage; business: { id: string }; subscriptions: BusinessSubscription[]; customers: unknown[] }) {
@@ -94,7 +100,11 @@ export function getCustomerUsage(state: { businessUsage?: BusinessUsage; busines
       remaining: Math.max(limits.limit - limits.used, 0),
     };
   }
-  return { used: 0, limit: 0, remaining: 0 };
+  
+  const sub = getSubscriptionForBusiness(state.subscriptions, state.business.id);
+  const limit = sub?.customerLimit ?? 25;
+  const used = state.customers?.length || 0;
+  return { used, limit, remaining: Math.max(limit - used, 0) };
 }
 
 export function getReadOnlyReason(

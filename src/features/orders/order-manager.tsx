@@ -208,7 +208,6 @@ export function OrderManager() {
 
  function handleEditOrder(order: Order) {
   setEditingId(order.id);
-  setMode(order.mode);
   setIsFormOpen(true);
  }
 
