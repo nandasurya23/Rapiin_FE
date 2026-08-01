@@ -146,7 +146,12 @@ export class ApiOrderService implements OrderService {
       return this.mapper.toDomain(response);
     } catch (err) {
       logServiceError("Failed to update order", err);
-      return null;
+      // Rethrow (like createOrder) instead of returning null — a null return was
+      // indistinguishable from other legitimate falsy states, so callers could not
+      // tell "the update failed" from "nothing to report" and would show a false
+      // success message (e.g. after the backend correctly rejects a reschedule
+      // that conflicts with another booking).
+      throw err;
     }
   }
 
@@ -160,6 +165,11 @@ export class ApiOrderService implements OrderService {
       }
     } catch (err) {
       logServiceError("Failed to delete order", err);
+      // Rethrow instead of swallowing — a caller that optimistically removes the
+      // order from its local list must know when the delete actually failed
+      // (blocked by a constraint, auth expiry, network error) so it can revert
+      // the UI instead of showing the order as deleted when it still exists.
+      throw err;
     }
   }
 }
