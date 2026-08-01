@@ -28,7 +28,7 @@ import {
 } from "@/lib/booking";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { parseIndonesianNumber } from "@/lib/number";
-import { ORDER_STATUS_BY_MODE, PAYMENT_STATUS_LABELS, getValidStatusOptions } from "@/lib/constants/orders";
+import { getOrderStatusOptions, PAYMENT_STATUS_LABELS, getValidStatusOptions } from "@/lib/constants/orders";
 import { isValidPhoneNumber, normalizePhoneNumber, parseWhatsAppChatText } from "@/lib/validation";
 
 import type { BusinessMode, Business } from "@/types/business";
@@ -50,6 +50,7 @@ type OrderFormState = {
  totalAmount: string;
  dpAmount: string;
  notes: string;
+ items: { id?: string; name: string; price?: number; quantity: number }[];
 };
 type OrderFormField = keyof OrderFormState;
 
@@ -59,7 +60,7 @@ function createDefaultForm(business: Business): OrderFormState {
   whatsappNumber: "",
   title: "",
   mode: business.mode,
-  status: ORDER_STATUS_BY_MODE[business.mode]?.[0]?.value || "WAITING_DP",
+  status: getOrderStatusOptions(business.mode, business.operationalModel)?.[0]?.value || "WAITING_DP",
   paymentStatus: "UNPAID",
   paymentMethod: "",
   scheduledDate: "",
@@ -70,6 +71,7 @@ function createDefaultForm(business: Business): OrderFormState {
   totalAmount: "",
   dpAmount: "",
   notes: "",
+  items: [],
  };
 }
 
@@ -139,6 +141,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
       totalAmount: order.totalAmount ? String(order.totalAmount) : "",
       dpAmount: order.dpAmount ? String(order.dpAmount) : "",
       notes: order.notes ?? "",
+      items: order.items ? JSON.parse(JSON.stringify(order.items)) : [],
      });
     }
    } else {
@@ -218,7 +221,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
  }, [editingId, orders]);
 
  const statusOptions = useMemo(() => {
-  return getValidStatusOptions(order?.status, form.mode);
+  return getValidStatusOptions(order?.status, form.mode, business.operationalModel);
  }, [order?.status, form.mode]);
  const catalogList = getPublicCatalog(business);
  const bookingDurationMinutes = useMemo(() => {
@@ -412,6 +415,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
      totalAmount: normalizedTotal,
      dpAmount: normalizedDp,
      notes: form.notes.trim() || undefined,
+     items: form.mode !== "BOOKING_SERVICE" ? (form.items.length > 0 ? form.items : undefined) : undefined,
     });
     toast.success("Order berhasil diperbarui");
     onClose();
@@ -444,6 +448,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
     totalAmount: normalizedTotal,
     dpAmount: normalizedDp,
     notes: form.notes.trim() || undefined,
+    items: form.mode !== "BOOKING_SERVICE" ? (form.items.length > 0 ? form.items : undefined) : undefined,
    });
    toast.success("Order baru berhasil dibuat");
    onClose();
@@ -632,7 +637,7 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
      
      <div>
       <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Kebutuhan / Item</label>
-      {catalogList.length > 0 ? (
+      {catalogList.length > 0 && (
        <Select 
         value={form.title} 
         onValueChange={(val) => {
@@ -652,10 +657,115 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
         options={catalogList.map((i) => ({ value: i.name, label: i.name }))}
         placeholder="Pilih item/layanan"
        />
-      ) : (
-       <Input value={form.title} onChange={(e) => updateFormField("title", e.target.value)} placeholder="Contoh: Futsal 2 Jam" />
       )}
      </div>
+
+     {(form.mode === "PRODUCT_ORDER" || form.mode === "CUSTOM_REQUEST") && (
+      <div>
+       <div className="mb-2 flex items-center justify-between">
+        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Rincian Item (Keranjang)</label>
+        <Button
+         type="button"
+         variant="secondary"
+         size="sm"
+         onClick={() => {
+          setForm((prev) => ({
+           ...prev,
+           items: [...(prev.items || []), { name: "", quantity: 1, price: 0 }]
+          }));
+         }}
+         className="h-7 px-2 text-xs"
+        >
+         + Tambah Item
+        </Button>
+       </div>
+       
+       {(!form.items || form.items.length === 0) ? (
+        <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] p-4 text-center text-xs text-[var(--color-text-muted)]">
+         Belum ada item ditambahkan
+        </div>
+       ) : (
+        <div className="space-y-2">
+         {form.items.map((item, idx) => (
+          <div key={idx} className="flex items-start gap-2 rounded-lg border border-[var(--color-border)] p-2">
+           <div className="flex-1 space-y-2">
+            <Input 
+             placeholder="Nama item" 
+             value={item.name} 
+             onChange={(e) => {
+              const newItems = [...form.items];
+              newItems[idx].name = e.target.value;
+              setForm({ ...form, items: newItems });
+             }}
+             className="h-8 text-sm"
+            />
+            <div className="flex gap-2">
+             <div className="w-20">
+              <Input 
+               type="number"
+               min={1}
+               placeholder="Qty" 
+               value={item.quantity} 
+               onChange={(e) => {
+                const newItems = [...form.items];
+                newItems[idx].quantity = Math.max(1, parseInt(e.target.value) || 1);
+                setForm({ ...form, items: newItems });
+               }}
+               className="h-8 text-sm"
+              />
+             </div>
+             <div className="flex-1">
+              <FormattedNumberInput 
+               placeholder="Harga Satuan" 
+               value={item.price ? String(item.price) : ""} 
+               onValueChange={(val) => {
+                const newItems = [...form.items];
+                newItems[idx].price = parseIndonesianNumber(val) || 0;
+                setForm({ ...form, items: newItems });
+               }}
+               className="h-8 text-sm"
+              />
+             </div>
+            </div>
+           </div>
+           <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-[var(--color-danger-text)] hover:bg-[var(--color-danger-surface)]"
+            onClick={() => {
+             const newItems = [...form.items];
+             newItems.splice(idx, 1);
+             setForm({ ...form, items: newItems });
+            }}
+           >
+            &times;
+           </Button>
+          </div>
+         ))}
+         {form.items.length > 0 && (
+          <div className="mt-2 text-right">
+           <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs font-semibold text-[var(--color-primary)]"
+            onClick={() => {
+             const total = form.items.reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0);
+             if (total > 0) {
+              setForm((prev) => ({ ...prev, totalAmount: String(total) }));
+              toast.success("Total tagihan diperbarui berdasarkan keranjang");
+             }
+            }}
+           >
+            Hitung Ulang Total
+           </Button>
+          </div>
+         )}
+        </div>
+       )}
+      </div>
+     )}
 
      {editingId ? (
       <>

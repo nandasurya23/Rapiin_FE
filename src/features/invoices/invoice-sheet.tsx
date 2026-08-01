@@ -77,13 +77,32 @@ export function InvoiceSheet({ business, invoice, order, compact = false }: Invo
 
     <div className="mt-6 border-t-2 border-dashed border-[var(--color-border)] pt-6">
      <h4 className="text-xs uppercase tracking-widest text-[var(--color-text-muted)] font-semibold mb-3">Pesanan</h4>
-     <div className="flex justify-between items-start mb-2">
-      <div className="pr-4">
-       <p className="text-sm font-medium text-[var(--color-text)]">{order?.title ?? "Layanan / order"}</p>
-       {invoice.notes && <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{invoice.notes}</p>}
+     
+     {order?.items && Array.isArray(order.items) && order.items.length > 0 ? (
+      <div className="space-y-3 mb-4">
+       {order.items.map((item: { name: string; quantity: number; price?: number }, idx: number) => (
+        <div key={idx} className="flex justify-between items-start">
+         <div className="pr-4">
+          <p className="text-sm font-medium text-[var(--color-text)]">
+           {item.quantity}x {item.name}
+          </p>
+         </div>
+         <p className="text-sm font-semibold text-[var(--color-text)] shrink-0">
+          {formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 1))}
+         </p>
+        </div>
+       ))}
+       {invoice.notes && <p className="mt-2 text-xs text-[var(--color-text-secondary)] border-t border-[var(--color-border)] pt-2">{invoice.notes}</p>}
       </div>
-      <p className="text-sm font-semibold text-[var(--color-text)] shrink-0">{formatCurrency(invoice.totalAmount)}</p>
-     </div>
+     ) : (
+      <div className="flex justify-between items-start mb-2">
+       <div className="pr-4">
+        <p className="text-sm font-medium text-[var(--color-text)]">{order?.title ?? "Layanan / order"}</p>
+        {invoice.notes && <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{invoice.notes}</p>}
+       </div>
+       <p className="text-sm font-semibold text-[var(--color-text)] shrink-0">{formatCurrency(invoice.totalAmount)}</p>
+      </div>
+     )}
      
      {invoice.paymentStatus === "DP_PAID" && order?.dpAmount ? (
       <div className="mt-4 pt-4 border-t border-[var(--color-border)] space-y-2">

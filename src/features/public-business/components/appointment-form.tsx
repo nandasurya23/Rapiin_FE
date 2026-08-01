@@ -15,6 +15,7 @@ import {
   getPublicCatalog,
   isBusinessSlugMatch,
   isTimeRequired,
+  isPaymentProofRequired,
 } from "@/lib/public-business";
 import type { Business, BusinessResource } from "@/types/business";
 import { usePublicOrderForm } from "../hooks/use-public-order-form";
@@ -176,7 +177,6 @@ export function AppointmentForm({
           {/* STEP 1: LAYANAN / PRODUK */}
           {currentStep === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-               {business.mode === "BOOKING_SERVICE" && (
                  <>
                    {catalog.length > 0 && (
                      <label className="block">
@@ -213,67 +213,14 @@ export function AppointmentForm({
                            required
                          />
                        </label>
-                       {isResourceBooking && (
-                         <label className="block">
-                           <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Durasi (Jam) *</span>
-                           <Input
-                             name="bookingDurationMinutes"
-                             type="number"
-                             min="0.5"
-                             step="0.5"
-                             value={form.bookingDurationMinutes ? String(Number(form.bookingDurationMinutes) / 60) : ""}
-                             onChange={(e) => {
-                               const val = Number(e.target.value);
-                               if (val > 0) updateField("bookingDurationMinutes", String(val * 60));
-                               else updateField("bookingDurationMinutes", "");
-                             }}
-                             placeholder="Contoh: 3"
-                             required
-                           />
-                         </label>
-                       )}
                      </div>
                    )}
                  </>
-               )}
-
-
-               {business.mode === "PRODUCT_ORDER" && (
-                 <>
-                   {catalog.length > 0 && (
-                     <label className="block">
-                       <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Pilih Produk</span>
-                       <Select
-                         value={form.serviceId || ""}
-                         onValueChange={(val) => handleSelectCatalogItem(val)}
-                         options={catalog.map((c) => ({
-                           value: c.id,
-                           label: `${c.name} ${c.priceLabel ? `(${c.priceLabel})` : ""}`,
-                         }))}
-                       />
-                     </label>
-                   )}
-                 </>
-               )}
-
-               {business.mode === "CUSTOM_REQUEST" && (
-                 <label className="block">
-                   <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Detail Request / Kebutuhan *</span>
-                   <Textarea
-                     name="requestDetail"
-                     value={form.requestDetail || ""}
-                     onChange={(e) => updateField("requestDetail", e.target.value)}
-                     placeholder="Jelaskan kebutuhan atau spesifikasi khusus..."
-                     rows={3}
-                     required
-                   />
-                 </label>
-               )}
             </div>
           )}
 
           {/* 2A: Staff preference — opsional, hanya untuk APPOINTMENT mode dengan staf aktif */}
-          {currentStep === 1 && !isResourceBooking && business.mode === "BOOKING_SERVICE" &&
+          {currentStep === 1 &&
             (business.resources?.filter((r: BusinessResource) => r.isActive).length ?? 0) > 0 && (
             <div className="mt-4 pt-4 border-t border-[var(--color-border)]/50 space-y-3 animate-in fade-in duration-300">
               <div>
@@ -558,7 +505,7 @@ export function AppointmentForm({
                  </div>
                )}
                
-               {business.paymentTiming === "PAYMENT_ON_BOOKING" && business.mode !== "CUSTOM_REQUEST" && (
+               {isPaymentProofRequired(business.paymentTiming, business.mode) && (
                  <div className="mt-6 border-t border-[var(--color-border)]/50 pt-6">
                    {totalAmount > 0 ? (
                      <div className="mb-4 bg-[var(--color-surface-elevated)] p-4 rounded-xl border border-[var(--color-border)] flex items-center justify-between">
@@ -610,9 +557,9 @@ export function AppointmentForm({
                    type="submit"
                    className="flex-1 h-12 font-black text-base rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] shadow-lg shadow-[var(--color-primary)]/20 hover:-translate-y-0.5 transition-all"
                    isLoading={isSubmitting}
-                   disabled={(business.paymentTiming === "PAYMENT_ON_BOOKING" && business.mode !== "CUSTOM_REQUEST" && !form.tempProofUrl)}
+                   disabled={(isPaymentProofRequired(business.paymentTiming, business.mode) && !form.tempProofUrl)}
                 >
-                   {business.paymentTiming === "PAYMENT_ON_BOOKING" && business.mode !== "CUSTOM_REQUEST" && !form.tempProofUrl 
+                   {isPaymentProofRequired(business.paymentTiming, business.mode) && !form.tempProofUrl 
                       ? "Unggah Bukti Dahulu" 
                       : "Kirim Pemesanan"}
                 </Button>

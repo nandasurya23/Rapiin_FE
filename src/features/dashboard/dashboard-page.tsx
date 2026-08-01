@@ -233,12 +233,14 @@ export function DashboardPage() {
    </section>
 
    {/* ── CALENDAR ──────────────────────────────────── */}
-   <DashboardCalendar
-    business={business}
-    orders={orders}
-    selectedDate={selectedDate}
-    onDateSelect={handleDateSelect}
-   />
+   {business.mode === "BOOKING_SERVICE" && (
+    <DashboardCalendar
+     business={business}
+     orders={orders}
+     selectedDate={selectedDate}
+     onDateSelect={handleDateSelect}
+    />
+   )}
 
    {/* ── ACTION ITEMS ──────────────────────────────── */}
    <section className="animate-fade-up-delay-2">
