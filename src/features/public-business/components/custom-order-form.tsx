@@ -377,7 +377,7 @@ export function CustomOrderForm({
                      >
                         <span className="text-sm">Bebas / Siapapun</span>
                      </button>
-                     {business.resources?.filter(r => r.isActive).map(r => {
+                     {business.resources?.map(r => {
                         const isSelected = form.resourceId === r.id;
                         const isAvailable = isResourceAvailableForDate(r.id);
                         

@@ -221,8 +221,8 @@ export function OrderFormSheet({ isOpen, onClose, editingId }: OrderFormSheetPro
  }, [editingId, orders]);
 
  const statusOptions = useMemo(() => {
-  return getValidStatusOptions(order?.status, form.mode, business.operationalModel);
- }, [order?.status, form.mode]);
+  return getValidStatusOptions(order?.status, form.mode, business.operationalModel, order?.allowedNextStatuses);
+ }, [order?.status, order?.allowedNextStatuses, form.mode]);
  const catalogList = getPublicCatalog(business);
  const bookingDurationMinutes = useMemo(() => {
   const parsedDuration = Number(form.bookingDurationMinutes);

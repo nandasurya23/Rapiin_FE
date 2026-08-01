@@ -114,7 +114,7 @@ export function OrderBoard({
       });
       const isValidDropTarget = draggedOrder && (
        draggedOrder.status === option.value || 
-       getValidStatusOptions(draggedOrder.status, draggedOrder.mode, isResourceBooking ? "RESOURCE_BOOKING" : undefined).some(opt => opt.value === option.value)
+       getValidStatusOptions(draggedOrder.status, draggedOrder.mode, isResourceBooking ? "RESOURCE_BOOKING" : undefined, draggedOrder.allowedNextStatuses).some(opt => opt.value === option.value)
       );
 
       return (

@@ -118,6 +118,10 @@ export interface BusinessUpdateInput {
   closedDates?: Record<string, string>;
   autoCreateOrderFromSubmission?: boolean;
   subscriptions?: Record<string, unknown>[];
+  // Optimistic concurrency token (business.updatedAt as last read by the client).
+  // Backend rejects with 409 if the business was modified since, instead of
+  // silently overwriting another admin's concurrent changes.
+  expectedUpdatedAt?: string;
 }
 
 export interface BusinessService {

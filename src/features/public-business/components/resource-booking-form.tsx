@@ -240,7 +240,7 @@ export function ResourceBookingForm({
 
           {/* 2A: Staff preference — opsional, hanya untuk APPOINTMENT mode dengan staf aktif */}
           {currentStep === 1 && !isResourceBooking &&
-            (business.resources?.filter((r: BusinessResource) => r.isActive).length ?? 0) > 0 && (
+            (business.resources?.length ?? 0) > 0 && (
             <div className="mt-4 pt-4 border-t border-[var(--color-border)]/50 space-y-3 animate-in fade-in duration-300">
               <div>
                 <span className="block text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
@@ -263,8 +263,7 @@ export function ResourceBookingForm({
                   Siapapun
                 </button>
                 {business.resources
-                  ?.filter((r: BusinessResource) => r.isActive)
-                  .map((r: BusinessResource) => (
+                  ?.map((r: BusinessResource) => (
                     <button
                       key={r.id}
                       type="button"
@@ -451,7 +450,7 @@ export function ResourceBookingForm({
                      >
                         <span className="text-sm">Bebas / Siapapun</span>
                      </button>
-                     {business.resources?.filter(r => r.isActive).map(r => {
+                     {business.resources?.map(r => {
                         const isSelected = form.resourceId === r.id;
                         const isAvailable = isResourceAvailableForDate(r.id);
                         

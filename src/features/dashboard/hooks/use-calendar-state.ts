@@ -25,6 +25,30 @@ export function useCalendarState({ business, orders, selectedDate, onDateSelect 
  const { updateOrder, deleteOrder } = useOrders();
  const { invoices, createInvoiceFromOrder } = useInvoices();
  const todayKey = toDateKey(new Date());
+ const [viewDate, setViewDate] = useState(parseDateKey(todayKey));
+
+ // Scope the calendar's own order fetch to the visible month (with a 1-day buffer
+ // for timezone safety), reactive to month navigation. Without this, navigating to a
+ // different month never fetches new data and just re-filters the same capped
+ // "most recently created" list passed down from the dashboard — which silently
+ // hides older-created-but-future-scheduled bookings once a business passes the page limit.
+ const { scheduledFrom, scheduledTo } = useMemo(() => {
+  const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const lastDay = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
+  firstDay.setDate(firstDay.getDate() - 1);
+  lastDay.setDate(lastDay.getDate() + 1);
+  return { scheduledFrom: toDateKey(firstDay), scheduledTo: toDateKey(lastDay) };
+ }, [viewDate]);
+
+ const { orders: calendarScopedOrders, isLoading: isCalendarOrdersLoading } = useOrders({
+  scheduledFrom,
+  scheduledTo,
+  limit: 1000,
+ });
+
+ // Fall back to the dashboard-supplied `orders` prop while the scoped fetch for this
+ // month is still loading, to avoid a flash of empty calendar on first render/navigation.
+ const effectiveOrders = isCalendarOrdersLoading ? orders : calendarScopedOrders;
 
  function handleToggleClosedDate(date: string, reason?: string, endDate?: string) {
   const closedDates = { ...(business.closedDates || {}) };
@@ -49,7 +73,6 @@ export function useCalendarState({ business, orders, selectedDate, onDateSelect 
   }
   updateBusiness({ closedDates });
  }
- const [viewDate, setViewDate] = useState(parseDateKey(todayKey));
  const [viewMode, setViewMode] = useState<"MONTH" | "DAY_TIMELINE">(() => {
   if (typeof window !== "undefined" && window.innerWidth < 1024) {
    return "DAY_TIMELINE";
@@ -77,7 +100,7 @@ export function useCalendarState({ business, orders, selectedDate, onDateSelect 
 
  const orderCountByDate = useMemo(
   () =>
-   orders.reduce<Record<string, number>>((accumulator, order) => {
+   effectiveOrders.reduce<Record<string, number>>((accumulator, order) => {
     if (!order.scheduledDate) {
      return accumulator;
     }
@@ -85,10 +108,10 @@ export function useCalendarState({ business, orders, selectedDate, onDateSelect 
     accumulator[order.scheduledDate] = (accumulator[order.scheduledDate] ?? 0) + 1;
     return accumulator;
    }, {}),
-  [orders]
+  [effectiveOrders]
  );
 
- const selectedOrders = useMemo(() => (orders || []).filter((order) => order.scheduledDate === selectedDate), [orders, selectedDate]);
+ const selectedOrders = useMemo(() => (effectiveOrders || []).filter((order) => order.scheduledDate === selectedDate), [effectiveOrders, selectedDate]);
  const selectedSlotSummaries = useMemo(() => getBookingSlotsForDate(selectedOrders, selectedDate, null, new Date(), business.bookingCapacity), [selectedOrders, selectedDate, business.bookingCapacity]);
  const selectedResourceDetails = useMemo(
   () => getResourceBookingDetailsForDate(selectedOrders, business.resources ?? [], selectedDate),
