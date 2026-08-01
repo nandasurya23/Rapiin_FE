@@ -84,7 +84,7 @@ export const DashboardCalendar = memo(function DashboardCalendar(props: Dashboar
           </div>
 
           {state.viewMode === "MONTH" ? (
-            <CalendarMonthView {...state} business={props.business} selectedDate={props.selectedDate} onDateSelect={props.onDateSelect} />
+            <CalendarMonthView {...state} orders={props.orders} business={props.business} selectedDate={props.selectedDate} onDateSelect={props.onDateSelect} />
           ) : (
             <CalendarTimelineView {...state} business={props.business} selectedDate={props.selectedDate} onDateSelect={props.onDateSelect} selectedDateLabel={state.selectedDateLabel} />
           )}
